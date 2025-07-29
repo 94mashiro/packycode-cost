@@ -5,6 +5,7 @@ interface AuthenticationPromptProps {
 
 interface TokenData {
   isValid: boolean
+  tokenType?: "api_key" | "jwt" | null
 }
 
 interface TokenExpiration {
@@ -15,7 +16,10 @@ export function AuthenticationPrompt({
   tokenData,
   tokenExpiration
 }: AuthenticationPromptProps) {
-  if (tokenData.isValid && !tokenExpiration.isExpired) {
+  const isApiKey = tokenData.tokenType === "api_key"
+
+  // API Key不需要检查过期，只要isValid就显示正常
+  if (tokenData.isValid && (isApiKey || !tokenExpiration.isExpired)) {
     return null
   }
 

@@ -4,40 +4,32 @@ export interface TokenData {
   isValid: boolean
   timestamp: null | number
   token: null | string
-}
-
-export function formatTokenAge(timestamp: null | number): string {
-  if (!timestamp) return "未知"
-
-  const age = Date.now() - timestamp
-  const hours = Math.floor(age / (60 * 60 * 1000))
-  const minutes = Math.floor((age % (60 * 60 * 1000)) / (60 * 1000))
-
-  if (hours > 0) {
-    return `${hours}小时${minutes}分钟前`
-  } else {
-    return `${minutes}分钟前`
-  }
+  tokenType: "api_key" | "jwt" | null
 }
 
 export function usePackyToken(): TokenData {
   const [tokenData, setTokenData] = useState<TokenData>({
     isValid: false,
     timestamp: null,
-    token: null
+    token: null,
+    tokenType: null
   })
 
   useEffect(() => {
     chrome.runtime.sendMessage({ action: "getStoredToken" }, (response) => {
       if (response) {
-        const { timestamp, token } = response
+        const { timestamp, token, tokenType } = response
+        // API Key不检查时间有效性，JWT检查24小时有效期
         const isValid =
-          token && timestamp && Date.now() - timestamp < 24 * 60 * 60 * 1000
+          token &&
+          (tokenType === "api_key" ||
+            (timestamp && Date.now() - timestamp < 24 * 60 * 60 * 1000))
 
         setTokenData({
           isValid: !!isValid,
           timestamp,
-          token
+          token,
+          tokenType: tokenType || null
         })
       }
     })

@@ -14,9 +14,11 @@ export interface UserInfo {
 export async function fetchUserInfo(): Promise<null | UserInfo> {
   try {
     const token = await storage.get("packy_token")
+    const tokenType = await storage.get("packy_token_type")
     const tokenTimestamp = await storage.get("packy_token_timestamp")
 
-    if (!token || !tokenTimestamp) {
+    // API Key不需要检查timestamp
+    if (!token || (tokenType !== "api_key" && !tokenTimestamp)) {
       return null
     }
 
@@ -32,7 +34,12 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     )
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      // API Key 的 400/401 错误也需要清除token
+      if (
+        response.status === 400 ||
+        response.status === 401 ||
+        response.status === 403
+      ) {
         await clearPluginTokenOnly()
         return null
       }

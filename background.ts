@@ -35,14 +35,22 @@ async function updateBadge() {
 chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
     try {
-      const tokenCookie = await chrome.cookies.get({
-        name: "token",
-        url: "https://www.packycode.com"
-      })
+      // 先检查是否已有token
+      const existingToken = await storage.get("packy_token")
+      const tokenType = await storage.get("packy_token_type")
 
-      if (tokenCookie && tokenCookie.value) {
-        await storage.set("packy_token", tokenCookie.value)
-        await storage.set("packy_token_timestamp", Date.now())
+      // 仅在没有token或token类型为jwt时，才尝试从cookie获取
+      if (!existingToken || tokenType !== "api_key") {
+        const tokenCookie = await chrome.cookies.get({
+          name: "token",
+          url: "https://www.packycode.com"
+        })
+
+        if (tokenCookie && tokenCookie.value) {
+          await storage.set("packy_token", tokenCookie.value)
+          await storage.set("packy_token_type", "jwt")
+          await storage.set("packy_token_timestamp", Date.now())
+        }
       }
     } catch {}
   }
@@ -50,10 +58,12 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
-    storage.get("packy_token").then((token) => {
-      storage.get("packy_token_timestamp").then((timestamp) => {
-        sendResponse({ timestamp, token })
-      })
+    Promise.all([
+      storage.get("packy_token"),
+      storage.get("packy_token_timestamp"),
+      storage.get("packy_token_type")
+    ]).then(([token, timestamp, tokenType]) => {
+      sendResponse({ timestamp, token, tokenType })
     })
     return true
   }
@@ -99,6 +109,47 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.runtime.onInstalled.addListener(() => {
   startPeriodicRefresh()
 })
+
+// 监听 API keys 相关请求的响应
+chrome.webRequest.onCompleted.addListener(
+  async (details) => {
+    if (details.statusCode === 200 && details.method === "GET") {
+      try {
+        // 获取当前token用于重放请求
+        const currentToken = await storage.get("packy_token")
+        if (!currentToken) return
+
+        // 重放请求获取响应内容
+        const response = await fetch(details.url, {
+          headers: {
+            Authorization: `Bearer ${currentToken}`,
+            "Content-Type": "application/json"
+          },
+          method: "GET"
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.api_key) {
+            // 存储API Key，覆盖现有token
+            await storage.set("packy_token", data.api_key)
+            await storage.set("packy_token_type", "api_key")
+            await storage.set("packy_token_timestamp", Date.now())
+
+            console.log("API key stored successfully")
+            // 触发重新获取用户信息以更新额度显示
+            backgroundFetchUserInfo()
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch API key:", error)
+      }
+    }
+  },
+  {
+    urls: ["https://www.packycode.com/api/backend/users/*/api-keys/*"]
+  }
+)
 
 updateBadge()
 startPeriodicRefresh()

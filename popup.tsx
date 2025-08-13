@@ -3,11 +3,10 @@ import "./reset.css"
 import { useEffect } from "react"
 
 import { ActionButtons } from "./components/ActionButtons"
-import { AuthenticationPrompt } from "./components/AuthenticationPrompt"
 import { BudgetResetCountdown } from "./components/BudgetResetCountdown"
+import { CombinedStatus } from "./components/CombinedStatus"
 import { ProgressBar } from "./components/ProgressBar"
 import { RefreshButton } from "./components/RefreshButton"
-import { UserStatus } from "./components/UserStatus"
 import { VersionInfo } from "./components/VersionInfo"
 import { usePackyToken } from "./hooks/usePackyToken"
 import { useUserInfo } from "./hooks/useUserInfo"
@@ -21,21 +20,32 @@ function IndexPopup() {
   const handleRefresh = () => {
     if (tokenData.isValid) {
       refresh()
+      // 同时刷新购买状态
+      chrome.runtime.sendMessage({ action: "checkPurchaseStatus" })
     }
   }
 
   useEffect(() => {
-    const script = document.createElement("script")
-    script.src = "//analytics.te.sb/count.js"
-    script.async = true
-    script.setAttribute("data-goatcounter", "https://analytics.te.sb/count")
-    document.head.appendChild(script)
+    // 通过 fetch 加载统计脚本（Chrome Extension 安全方式）
+    const loadAnalyticsScript = async () => {
+      try {
+        const response = await fetch("https://analytics.te.sb/count.js")
+        const scriptContent = await response.text()
 
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script)
+        // 创建一个安全的脚本执行环境
+        const script = document.createElement("script")
+        script.textContent = scriptContent
+        script.setAttribute("data-goatcounter", "https://analytics.te.sb/count")
+        document.head.appendChild(script)
+      } catch (error) {
+        console.log("Failed to load analytics script:", error)
       }
     }
+
+    loadAnalyticsScript()
+
+    // popup打开时立即检查购买状态
+    chrome.runtime.sendMessage({ action: "checkPurchaseStatus" })
   }, [])
 
   return (
@@ -56,9 +66,7 @@ function IndexPopup() {
             </p>
           </div>
 
-          <UserStatus tokenData={tokenData} tokenExpiration={tokenExpiration} />
-
-          <AuthenticationPrompt
+          <CombinedStatus
             tokenData={tokenData}
             tokenExpiration={tokenExpiration}
           />

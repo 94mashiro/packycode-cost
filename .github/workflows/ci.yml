@@ -2,52 +2,52 @@ name: CI
 
 on:
   push:
-    branches: [ master, main ]
-    tags: [ 'v*' ]
+    branches: [master, main]
+    tags: ["v*"]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
 
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 10
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'pnpm'
-        
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-      
-    - name: Run ESLint
-      run: pnpm lint
-      
-    - name: Run TypeScript type checking
-      run: pnpm type-check
-      
-    - name: Build extension
-      run: pnpm build
-      
-    - name: Package extension
-      run: pnpm package
-      
-    - name: Upload packaged extension (push only)
-      if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
-      uses: actions/upload-artifact@v4
-      with:
-        name: extension-package
-        path: build/*.zip
-        retention-days: 30
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Run TypeScript type checking
+        run: pnpm type-check
+
+      - name: Build extension
+        run: pnpm build
+
+      - name: Package extension
+        run: pnpm package
+
+      - name: Upload packaged extension (push only)
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-package
+          path: build/*.zip
+          retention-days: 30
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
@@ -55,37 +55,37 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 10
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'pnpm'
-        
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-      
-    - name: Build extension
-      run: pnpm build
-      
-    - name: Package extension
-      run: pnpm package
-      
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: build/*.zip
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build extension
+        run: pnpm build
+
+      - name: Package extension
+        run: pnpm package
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

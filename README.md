@@ -5,10 +5,11 @@
   
   <p>一个 Chrome 浏览器扩展，帮助用户实时监控 PackyCode 的使用额度和预算。</p>
 
-  ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-  ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
-  ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
-  ![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=google-chrome&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
+![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?style=flat&logo=google-chrome&logoColor=white)
+
 </div>
 
 ## 📷 功能预览
@@ -39,11 +40,13 @@
 ### 安装
 
 #### 方式一：Chrome Web Store 安装（推荐）
+
 - 从 [Chrome Web Store](https://chromewebstore.google.com/detail/packycode-cost/aeddjefljmkfbocmkpienjblkdgpnamk) 安装
 - **优点**：安装方便，自动更新，无需手动管理
 - **缺点**：更新可能不够及时，需要等待商店审核
 
 #### 方式二：手动安装（获取最新版本）
+
 - 从 [Releases](https://github.com/94mashiro/packycode-cost/releases) 下载最新版本
 - **优点**：可以第一时间获取最新功能和修复
 - **缺点**：需要手动下载和更新，安装步骤相对复杂
@@ -84,17 +87,20 @@ pnpm build
 ## 📖 使用指南
 
 ### 基础功能
+
 1. **初次使用**: 安装扩展后，点击扩展图标开始使用
 2. **自动认证**: 扩展会自动获取 PackyCode dashboard 的登录状态，无需手动配置 Token
 3. **监控数据**: 自动查询并展示实时的使用情况
 
 ### 购买状态监控 (v1.4.0+)
+
 1. **实时监控**: 扩展每30秒自动检查 PackyCode 购买开放状态
 2. **即时通知**: 当购买从关闭变为开放时，会收到桌面通知
 3. **手动刷新**: 点击刷新按钮可立即触发状态检查
 4. **状态显示**: 在扩展界面中实时显示当前购买状态
 
 ### 认证模式
+
 - **JWT Token**: 从网站 Cookie 自动获取，有过期时间
 - **API Key**: 从控制台复制后自动检测，长期有效
 - **自动切换**: 检测到 API Key 时自动切换至 API Key 模式
@@ -130,7 +136,7 @@ pnpm build
 ### v1.2.0 (2025-07-09) - 界面体验升级
 
 - ⏰ **预算重置提醒**: 显示每日预算重置倒计时，合理规划使用时间
-- 🎨 **界面重构**: 全新模块化界面设计，操作更加直观流畅  
+- 🎨 **界面重构**: 全新模块化界面设计，操作更加直观流畅
 - 📍 **布局优化**: 重新安排按钮位置，提升使用便捷性
 - ⚡ **实时更新**: 数据刷新更加及时，信息始终保持最新状态
 

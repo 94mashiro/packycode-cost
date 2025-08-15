@@ -1,97 +1,49 @@
 import { Storage } from "@plasmohq/storage"
 
-import { fetchPurchaseStatus, type PackyConfig } from "./utils/purchaseStatus"
+import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
 import { fetchUserInfo, type UserInfo } from "./utils/userInfo"
 
 const storage = new Storage()
 
 async function backgroundCheckPurchaseStatus() {
-  try {
-    console.log(
-      "[ALARM] Purchase status check triggered at:",
-      new Date().toISOString()
-    )
+  // 使用统一的购买状态检查方法，包含锁机制和通知逻辑
+  const result = await checkAndNotifyPurchaseStatus()
 
-    // 获取最新的API数据（静态导入，避免动态导入在 SW 中偶发失败）
-    console.log("[ALARM] About to call fetchPurchaseStatus()")
-    const currentConfig = await fetchPurchaseStatus()
-    console.log(
-      "[ALARM] fetchPurchaseStatus() returned:",
-      currentConfig ? "success" : "null"
-    )
-
-    if (!currentConfig) {
-      console.log("[ALARM] Failed to fetch current config, stopping")
-      return
+  if (result.success) {
+    console.log("[BACKGROUND] Purchase status check completed successfully")
+    if (result.triggered) {
+      console.log("[BACKGROUND] Purchase notification was triggered")
     }
+    // 清除错误计数器
+    await storage.remove("purchase_check_error_count")
+  } else {
+    console.log("[BACKGROUND] Purchase status check failed or was skipped")
 
-    // 获取之前的配置，添加正确的类型
-    const previousConfig = await storage.get<PackyConfig>(
-      "packy_config_previous"
-    )
+    // 记录连续错误次数
+    const errorCount =
+      (await storage.get<number>("purchase_check_error_count")) || 0
+    const newErrorCount = errorCount + 1
+    await storage.set("purchase_check_error_count", newErrorCount)
 
-    // 更新storage中的当前数据供UI组件使用
-    await storage.set("packy_config", currentConfig)
-    await storage.set("packy_config_timestamp", Date.now())
-
-    // 检查是否首次检查
-    if (!previousConfig) {
-      console.log("First check, saving initial state")
-      await storage.set("packy_config_previous", currentConfig)
-      return
-    }
-
-    // 检查购买状态是否从禁用变为开放
-    const statusChanged =
-      previousConfig.purchaseDisabled && !currentConfig.purchaseDisabled
-
-    console.log(
-      `Alarm check: previous=${previousConfig.purchaseDisabled}, current=${currentConfig.purchaseDisabled}, changed=${statusChanged}`
-    )
-
-    if (statusChanged) {
-      // 显示购买开放通知
-      const notificationId = `purchase-available-${Date.now()}`
+    // 如果连续失败3次，暂时停止轮询
+    if (newErrorCount >= 3) {
       console.log(
-        "Purchase status changed! Creating notification with ID:",
-        notificationId
+        "[BACKGROUND] Too many failures, temporarily stopping purchase status checks"
       )
+      chrome.alarms.clear("checkPurchaseStatus")
 
-      try {
-        chrome.notifications.create(
-          notificationId,
-          {
-            iconUrl:
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-            message: "购买功能现已开放，点击查看购买选项",
-            title: "PackyCode 购买开放",
-            type: "basic"
-          },
-          (createdNotificationId) => {
-            if (chrome.runtime.lastError) {
-              console.error(
-                "Notification creation failed:",
-                chrome.runtime.lastError
-              )
-            } else {
-              console.log(
-                "Notification created successfully with ID:",
-                createdNotificationId
-              )
-            }
-          }
-        )
-      } catch (notificationError) {
-        console.error("Error creating notification:", notificationError)
-      }
-
-      console.log("PackyCode purchase is now available!")
+      // 5分钟后重新启动
+      setTimeout(
+        () => {
+          console.log(
+            "[BACKGROUND] Restarting purchase status checks after error recovery"
+          )
+          startPurchaseStatusCheck()
+          storage.remove("purchase_check_error_count")
+        },
+        5 * 60 * 1000
+      )
     }
-
-    // 最后更新previous状态，为下次比较做准备
-    await storage.set("packy_config_previous", currentConfig)
-  } catch (error) {
-    console.error("Background purchase status check failed:", error)
   }
 }
 

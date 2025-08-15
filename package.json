@@ -1,7 +1,7 @@
 {
   "name": "packy-cost",
   "displayName": "PackyCode Cost",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "PackyCode 使用额度和预算监控插件，实时查看每日和每月额度使用情况",
   "author": "Mashiro",
   "keywords": [
@@ -66,8 +66,7 @@
     "host_permissions": [
       "https://www.packycode.com/*",
       "https://packy.te.sb/*",
-      "https://packy-status.te.sb/*",
-      "https://analytics.te.sb/*"
+      "https://packy-status.te.sb/*"
     ],
     "permissions": [
       "cookies",

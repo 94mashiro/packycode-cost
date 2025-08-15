@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        
+
   - type: textarea
     id: what-happened
     attributes:
@@ -17,7 +17,7 @@ body:
       value: "A bug happened!"
     validations:
       required: true
-      
+
   - type: textarea
     id: reproduction-steps
     attributes:
@@ -30,7 +30,7 @@ body:
         4. See error
     validations:
       required: true
-      
+
   - type: dropdown
     id: browser
     attributes:
@@ -43,7 +43,7 @@ body:
         - Other Chromium-based browser
     validations:
       required: true
-      
+
   - type: input
     id: browser-version
     attributes:
@@ -51,7 +51,7 @@ body:
       placeholder: e.g. 119.0.6045.105
     validations:
       required: true
-      
+
   - type: dropdown
     id: os
     attributes:
@@ -64,7 +64,7 @@ body:
         - Other
     validations:
       required: true
-      
+
   - type: input
     id: extension-version
     attributes:
@@ -72,14 +72,14 @@ body:
       placeholder: e.g. 1.0.0
     validations:
       required: true
-      
+
   - type: textarea
     id: logs
     attributes:
       label: Relevant log output
       description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
       render: shell
-      
+
   - type: checkboxes
     id: terms
     attributes:

@@ -69,6 +69,7 @@ Bug 通过 [GitHub Issues](https://github.com/94mashiro/packycode-cost/issues) �
 ```
 
 **类型包括：**
+
 - `feat`: 新功能
 - `fix`: Bug 修复
 - `docs`: 文档更新
@@ -78,6 +79,7 @@ Bug 通过 [GitHub Issues](https://github.com/94mashiro/packycode-cost/issues) �
 - `chore`: 构建过程或辅助工具的变动
 
 **示例：**
+
 ```
 feat(popup): add budget progress bar
 fix(auth): handle token expiration
@@ -87,6 +89,7 @@ docs: update installation guide
 #### Pull Request 流程
 
 1. **确保代码质量**：
+
    ```bash
    pnpm lint
    pnpm build
@@ -95,6 +98,7 @@ docs: update installation guide
 2. **更新文档**（如果需要）
 
 3. **创建 Pull Request**：
+
    - 清晰描述您的更改
    - 关联相关的 issue
    - 添加截图（如果是 UI 更改）
@@ -147,6 +151,7 @@ const value = await storage.get("key")
 ### API 集成
 
 所有 API 调用应该：
+
 - 包含适当的错误处理
 - 使用 TypeScript 类型
 - 遵循现有的认证模式
@@ -154,6 +159,7 @@ const value = await storage.get("key")
 ## 测试
 
 虽然我们目前还没有完整的测试套件，但我们鼓励：
+
 - 手动测试所有更改
 - 在不同浏览器中测试
 - 验证扩展的核心功能

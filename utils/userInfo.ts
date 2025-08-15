@@ -1,6 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { clearPluginTokenOnly } from "./auth"
+import { get } from "./request"
 
 const storage = new Storage()
 
@@ -22,32 +23,30 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       return null
     }
 
-    const response = await fetch(
+    const result = await get<any>(
       "https://www.packycode.com/api/backend/users/info",
       {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
-        },
-        method: "GET"
+        }
       }
     )
 
-    if (!response.ok) {
-      // API Key 的 400/401 错误也需要清除token
+    if (!result.success) {
+      // 检查是否是认证错误
       if (
-        response.status === 400 ||
-        response.status === 401 ||
-        response.status === 403
+        result.error?.includes("400") ||
+        result.error?.includes("401") ||
+        result.error?.includes("403")
       ) {
         await clearPluginTokenOnly()
         return null
       }
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(result.error || "获取用户信息失败")
     }
 
-    const rawData = await response.json()
-
+    const rawData = result.data
     const userInfo: UserInfo = {
       daily_budget_usd: Number(rawData.daily_budget_usd) || 0,
       daily_spent_usd: Number(rawData.daily_spent_usd) || 0,

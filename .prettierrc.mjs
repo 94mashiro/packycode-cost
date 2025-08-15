@@ -9,5 +9,5 @@ export default {
   singleQuote: false,
   tabWidth: 2,
   trailingComma: "none",
-  useTabs: false,
+  useTabs: false
 }

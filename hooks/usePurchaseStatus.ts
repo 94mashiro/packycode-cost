@@ -1,7 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
-import type { PackyConfig } from "../utils/purchaseStatus"
+import {
+  getCurrentPurchaseConfig,
+  type PackyConfig
+} from "../utils/purchaseStatus"
 
 const storage = new Storage()
 
@@ -20,46 +23,49 @@ export function usePurchaseStatus() {
     loading: true
   })
 
-  const fetchPurchaseStatus = async () => {
+  const fetchPurchaseStatus = async (isInitial = false) => {
     try {
-      setData((prev) => ({ ...prev, error: null, loading: true }))
+      if (isInitial) {
+        setData((prev) => ({ ...prev, error: null, loading: true }))
+      }
 
-      const config = await storage.get<PackyConfig>("packy_config")
+      const config = await getCurrentPurchaseConfig()
       const timestamp = await storage.get<number>("packy_config_timestamp")
 
-      if (config) {
-        setData({
-          config,
-          error: null,
-          lastUpdated: timestamp || null,
-          loading: false
-        })
-      } else {
-        // 等待后台轮询提供数据
+      setData((prev) => ({
+        ...prev,
+        config,
+        error: null,
+        lastUpdated: timestamp || null,
+        loading: false
+      }))
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "获取购买状态失败"
+
+      if (isInitial) {
         setData({
           config: null,
-          error: null,
+          error: errorMessage,
           lastUpdated: null,
           loading: false
         })
+      } else {
+        setData((prev) => ({
+          ...prev,
+          error: prev.config ? prev.error : errorMessage
+        }))
       }
-    } catch (error) {
-      setData({
-        config: null,
-        error: error instanceof Error ? error.message : "获取购买状态失败",
-        lastUpdated: null,
-        loading: false
-      })
     }
   }
 
   useEffect(() => {
-    fetchPurchaseStatus()
+    // 初始加载
+    fetchPurchaseStatus(true)
 
-    // 监听storage变化
     const handleStorageChange = (changes: any) => {
       if (changes.packy_config || changes.packy_config_timestamp) {
-        fetchPurchaseStatus()
+        fetchPurchaseStatus(false)
       }
     }
 
@@ -71,7 +77,10 @@ export function usePurchaseStatus() {
   }, [])
 
   return {
-    ...data,
-    refresh: fetchPurchaseStatus
+    config: data.config,
+    error: data.error,
+    lastUpdated: data.lastUpdated,
+    loading: data.loading,
+    refresh: () => fetchPurchaseStatus(false)
   }
 }

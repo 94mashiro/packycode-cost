@@ -11,6 +11,7 @@ import { VersionInfo } from "./components/VersionInfo"
 import { usePackyToken } from "./hooks/usePackyToken"
 import { useUserInfo } from "./hooks/useUserInfo"
 import { getTokenExpiration } from "./utils/jwt"
+import { checkPurchaseStatus } from "./utils/purchaseStatusChecker"
 
 function IndexPopup() {
   const tokenData = usePackyToken()
@@ -21,31 +22,13 @@ function IndexPopup() {
     if (tokenData.isValid) {
       refresh()
       // 同时刷新购买状态
-      chrome.runtime.sendMessage({ action: "checkPurchaseStatus" })
+      checkPurchaseStatus()
     }
   }
 
   useEffect(() => {
-    // 通过 fetch 加载统计脚本（Chrome Extension 安全方式）
-    const loadAnalyticsScript = async () => {
-      try {
-        const response = await fetch("https://analytics.te.sb/count.js")
-        const scriptContent = await response.text()
-
-        // 创建一个安全的脚本执行环境
-        const script = document.createElement("script")
-        script.textContent = scriptContent
-        script.setAttribute("data-goatcounter", "https://analytics.te.sb/count")
-        document.head.appendChild(script)
-      } catch (error) {
-        console.log("Failed to load analytics script:", error)
-      }
-    }
-
-    loadAnalyticsScript()
-
     // popup打开时立即检查购买状态
-    chrome.runtime.sendMessage({ action: "checkPurchaseStatus" })
+    checkPurchaseStatus()
   }, [])
 
   return (

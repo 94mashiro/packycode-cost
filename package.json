@@ -1,8 +1,8 @@
 {
   "name": "packy-cost",
   "displayName": "PackyCode Cost",
-  "version": "1.4.1",
-  "description": "PackyCode 使用额度和预算监控插件，实时查看每日和每月额度使用情况",
+  "version": "1.5.0",
+  "description": "PackyCode 使用额度和预算监控插件，实时查看每日和每月额度使用情况，支持购买状态和 Opus 模型开放监控",
   "author": "Mashiro",
   "keywords": [
     "packycode",

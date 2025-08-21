@@ -11,7 +11,6 @@ const storage = new Storage()
 interface PurchaseStatusData {
   config: null | PackyConfig
   error: null | string
-  lastUpdated: null | number
   loading: boolean
 }
 
@@ -19,7 +18,6 @@ export function usePurchaseStatus() {
   const [data, setData] = useState<PurchaseStatusData>({
     config: null,
     error: null,
-    lastUpdated: null,
     loading: true
   })
 
@@ -30,13 +28,11 @@ export function usePurchaseStatus() {
       }
 
       const config = await getCurrentPurchaseConfig()
-      const timestamp = await storage.get<number>("packy_config_timestamp")
 
       setData((prev) => ({
         ...prev,
         config,
         error: null,
-        lastUpdated: timestamp || null,
         loading: false
       }))
     } catch (error) {
@@ -47,7 +43,6 @@ export function usePurchaseStatus() {
         setData({
           config: null,
           error: errorMessage,
-          lastUpdated: null,
           loading: false
         })
       } else {
@@ -64,7 +59,7 @@ export function usePurchaseStatus() {
     fetchPurchaseStatus(true)
 
     const handleStorageChange = (changes: any) => {
-      if (changes.packy_config || changes.packy_config_timestamp) {
+      if (changes.packy_config) {
         fetchPurchaseStatus(false)
       }
     }
@@ -79,7 +74,6 @@ export function usePurchaseStatus() {
   return {
     config: data.config,
     error: data.error,
-    lastUpdated: data.lastUpdated,
     loading: data.loading,
     refresh: () => fetchPurchaseStatus(false)
   }

@@ -14,36 +14,8 @@ async function backgroundCheckPurchaseStatus() {
     if (result.triggered) {
       console.log("[BACKGROUND] Purchase notification was triggered")
     }
-    // 清除错误计数器
-    await storage.remove("purchase_check_error_count")
   } else {
     console.log("[BACKGROUND] Purchase status check failed or was skipped")
-
-    // 记录连续错误次数
-    const errorCount =
-      (await storage.get<number>("purchase_check_error_count")) || 0
-    const newErrorCount = errorCount + 1
-    await storage.set("purchase_check_error_count", newErrorCount)
-
-    // 如果连续失败3次，暂时停止轮询
-    if (newErrorCount >= 3) {
-      console.log(
-        "[BACKGROUND] Too many failures, temporarily stopping purchase status checks"
-      )
-      chrome.alarms.clear("checkPurchaseStatus")
-
-      // 5分钟后重新启动
-      setTimeout(
-        () => {
-          console.log(
-            "[BACKGROUND] Restarting purchase status checks after error recovery"
-          )
-          startPurchaseStatusCheck()
-          storage.remove("purchase_check_error_count")
-        },
-        5 * 60 * 1000
-      )
-    }
   }
 }
 

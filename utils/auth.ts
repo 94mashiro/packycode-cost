@@ -9,7 +9,6 @@ export async function clearPluginTokenOnly() {
     await storage.remove("packy_token_type")
 
     await storage.remove("cached_user_info")
-    await storage.remove("cache_timestamp")
 
     return true
   } catch {

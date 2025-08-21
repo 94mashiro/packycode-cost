@@ -8,7 +8,6 @@ const storage = new Storage()
 interface OpusStatusData {
   enabled: boolean | null
   error: null | string
-  lastUpdated: null | number
   loading: boolean
 }
 
@@ -16,7 +15,6 @@ export function useOpusStatus() {
   const [data, setData] = useState<OpusStatusData>({
     enabled: null,
     error: null,
-    lastUpdated: null,
     loading: true
   })
 
@@ -28,14 +26,12 @@ export function useOpusStatus() {
 
       // 从缓存的用户信息中获取 opus_enabled 状态
       const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
-      const cacheTimestamp = await storage.get<number>("cache_timestamp")
 
       if (cachedUserInfo && typeof cachedUserInfo.opus_enabled === "boolean") {
         setData((prev) => ({
           ...prev,
           enabled: cachedUserInfo.opus_enabled,
           error: null,
-          lastUpdated: cacheTimestamp || null,
           loading: false
         }))
       } else {
@@ -43,7 +39,6 @@ export function useOpusStatus() {
           ...prev,
           enabled: null,
           error: null,
-          lastUpdated: null,
           loading: false
         }))
       }
@@ -55,7 +50,6 @@ export function useOpusStatus() {
         setData({
           enabled: null,
           error: errorMessage,
-          lastUpdated: null,
           loading: false
         })
       } else {
@@ -72,7 +66,7 @@ export function useOpusStatus() {
     fetchOpusStatus(true)
 
     const handleStorageChange = (changes: any) => {
-      if (changes.cached_user_info || changes.cache_timestamp) {
+      if (changes.cached_user_info) {
         fetchOpusStatus(false)
       }
     }
@@ -87,7 +81,6 @@ export function useOpusStatus() {
   return {
     enabled: data.enabled,
     error: data.error,
-    lastUpdated: data.lastUpdated,
     loading: data.loading,
     refresh: () => fetchOpusStatus(false)
   }

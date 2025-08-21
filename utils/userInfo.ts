@@ -73,7 +73,6 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     // 更新存储状态
     await storage.set("last_opus_enabled", currentOpusEnabled)
     await storage.set("cached_user_info", userInfo)
-    await storage.set("cache_timestamp", Date.now())
 
     return userInfo
   } catch (error) {

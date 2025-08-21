@@ -82,7 +82,6 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     // 4. 更新存储状态
     await storage.set("last_purchase_disabled", currentPurchaseDisabled)
     await storage.set("packy_config", currentConfig)
-    await storage.set("packy_config_timestamp", Date.now())
 
     console.log("[STORAGE] Purchase status updated in storage")
 

@@ -27,17 +27,14 @@ export function useUserInfo(token: null | string): UserInfoData {
     const loadCachedData = async () => {
       try {
         const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
-        const cacheTimestamp = await storage.get<number>("cache_timestamp")
-
-        if (cachedUserInfo && cacheTimestamp) {
-          const age = Date.now() - Number(cacheTimestamp)
-          // 缓存有效期调整为30秒，适合预算监控的实时性需求
-          if (age < 30 * 1000) {
-            setData((prev) => ({
-              ...prev,
-              userInfo: cachedUserInfo
-            }))
-          }
+        
+        // Just load whatever we have cached, period.
+        // The alarm keeps it fresh every 30 seconds.
+        if (cachedUserInfo) {
+          setData((prev) => ({
+            ...prev,
+            userInfo: cachedUserInfo
+          }))
         }
       } catch {}
     }
@@ -59,8 +56,13 @@ export function useUserInfo(token: null | string): UserInfoData {
       if (userInfo) {
         setData({ error: null, loading: false, userInfo })
       } else {
-        setData({ error: null, loading: false, userInfo: null })
-        window.location.reload()
+        // If fetchUserInfo returns null, token might be invalid
+        // Let the user see the error state instead of force reloading
+        setData({ 
+          error: "无法获取用户信息", 
+          loading: false, 
+          userInfo: null 
+        })
       }
     } catch (error) {
       setData({

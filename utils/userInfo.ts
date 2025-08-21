@@ -29,7 +29,7 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       return null
     }
 
-    // JWT需要检查过期时间
+    // JWT需要检查过期时间（如果有expiry的话）
     if (tokenType === "jwt" && tokenExpiry && tokenExpiry < Date.now()) {
       await clearPluginTokenOnly()
       return null

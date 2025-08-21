@@ -51,16 +51,28 @@ async function updateBadge() {
 
 chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
+    console.log("[JWT] Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const existingToken = await storage.get("token")
-      const tokenType = await storage.get("token_type")
+      const existingToken = await storage.get<string>("token")
+      const tokenType = await storage.get<string>("token_type")
+
+      console.log("[JWT] Current state:", {
+        hasToken: !!existingToken,
+        shouldFetchCookie: !existingToken || tokenType !== "api_key",
+        tokenType
+      })
 
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
       if (!existingToken || tokenType !== "api_key") {
         const tokenCookie = await chrome.cookies.get({
           name: "token",
           url: API_URLS.PACKY_BASE
+        })
+
+        console.log("[JWT] Cookie result:", {
+          found: !!tokenCookie?.value,
+          valueLength: tokenCookie?.value?.length || 0
         })
 
         if (tokenCookie && tokenCookie.value) {
@@ -71,18 +83,21 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
           if (payload?.exp) {
             await storage.set("token_expiry", payload.exp * 1000) // 转换为毫秒
           }
+          console.log("[JWT] Token stored successfully")
         }
       }
-    } catch {}
+    } catch (error) {
+      console.error("[JWT] Error getting cookie:", error)
+    }
   }
 })
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
     Promise.all([
-      storage.get("token"),
-      storage.get("token_expiry"),
-      storage.get("token_type")
+      storage.get<string>("token"),
+      storage.get<number>("token_expiry"),
+      storage.get<string>("token_type")
     ]).then(([token, expiry, tokenType]) => {
       sendResponse({ expiry, token, tokenType })
     })
@@ -166,7 +181,7 @@ chrome.webRequest.onCompleted.addListener(
     if (details.statusCode === 200 && details.method === "GET") {
       try {
         // 获取当前token用于重放请求
-        const currentToken = await storage.get("token")
+        const currentToken = await storage.get<string>("token")
         if (!currentToken) return
 
         // 重放请求获取响应内容

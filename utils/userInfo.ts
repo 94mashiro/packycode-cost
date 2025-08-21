@@ -1,6 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { userApi } from "../api"
+import { TokenType, type UserInfo } from "../types"
 import { clearPluginTokenOnly } from "./auth"
 import {
   checkOpusNotification,
@@ -10,13 +11,7 @@ import {
 
 const storage = new Storage()
 
-export interface UserInfo {
-  daily_budget_usd: number
-  daily_spent_usd: number
-  monthly_budget_usd: number
-  monthly_spent_usd: number
-  opus_enabled: boolean
-}
+export { type UserInfo }
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
   try {
@@ -30,15 +25,16 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     }
 
     // JWT需要检查过期时间（如果有expiry的话）
-    if (tokenType === "jwt" && tokenExpiry && tokenExpiry < Date.now()) {
+    if (
+      tokenType === TokenType.JWT &&
+      tokenExpiry &&
+      tokenExpiry < Date.now()
+    ) {
       await clearPluginTokenOnly()
       return null
     }
 
-    const result = await userApi.getUserInfo(
-      token,
-      tokenType as "api_key" | "jwt"
-    )
+    const result = await userApi.getUserInfo(token, tokenType as TokenType)
 
     if (!result.success) {
       // 检查是否是认证错误

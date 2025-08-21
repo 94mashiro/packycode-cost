@@ -1,9 +1,6 @@
-export interface JWTPayload {
-  [key: string]: any
-  exp?: number
-  iat?: number
-  sub?: string
-}
+import type { JWTPayload } from "../types"
+
+export { type JWTPayload }
 
 export function formatExpirationTime(exp: number): string {
   const expDate = new Date(exp * 1000) // Convert from seconds to milliseconds

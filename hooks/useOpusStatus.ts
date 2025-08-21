@@ -1,15 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
+import { type OpusStatusData } from "../types"
 import { type UserInfo } from "../utils/userInfo"
 
 const storage = new Storage()
-
-interface OpusStatusData {
-  enabled: boolean | null
-  error: null | string
-  loading: boolean
-}
 
 export function useOpusStatus() {
   const [data, setData] = useState<OpusStatusData>({
@@ -65,7 +60,9 @@ export function useOpusStatus() {
     // 初始加载
     fetchOpusStatus(true)
 
-    const handleStorageChange = (changes: any) => {
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>
+    ) => {
       if (changes.user_info) {
         fetchOpusStatus(false)
       }

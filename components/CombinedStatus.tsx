@@ -1,20 +1,11 @@
 import { API_URLS } from "../api"
 import { useOpusStatus } from "../hooks/useOpusStatus"
 import { usePurchaseStatus } from "../hooks/usePurchaseStatus"
+import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface CombinedStatusProps {
   tokenData: TokenData
   tokenExpiration: TokenExpiration
-}
-
-interface TokenData {
-  isValid: boolean
-  tokenType?: "api_key" | "jwt" | null
-}
-
-interface TokenExpiration {
-  formatted: string
-  isExpired: boolean
 }
 
 export function CombinedStatus({
@@ -25,7 +16,7 @@ export function CombinedStatus({
     usePurchaseStatus()
   const { enabled: opusEnabled, loading: opusLoading } = useOpusStatus()
 
-  const isApiKey = tokenData.tokenType === "api_key"
+  const isApiKey = tokenData.tokenType === TokenType.API_KEY
   const isAuthenticated =
     tokenData.isValid && (isApiKey || !tokenExpiration.isExpired)
   const purchaseAvailable = purchaseConfig && !purchaseConfig.purchaseDisabled

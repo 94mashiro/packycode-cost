@@ -1,12 +1,4 @@
-interface TokenData {
-  isValid: boolean
-  tokenType?: "api_key" | "jwt" | null
-}
-
-interface TokenExpiration {
-  formatted: string
-  isExpired: boolean
-}
+import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface UserStatusProps {
   tokenData: TokenData
@@ -14,7 +6,7 @@ interface UserStatusProps {
 }
 
 export function UserStatus({ tokenData, tokenExpiration }: UserStatusProps) {
-  const isApiKey = tokenData.tokenType === "api_key"
+  const isApiKey = tokenData.tokenType === TokenType.API_KEY
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">

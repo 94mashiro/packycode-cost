@@ -3,8 +3,12 @@
  * 不要再到处硬编码 URL 了！
  */
 
-import type { PackyConfig } from "../utils/purchaseStatus"
-
+import {
+  type ApiResponse,
+  type PackyConfig,
+  TokenType,
+  type UserApiResponse
+} from "../types"
 import { get } from "../utils/request"
 
 /**
@@ -28,11 +32,7 @@ export const packyApi = {
    * 获取购买配置
    * @returns 购买状态、URL等配置信息
    */
-  async getConfig(): Promise<{
-    data?: PackyConfig
-    error?: string
-    success: boolean
-  }> {
+  async getConfig(): Promise<ApiResponse<PackyConfig>> {
     return get<PackyConfig>(
       `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.CONFIG}`
     )
@@ -51,8 +51,8 @@ export const userApi = {
    */
   async getUserInfo(
     token: string,
-    _tokenType: "api_key" | "jwt" // 暂时保留参数签名兼容性，但不使用
-  ): Promise<{ data?: any; error?: string; success: boolean }> {
+    _tokenType: TokenType // 暂时保留参数签名兼容性，但不使用
+  ): Promise<ApiResponse<UserApiResponse>> {
     // 目前只有一个端点，都用 Bearer token
     const url = `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.USER_INFO}`
 
@@ -61,7 +61,7 @@ export const userApi = {
       "Content-Type": "application/json"
     }
 
-    return get<any>(url, { headers })
+    return get<UserApiResponse>(url, { headers })
   }
 }
 
@@ -89,16 +89,12 @@ export const API_URLS = {
 /**
  * API 响应类型定义
  */
-export interface ApiResponse<T> {
-  data?: T
-  error?: string
-  success: boolean
-}
+export { type ApiResponse }
 
 /**
  * 统一的错误处理
  */
-export function handleApiError(error: any, context: string): string {
+export function handleApiError(error: unknown, context: string): string {
   console.error(`[API Error - ${context}]:`, error)
 
   if (error instanceof Error) {

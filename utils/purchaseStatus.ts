@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import type { PackyConfig } from "../types"
+
 import { packyApi } from "../api"
 import {
   checkPurchaseNotification,
@@ -12,12 +14,7 @@ const storage = new Storage()
 // 全局锁，防止并发调用
 let isCheckingPurchaseStatus = false
 
-export interface PackyConfig {
-  anthropicBaseUrl: string
-  purchaseDisabled: boolean
-  purchaseUrl: string
-  supportEmail: string
-}
+export { type PackyConfig }
 
 /**
  * 统一的购买状态检查方法
@@ -116,14 +113,17 @@ export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
 /**
  * 验证 PackyConfig 响应结构
  */
-function isValidPackyConfig(config: any): config is PackyConfig {
+function isValidPackyConfig(config: unknown): config is PackyConfig {
+  if (!config || typeof config !== "object") {
+    return false
+  }
+
+  const c = config as Record<string, unknown>
   return (
-    config &&
-    typeof config === "object" &&
-    typeof config.purchaseDisabled === "boolean" &&
-    typeof config.anthropicBaseUrl === "string" &&
-    typeof config.purchaseUrl === "string" &&
-    typeof config.supportEmail === "string"
+    typeof c.purchaseDisabled === "boolean" &&
+    typeof c.anthropicBaseUrl === "string" &&
+    typeof c.purchaseUrl === "string" &&
+    typeof c.supportEmail === "string"
   )
 }
 

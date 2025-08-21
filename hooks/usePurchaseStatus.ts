@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react"
 
-import {
-  getCurrentPurchaseConfig,
-  type PackyConfig
-} from "../utils/purchaseStatus"
-
-interface PurchaseStatusData {
-  config: null | PackyConfig
-  error: null | string
-  loading: boolean
-}
+import { type PurchaseStatusData } from "../types"
+import { getCurrentPurchaseConfig } from "../utils/purchaseStatus"
 
 export function usePurchaseStatus() {
   const [data, setData] = useState<PurchaseStatusData>({
@@ -55,7 +47,9 @@ export function usePurchaseStatus() {
     // 初始加载
     fetchPurchaseStatus(true)
 
-    const handleStorageChange = (changes: any) => {
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>
+    ) => {
       if (changes.purchase_config) {
         fetchPurchaseStatus(false)
       }

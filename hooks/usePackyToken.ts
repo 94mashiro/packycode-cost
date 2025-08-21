@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react"
 
-export interface TokenData {
-  expiry: null | number
-  isValid: boolean
-  token: null | string
-  tokenType: "api_key" | "jwt" | null
-}
+import { type TokenData, TokenType } from "../types"
 
 export function usePackyToken(): TokenData {
   const [tokenData, setTokenData] = useState<TokenData>({
@@ -23,8 +18,8 @@ export function usePackyToken(): TokenData {
         // 如果JWT没有expiry信息，默认认为有效
         const isValid =
           token &&
-          (tokenType === "api_key" ||
-            (tokenType === "jwt" && (!expiry || Date.now() < expiry)))
+          (tokenType === TokenType.API_KEY ||
+            (tokenType === TokenType.JWT && (!expiry || Date.now() < expiry)))
 
         setTokenData({
           expiry,

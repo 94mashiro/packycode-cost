@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import type { ApiKeyResponse } from "./types"
+
 import { API_URLS } from "./api"
 import { parseJWT } from "./utils/jwt"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
@@ -194,7 +196,7 @@ chrome.webRequest.onCompleted.addListener(
         })
 
         if (response.ok) {
-          const data = await response.json()
+          const data = (await response.json()) as ApiKeyResponse
           if (data.api_key) {
             // 存储API Key，覆盖现有token
             await storage.set("token", data.api_key)

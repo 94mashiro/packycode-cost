@@ -1,15 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 
+import type { NotificationStates } from "../types"
+
 const storage = new Storage()
 
-/**
- * 通知状态管理 - 替代垃圾的 last_* 字段
- * 存储各个功能的上次状态，用于检测状态变化
- */
-export interface NotificationStates {
-  opus_enabled?: boolean // Opus 模型上次的启用状态
-  purchase_disabled?: boolean // 购买功能上次的禁用状态
-}
+export { type NotificationStates }
 
 /**
  * 检查 Opus 状态是否需要通知

@@ -10,11 +10,12 @@ import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
 import { usePackyToken } from "./hooks/usePackyToken"
 import { useUserInfo } from "./hooks/useUserInfo"
+import { TokenType, ViewType } from "./types"
 import { getTokenExpiration } from "./utils/jwt"
 import { checkPurchaseStatus } from "./utils/purchaseStatusChecker"
 
 function IndexPopup() {
-  const [currentView, setCurrentView] = useState<"main" | "settings">("main")
+  const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
   const tokenData = usePackyToken()
   const { error, loading, refresh, userInfo } = useUserInfo(tokenData.token)
   const tokenExpiration = getTokenExpiration(tokenData.token)
@@ -33,11 +34,11 @@ function IndexPopup() {
   }, [])
 
   // 设置页面
-  if (currentView === "settings") {
+  if (currentView === ViewType.SETTINGS) {
     return (
       <div className="h-[600px] w-[400px] m-0 p-0 overflow-hidden bg-white dark:bg-gray-900">
         <div className="h-full w-full overflow-y-auto">
-          <SettingsPage onBack={() => setCurrentView("main")} />
+          <SettingsPage onBack={() => setCurrentView(ViewType.MAIN)} />
         </div>
       </div>
     )
@@ -54,7 +55,7 @@ function IndexPopup() {
               <div className="flex items-center space-x-2">
                 <button
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-                  onClick={() => setCurrentView("settings")}
+                  onClick={() => setCurrentView(ViewType.SETTINGS)}
                   title="设置">
                   <svg
                     className="w-4 h-4 text-gray-600 dark:text-gray-300"
@@ -94,7 +95,7 @@ function IndexPopup() {
           />
 
           {tokenData.isValid &&
-            (tokenData.tokenType === "api_key" ||
+            (tokenData.tokenType === TokenType.API_KEY ||
               !tokenExpiration.isExpired) && (
               <div className="space-y-4">
                 {error && (

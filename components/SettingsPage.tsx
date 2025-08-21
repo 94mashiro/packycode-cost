@@ -1,6 +1,7 @@
+import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
-import { Storage } from "@plasmohq/storage"
+import { AccountVersion } from "../types"
 
 const storage = new Storage()
 
@@ -8,10 +9,10 @@ interface SettingsPageProps {
   onBack: () => void
 }
 
-type AccountVersion = "shared" | "private"
-
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const [accountVersion, setAccountVersion] = useState<AccountVersion>("shared")
+  const [accountVersion, setAccountVersion] = useState<AccountVersion>(
+    AccountVersion.SHARED
+  )
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -23,10 +24,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     })
   }, [])
 
-  const handleVersionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleVersionChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     const newVersion = e.target.value as AccountVersion
     setSaving(true)
-    
+
     try {
       await storage.set("account_version", newVersion)
       setAccountVersion(newVersion)
@@ -53,10 +56,10 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             stroke="currentColor"
             viewBox="0 0 24 24">
             <path
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
             />
           </svg>
         </button>
@@ -65,23 +68,23 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       {/* 设置内容 */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <label 
-            htmlFor="account-version" 
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor="account-version">
             账号版本
           </label>
           <select
-            id="account-version"
-            value={accountVersion}
-            onChange={handleVersionChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
             disabled={saving}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200">
-            <option value="shared">🚌 公交车</option>
-            <option value="private">🚗 私家车</option>
+            id="account-version"
+            onChange={handleVersionChange}
+            value={accountVersion}>
+            <option value={AccountVersion.SHARED}>🚌 公交车</option>
+            <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
           </select>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {accountVersion === "shared" 
-              ? "公交车版本：共享资源，价格实惠" 
+            {accountVersion === AccountVersion.SHARED
+              ? "公交车版本：共享资源，价格实惠"
               : "私家车版本：独享资源，性能更优"}
           </p>
         </div>

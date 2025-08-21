@@ -1,24 +1,16 @@
 import { API_URLS } from "../api"
+import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface AuthenticationPromptProps {
   tokenData: TokenData
   tokenExpiration: TokenExpiration
 }
 
-interface TokenData {
-  isValid: boolean
-  tokenType?: "api_key" | "jwt" | null
-}
-
-interface TokenExpiration {
-  isExpired: boolean
-}
-
 export function AuthenticationPrompt({
   tokenData,
   tokenExpiration
 }: AuthenticationPromptProps) {
-  const isApiKey = tokenData.tokenType === "api_key"
+  const isApiKey = tokenData.tokenType === TokenType.API_KEY
 
   // API Key不需要检查过期，只要isValid就显示正常
   if (tokenData.isValid && (isApiKey || !tokenExpiration.isExpired)) {

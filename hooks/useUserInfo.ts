@@ -1,16 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 import { useCallback, useEffect, useState } from "react"
 
+import { type UserInfoData } from "../types"
 import { fetchUserInfo, type UserInfo } from "../utils/userInfo"
 
 const storage = new Storage()
-
-export interface UserInfoData {
-  error: null | string
-  loading: boolean
-  refresh: () => void
-  userInfo: null | UserInfo
-}
 
 export function useUserInfo(token: null | string): UserInfoData {
   const [data, setData] = useState<{

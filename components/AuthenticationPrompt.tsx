@@ -1,3 +1,5 @@
+import { API_URLS } from "../api"
+
 interface AuthenticationPromptProps {
   tokenData: TokenData
   tokenExpiration: TokenExpiration
@@ -35,7 +37,7 @@ export function AuthenticationPrompt({
           className="w-full rounded-md bg-yellow-600 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors dark:bg-yellow-700 dark:hover:bg-yellow-600"
           onClick={() =>
             chrome.tabs.create({
-              url: "https://www.packycode.com/dashboard"
+              url: API_URLS.PACKY_DASHBOARD
             })
           }>
           {!tokenData.isValid ? "前往登录" : "重新登录"}

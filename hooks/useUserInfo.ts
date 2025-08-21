@@ -27,7 +27,7 @@ export function useUserInfo(token: null | string): UserInfoData {
     const loadCachedData = async () => {
       try {
         const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
-        
+
         // Just load whatever we have cached, period.
         // The alarm keeps it fresh every 30 seconds.
         if (cachedUserInfo) {
@@ -58,10 +58,10 @@ export function useUserInfo(token: null | string): UserInfoData {
       } else {
         // If fetchUserInfo returns null, token might be invalid
         // Let the user see the error state instead of force reloading
-        setData({ 
-          error: "无法获取用户信息", 
-          loading: false, 
-          userInfo: null 
+        setData({
+          error: "无法获取用户信息",
+          loading: false,
+          userInfo: null
         })
       }
     } catch (error) {

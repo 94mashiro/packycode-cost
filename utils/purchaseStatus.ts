@@ -1,6 +1,11 @@
 import { Storage } from "@plasmohq/storage"
 
-import { get } from "./request"
+import { packyApi } from "../api"
+import {
+  checkPurchaseNotification,
+  getPurchaseState,
+  setPurchaseState
+} from "./notificationStates"
 
 const storage = new Storage()
 
@@ -40,9 +45,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
   try {
     // 1. 获取最新的API数据
     console.log("[API] Fetching latest purchase status")
-    const result = await get<PackyConfig>(
-      "https://www.packycode.com/api/config"
-    )
+    const result = await packyApi.getConfig()
 
     if (!result.success || !result.data) {
       console.log("[API] Failed to fetch current config:", result.error)
@@ -57,30 +60,28 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
       return { success: false, triggered: false }
     }
 
-    // 2. 获取上次存储的购买禁用状态
-    const lastPurchaseDisabled = await storage.get<boolean>(
-      "last_purchase_disabled"
+    // 2. 检查购买状态变化并决定是否通知
+    // 职责分离：先获取，再判断，最后更新
+    const previousPurchaseState = await getPurchaseState()
+    const shouldNotify = checkPurchaseNotification(
+      previousPurchaseState,
+      currentConfig.purchaseDisabled
     )
-    const currentPurchaseDisabled = currentConfig.purchaseDisabled
 
     console.log(
-      `[STATUS] Previous: ${lastPurchaseDisabled}, Current: ${currentPurchaseDisabled}`
+      `[STATUS] Previous: ${previousPurchaseState}, Current: ${currentConfig.purchaseDisabled}, Should notify: ${shouldNotify}`
     )
 
-    // 3. 检查是否需要触发通知（从禁用变为可用）
+    // 3. 触发通知（只在从禁用变为可用时）
     let notificationTriggered = false
-    if (lastPurchaseDisabled === true && currentPurchaseDisabled === false) {
+    if (shouldNotify) {
       console.log("[NOTIFICATION] Purchase status changed: disabled → enabled")
       await triggerPurchaseAvailableNotification()
       notificationTriggered = true
-    } else if (lastPurchaseDisabled !== undefined) {
-      console.log("[STATUS] No notification needed")
-    } else {
-      console.log("[STATUS] First check, no notification")
     }
 
-    // 4. 更新存储状态
-    await storage.set("last_purchase_disabled", currentPurchaseDisabled)
+    // 4. 更新存储状态 - 单一职责
+    await setPurchaseState(currentConfig.purchaseDisabled)
     await storage.set("packy_config", currentConfig)
 
     console.log("[STORAGE] Purchase status updated in storage")

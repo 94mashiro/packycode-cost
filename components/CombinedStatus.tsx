@@ -1,3 +1,4 @@
+import { API_URLS } from "../api"
 import { useOpusStatus } from "../hooks/useOpusStatus"
 import { usePurchaseStatus } from "../hooks/usePurchaseStatus"
 
@@ -61,7 +62,7 @@ export function CombinedStatus({
                   className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
                   onClick={() =>
                     chrome.tabs.create({
-                      url: "https://www.packycode.com/dashboard"
+                      url: API_URLS.PACKY_DASHBOARD
                     })
                   }>
                   点击登录
@@ -99,7 +100,7 @@ export function CombinedStatus({
                   className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
                   onClick={() =>
                     chrome.tabs.create({
-                      url: "https://www.packycode.com/pricing"
+                      url: API_URLS.PACKY_PRICING
                     })
                   }>
                   立即购买

@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { API_URLS } from "./api"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
 import { fetchUserInfo, type UserInfo } from "./utils/userInfo"
 
@@ -199,7 +200,7 @@ chrome.webRequest.onCompleted.addListener(
 chrome.notifications.onClicked.addListener((notificationId) => {
   if (notificationId.startsWith("purchase-available-")) {
     // 打开购买页面
-    chrome.tabs.create({ url: "https://www.packycode.com/pricing" })
+    chrome.tabs.create({ url: API_URLS.PACKY_PRICING })
     // 清除通知
     chrome.notifications.clear(notificationId)
   }

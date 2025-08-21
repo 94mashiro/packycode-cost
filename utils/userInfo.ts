@@ -1,7 +1,12 @@
 import { Storage } from "@plasmohq/storage"
 
+import { userApi } from "../api"
 import { clearPluginTokenOnly } from "./auth"
-import { get } from "./request"
+import {
+  checkOpusNotification,
+  getOpusState,
+  setOpusState
+} from "./notificationStates"
 
 const storage = new Storage()
 
@@ -24,14 +29,9 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       return null
     }
 
-    const result = await get<any>(
-      "https://www.packycode.com/api/backend/users/info",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      }
+    const result = await userApi.getUserInfo(
+      token,
+      tokenType as "api_key" | "jwt"
     )
 
     if (!result.success) {
@@ -57,21 +57,22 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     }
 
     // 检查 opus_enabled 状态变化
-    const lastOpusEnabled = await storage.get<boolean>("last_opus_enabled")
-    const currentOpusEnabled = userInfo.opus_enabled
+    // 职责分离：先获取，再判断，最后更新
+    const previousOpusState = await getOpusState()
+    const shouldNotify = checkOpusNotification(
+      previousOpusState,
+      userInfo.opus_enabled
+    )
 
-    if (
-      lastOpusEnabled !== undefined &&
-      lastOpusEnabled !== currentOpusEnabled
-    ) {
+    if (shouldNotify) {
       console.log(
-        `[OPUS STATUS] Changed: ${lastOpusEnabled} → ${currentOpusEnabled}`
+        `[OPUS STATUS] Changed: ${previousOpusState} → ${userInfo.opus_enabled}`
       )
-      await triggerOpusStatusNotification(currentOpusEnabled)
+      await triggerOpusStatusNotification(userInfo.opus_enabled)
     }
 
-    // 更新存储状态
-    await storage.set("last_opus_enabled", currentOpusEnabled)
+    // 更新状态 - 单一职责
+    await setOpusState(userInfo.opus_enabled)
     await storage.set("cached_user_info", userInfo)
 
     return userInfo

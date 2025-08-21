@@ -12,6 +12,8 @@ import { get } from "../utils/request"
  */
 const API_ENDPOINTS = {
   PACKY: {
+    // WebRequest 监听模式
+    API_KEYS_PATTERN: "/api/backend/users/*/api-keys/*",
     BASE: "https://www.packycode.com",
     CONFIG: "/api/config",
     USER_INFO: "/api/backend/users/info"
@@ -67,8 +69,12 @@ export const userApi = {
  * 导出 API 端点常量（用于需要直接访问的场景）
  */
 export const API_URLS = {
+  API_KEYS_PATTERN: `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.API_KEYS_PATTERN}`,
+
   // 其他服务 - 这些暂时硬编码，因为不属于主 API
   NETWORK_TEST: "https://packy.te.sb/",
+  // 基础 URL
+  PACKY_BASE: API_ENDPOINTS.PACKY.BASE,
   // API 端点
   PACKY_CONFIG: `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.CONFIG}`,
 

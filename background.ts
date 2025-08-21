@@ -59,7 +59,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
       if (!existingToken || tokenType !== "api_key") {
         const tokenCookie = await chrome.cookies.get({
           name: "token",
-          url: "https://www.packycode.com"
+          url: API_URLS.PACKY_BASE
         })
 
         if (tokenCookie && tokenCookie.value) {
@@ -192,7 +192,7 @@ chrome.webRequest.onCompleted.addListener(
     }
   },
   {
-    urls: ["https://www.packycode.com/api/backend/users/*/api-keys/*"]
+    urls: [API_URLS.API_KEYS_PATTERN]
   }
 )
 

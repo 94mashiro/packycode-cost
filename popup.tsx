@@ -1,11 +1,12 @@
 import "./reset.css"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 import { ActionButtons } from "./components/ActionButtons"
 import { CombinedBudget } from "./components/CombinedBudget"
 import { CombinedStatus } from "./components/CombinedStatus"
 import { RefreshButton } from "./components/RefreshButton"
+import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
 import { usePackyToken } from "./hooks/usePackyToken"
 import { useUserInfo } from "./hooks/useUserInfo"
@@ -13,6 +14,7 @@ import { getTokenExpiration } from "./utils/jwt"
 import { checkPurchaseStatus } from "./utils/purchaseStatusChecker"
 
 function IndexPopup() {
+  const [currentView, setCurrentView] = useState<"main" | "settings">("main")
   const tokenData = usePackyToken()
   const { error, loading, refresh, userInfo } = useUserInfo(tokenData.token)
   const tokenExpiration = getTokenExpiration(tokenData.token)
@@ -30,6 +32,18 @@ function IndexPopup() {
     checkPurchaseStatus()
   }, [])
 
+  // 设置页面
+  if (currentView === "settings") {
+    return (
+      <div className="h-[600px] w-[400px] m-0 p-0 overflow-hidden bg-white dark:bg-gray-900">
+        <div className="h-full w-full overflow-y-auto">
+          <SettingsPage onBack={() => setCurrentView("main")} />
+        </div>
+      </div>
+    )
+  }
+
+  // 主页面
   return (
     <div className="h-[600px] w-[400px] m-0 p-0 overflow-hidden bg-white dark:bg-gray-900">
       <div className="h-full w-full overflow-y-auto">
@@ -40,10 +54,7 @@ function IndexPopup() {
               <div className="flex items-center space-x-2">
                 <button
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
-                  onClick={() => {
-                    // Open Chrome extension options page
-                    chrome.runtime.openOptionsPage()
-                  }}
+                  onClick={() => setCurrentView("settings")}
                   title="设置">
                   <svg
                     className="w-4 h-4 text-gray-600 dark:text-gray-300"

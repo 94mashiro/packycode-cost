@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react"
 
 export interface TokenData {
+  expiry: null | number
   isValid: boolean
-  timestamp: null | number
   token: null | string
   tokenType: "api_key" | "jwt" | null
 }
 
 export function usePackyToken(): TokenData {
   const [tokenData, setTokenData] = useState<TokenData>({
+    expiry: null,
     isValid: false,
-    timestamp: null,
     token: null,
     tokenType: null
   })
@@ -18,16 +18,14 @@ export function usePackyToken(): TokenData {
   useEffect(() => {
     chrome.runtime.sendMessage({ action: "getStoredToken" }, (response) => {
       if (response) {
-        const { timestamp, token, tokenType } = response
-        // API Key不检查时间有效性，JWT检查24小时有效期
+        const { expiry, token, tokenType } = response
+        // API Key不检查过期时间，JWT检查是否过期
         const isValid =
-          token &&
-          (tokenType === "api_key" ||
-            (timestamp && Date.now() - timestamp < 24 * 60 * 60 * 1000))
+          token && (tokenType === "api_key" || (expiry && Date.now() < expiry))
 
         setTokenData({
+          expiry,
           isValid: !!isValid,
-          timestamp,
           token,
           tokenType: tokenType || null
         })

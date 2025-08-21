@@ -26,7 +26,7 @@ export function useUserInfo(token: null | string): UserInfoData {
   useEffect(() => {
     const loadCachedData = async () => {
       try {
-        const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
+        const cachedUserInfo = await storage.get<UserInfo>("user_info")
 
         // Just load whatever we have cached, period.
         // The alarm keeps it fresh every 30 seconds.

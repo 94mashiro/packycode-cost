@@ -25,7 +25,7 @@ export function useOpusStatus() {
       }
 
       // 从缓存的用户信息中获取 opus_enabled 状态
-      const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
+      const cachedUserInfo = await storage.get<UserInfo>("user_info")
 
       if (cachedUserInfo && typeof cachedUserInfo.opus_enabled === "boolean") {
         setData((prev) => ({
@@ -66,7 +66,7 @@ export function useOpusStatus() {
     fetchOpusStatus(true)
 
     const handleStorageChange = (changes: any) => {
-      if (changes.cached_user_info) {
+      if (changes.user_info) {
         fetchOpusStatus(false)
       }
     }

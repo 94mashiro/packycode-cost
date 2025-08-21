@@ -20,12 +20,18 @@ export interface UserInfo {
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
   try {
-    const token = await storage.get("packy_token")
-    const tokenType = await storage.get("packy_token_type")
-    const tokenTimestamp = await storage.get("packy_token_timestamp")
+    const token = await storage.get<string>("token")
+    const tokenType = await storage.get<string>("token_type")
+    const tokenExpiry = await storage.get<number>("token_expiry")
 
-    // API Key不需要检查timestamp
-    if (!token || (tokenType !== "api_key" && !tokenTimestamp)) {
+    // API Key不需要检查过期时间
+    if (!token) {
+      return null
+    }
+
+    // JWT需要检查过期时间
+    if (tokenType === "jwt" && tokenExpiry && tokenExpiry < Date.now()) {
+      await clearPluginTokenOnly()
       return null
     }
 
@@ -73,7 +79,7 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
 
     // 更新状态 - 单一职责
     await setOpusState(userInfo.opus_enabled)
-    await storage.set("cached_user_info", userInfo)
+    await storage.set("user_info", userInfo)
 
     return userInfo
   } catch (error) {

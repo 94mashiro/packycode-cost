@@ -82,7 +82,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 
     // 4. 更新存储状态 - 单一职责
     await setPurchaseState(currentConfig.purchaseDisabled)
-    await storage.set("packy_config", currentConfig)
+    await storage.set("purchase_config", currentConfig)
 
     console.log("[STORAGE] Purchase status updated in storage")
 
@@ -106,7 +106,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
-    return await storage.get<PackyConfig>("packy_config")
+    return await storage.get<PackyConfig>("purchase_config")
   } catch (error) {
     console.error("Failed to get current purchase config:", error)
     return null

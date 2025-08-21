@@ -1,12 +1,9 @@
-import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
 import {
   getCurrentPurchaseConfig,
   type PackyConfig
 } from "../utils/purchaseStatus"
-
-const storage = new Storage()
 
 interface PurchaseStatusData {
   config: null | PackyConfig
@@ -59,7 +56,7 @@ export function usePurchaseStatus() {
     fetchPurchaseStatus(true)
 
     const handleStorageChange = (changes: any) => {
-      if (changes.packy_config) {
+      if (changes.purchase_config) {
         fetchPurchaseStatus(false)
       }
     }

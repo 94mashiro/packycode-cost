@@ -1,6 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { API_URLS } from "./api"
+import { parseJWT } from "./utils/jwt"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
 import { fetchUserInfo, type UserInfo } from "./utils/userInfo"
 
@@ -30,7 +31,7 @@ async function backgroundFetchUserInfo() {
 
 async function updateBadge() {
   try {
-    const cachedUserInfo = await storage.get<UserInfo>("cached_user_info")
+    const cachedUserInfo = await storage.get<UserInfo>("user_info")
 
     if (cachedUserInfo && cachedUserInfo.daily_budget_usd > 0) {
       const percentage = Math.round(
@@ -52,8 +53,8 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
     try {
       // 先检查是否已有token
-      const existingToken = await storage.get("packy_token")
-      const tokenType = await storage.get("packy_token_type")
+      const existingToken = await storage.get("token")
+      const tokenType = await storage.get("token_type")
 
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
       if (!existingToken || tokenType !== "api_key") {
@@ -63,9 +64,13 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
         })
 
         if (tokenCookie && tokenCookie.value) {
-          await storage.set("packy_token", tokenCookie.value)
-          await storage.set("packy_token_type", "jwt")
-          await storage.set("packy_token_timestamp", Date.now())
+          await storage.set("token", tokenCookie.value)
+          await storage.set("token_type", "jwt")
+          // 解析JWT获取过期时间
+          const payload = parseJWT(tokenCookie.value)
+          if (payload?.exp) {
+            await storage.set("token_expiry", payload.exp * 1000) // 转换为毫秒
+          }
         }
       }
     } catch {}
@@ -75,11 +80,11 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
     Promise.all([
-      storage.get("packy_token"),
-      storage.get("packy_token_timestamp"),
-      storage.get("packy_token_type")
-    ]).then(([token, timestamp, tokenType]) => {
-      sendResponse({ timestamp, token, tokenType })
+      storage.get("token"),
+      storage.get("token_expiry"),
+      storage.get("token_type")
+    ]).then(([token, expiry, tokenType]) => {
+      sendResponse({ expiry, token, tokenType })
     })
     return true
   }
@@ -98,7 +103,7 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 })
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.cached_user_info) {
+  if (changes.user_info) {
     updateBadge()
   }
 })
@@ -161,7 +166,7 @@ chrome.webRequest.onCompleted.addListener(
     if (details.statusCode === 200 && details.method === "GET") {
       try {
         // 获取当前token用于重放请求
-        const currentToken = await storage.get("packy_token")
+        const currentToken = await storage.get("token")
         if (!currentToken) return
 
         // 重放请求获取响应内容
@@ -177,9 +182,10 @@ chrome.webRequest.onCompleted.addListener(
           const data = await response.json()
           if (data.api_key) {
             // 存储API Key，覆盖现有token
-            await storage.set("packy_token", data.api_key)
-            await storage.set("packy_token_type", "api_key")
-            await storage.set("packy_token_timestamp", Date.now())
+            await storage.set("token", data.api_key)
+            await storage.set("token_type", "api_key")
+            // API Key 不需要过期时间
+            await storage.remove("token_expiry")
 
             console.log("API key stored successfully")
             // 触发重新获取用户信息以更新额度显示

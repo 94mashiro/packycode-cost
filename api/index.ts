@@ -9,7 +9,10 @@ import {
   TokenType,
   type UserApiResponse
 } from "../types"
+import { loggers } from "../utils/logger"
 import { get } from "../utils/request"
+
+const logger = loggers.api
 
 /**
  * API 基础配置
@@ -95,7 +98,7 @@ export { type ApiResponse }
  * 统一的错误处理
  */
 export function handleApiError(error: unknown, context: string): string {
-  console.error(`[API Error - ${context}]:`, error)
+  logger.error(`Error - ${context}:`, error)
 
   if (error instanceof Error) {
     return error.message

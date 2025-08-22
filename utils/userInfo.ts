@@ -8,18 +8,20 @@ import {
   type UserInfoStorage
 } from "../types"
 import { clearPluginTokenOnly } from "./auth"
+import { loggers } from "./logger"
 import { STORAGE_KEYS } from "./storage-keys"
 
 const storage = new Storage()
+const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
   try {
     const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
-    console.log("[fetchUserInfo] Auth data:", authData)
+    logger.debug("Auth data:", authData)
 
     // API Key不需要检查过期时间
     if (!authData?.token) {
-      console.log("[fetchUserInfo] No token found")
+      logger.debug("No token found")
       return null
     }
 
@@ -78,8 +80,8 @@ export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
     )
 
     if (shouldNotify) {
-      console.log(
-        `[OPUS STATUS] Changed: ${previousOpusState} → ${currentOpusState}`
+      logger.info(
+        `Opus status changed: ${previousOpusState} → ${currentOpusState}`
       )
       await triggerOpusStatusNotification(currentOpusState)
     }
@@ -130,22 +132,19 @@ async function triggerOpusStatusNotification(enabled: boolean): Promise<void> {
       },
       (createdNotificationId) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            "[NOTIFICATION] Opus status creation failed:",
+          logger.error(
+            "Opus status notification creation failed:",
             chrome.runtime.lastError
           )
         } else {
-          console.log(
-            "[NOTIFICATION] Opus status created successfully:",
+          logger.debug(
+            "Opus status notification created successfully:",
             createdNotificationId
           )
         }
       }
     )
   } catch (error) {
-    console.error(
-      "[NOTIFICATION] Error creating opus status notification:",
-      error
-    )
+    logger.error("Error creating opus status notification:", error)
   }
 }

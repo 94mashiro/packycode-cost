@@ -3,9 +3,11 @@ import { Storage } from "@plasmohq/storage"
 import type { PackyConfig, SystemPreferenceStorage } from "../types"
 
 import { packyApi } from "../api"
+import { loggers } from "./logger"
 import { STORAGE_KEYS } from "./storage-keys"
 
 const storage = new Storage()
+const logger = loggers.purchase
 
 // 全局锁，防止并发调用
 let isCheckingPurchaseStatus = false
@@ -27,21 +29,21 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 }> {
   // 检查锁，防止并发调用
   if (isCheckingPurchaseStatus) {
-    console.log("[LOCK] Purchase status check already in progress, skipping")
+    logger.debug("[LOCK] Purchase status check already in progress, skipping")
     return { success: false, triggered: false }
   }
 
   // 获取锁
   isCheckingPurchaseStatus = true
-  console.log("[LOCK] Acquired purchase status check lock")
+  logger.debug("[LOCK] Acquired purchase status check lock")
 
   try {
     // 1. 获取最新的API数据
-    console.log("[API] Fetching latest purchase status")
+    logger.debug("[API] Fetching latest purchase status")
     const result = await packyApi.getConfig()
 
     if (!result.success || !result.data) {
-      console.log("[API] Failed to fetch current config:", result.error)
+      logger.debug("[API] Failed to fetch current config:", result.error)
       return { success: false, triggered: false }
     }
 
@@ -49,7 +51,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 
     // 验证响应数据结构
     if (!isValidPackyConfig(currentConfig)) {
-      console.log("[API] Invalid response structure")
+      logger.debug("[API] Invalid response structure")
       return { success: false, triggered: false }
     }
 
@@ -63,14 +65,14 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
       currentConfig.purchaseDisabled
     )
 
-    console.log(
+    logger.debug(
       `[STATUS] Previous: ${previousPurchaseState}, Current: ${currentConfig.purchaseDisabled}, Should notify: ${shouldNotify}`
     )
 
     // 3. 触发通知（只在从禁用变为可用时）
     let notificationTriggered = false
     if (shouldNotify) {
-      console.log("[NOTIFICATION] Purchase status changed: disabled → enabled")
+      logger.debug("[NOTIFICATION] Purchase status changed: disabled → enabled")
       await triggerPurchaseAvailableNotification()
       notificationTriggered = true
     }
@@ -82,7 +84,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     })
     await storage.set(STORAGE_KEYS.PURCHASE_CONFIG, currentConfig)
 
-    console.log("[STORAGE] Purchase status updated in storage")
+    logger.debug("[STORAGE] Purchase status updated in storage")
 
     return {
       config: currentConfig,
@@ -90,12 +92,12 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
       triggered: notificationTriggered
     }
   } catch (error) {
-    console.error("[ERROR] Purchase status check failed:", error)
+    logger.error("[ERROR] Purchase status check failed:", error)
     return { success: false, triggered: false }
   } finally {
     // 5. 释放锁
     isCheckingPurchaseStatus = false
-    console.log("[LOCK] Released purchase status check lock")
+    logger.debug("[LOCK] Released purchase status check lock")
   }
 }
 
@@ -106,7 +108,7 @@ export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
     return await storage.get<PackyConfig>(STORAGE_KEYS.PURCHASE_CONFIG)
   } catch (error) {
-    console.error("Failed to get current purchase config:", error)
+    logger.error("Failed to get current purchase config:", error)
     return null
   }
 }
@@ -157,19 +159,16 @@ async function triggerPurchaseAvailableNotification(): Promise<void> {
       },
       (createdNotificationId) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            "[NOTIFICATION] Creation failed:",
+          logger.error(
+            "Purchase notification creation failed:",
             chrome.runtime.lastError
           )
         } else {
-          console.log(
-            "[NOTIFICATION] Created successfully:",
-            createdNotificationId
-          )
+          logger.debug("Purchase notification created:", createdNotificationId)
         }
       }
     )
   } catch (error) {
-    console.error("[NOTIFICATION] Error creating notification:", error)
+    logger.error("Error creating purchase notification:", error)
   }
 }

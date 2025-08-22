@@ -4,6 +4,9 @@
  */
 
 import { type ApiResponse, HttpMethod } from "../types"
+import { loggers } from "./logger"
+
+const logger = loggers.api
 
 interface RequestOptions {
   baseDelay?: number
@@ -58,9 +61,7 @@ export async function request<T>(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(
-        `[REQUEST] ${method} ${url} (attempt ${attempt}/${maxRetries})`
-      )
+      logger.debug(`${method} ${url} (attempt ${attempt}/${maxRetries})`)
 
       const response = await fetch(url, {
         body,
@@ -74,7 +75,7 @@ export async function request<T>(
       }
 
       const data = await response.json()
-      console.log(`[REQUEST] ${method} ${url} succeeded`)
+      logger.debug(`${method} ${url} succeeded`)
 
       return {
         data,
@@ -83,14 +84,11 @@ export async function request<T>(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error"
-      console.error(
-        `[REQUEST] ${method} ${url} attempt ${attempt} failed:`,
-        errorMessage
-      )
+      logger.error(`${method} ${url} attempt ${attempt} failed:`, errorMessage)
 
       // 如果是最后一次尝试，返回失败
       if (attempt === maxRetries) {
-        console.error(`[REQUEST] ${method} ${url} all attempts failed`)
+        logger.error(`${method} ${url} all attempts failed`)
         return {
           error: errorMessage,
           success: false
@@ -99,7 +97,7 @@ export async function request<T>(
 
       // 指数退避：1s, 2s, 4s
       const delay = baseDelay * Math.pow(2, attempt - 1)
-      console.log(`[REQUEST] Retrying ${method} ${url} in ${delay}ms...`)
+      logger.debug(`Retrying ${method} ${url} in ${delay}ms...`)
 
       await new Promise((resolve) => setTimeout(resolve, delay))
     }

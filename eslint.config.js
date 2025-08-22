@@ -58,7 +58,7 @@ const config = tseslint.config([
       ],
 
       // 通用规则
-      "no-console": process.env.NODE_ENV === "production" ? "error" : "warn",
+      "no-console": ["warn", { allow: ["warn", "error"] }], // 允许 warn 和 error，其他需要使用 logger
       "no-debugger": process.env.NODE_ENV === "production" ? "error" : "warn",
       "no-duplicate-imports": "error",
       "no-empty": "off",
@@ -109,6 +109,13 @@ const config = tseslint.config([
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "no-var": "error",
       "prefer-const": "error"
+    }
+  },
+  {
+    // Logger 模块专用规则 - 允许使用 console
+    files: ["**/logger.ts", "**/logger.js"],
+    rules: {
+      "no-console": "off" // Logger 模块需要使用 console
     }
   },
   {

@@ -9,23 +9,25 @@ import type {
 
 import { API_URLS } from "./api"
 import { parseJWT } from "./utils/jwt"
+import { loggers } from "./utils/logger"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
 import { STORAGE_KEYS } from "./utils/storage-keys"
 import { fetchUserInfo } from "./utils/userInfo"
 
 const storage = new Storage()
+const logger = loggers.background
 
 async function backgroundCheckPurchaseStatus() {
   // 使用统一的购买状态检查方法，包含锁机制和通知逻辑
   const result = await checkAndNotifyPurchaseStatus()
 
   if (result.success) {
-    console.log("[BACKGROUND] Purchase status check completed successfully")
+    logger.info("Purchase status check completed successfully")
     if (result.triggered) {
-      console.log("[BACKGROUND] Purchase notification was triggered")
+      logger.info("Purchase notification was triggered")
     }
   } else {
-    console.log("[BACKGROUND] Purchase status check failed or was skipped")
+    logger.debug("Purchase status check failed or was skipped")
   }
 }
 
@@ -33,7 +35,7 @@ async function backgroundFetchUserInfo() {
   try {
     await fetchUserInfo()
   } catch (error) {
-    console.error("Background fetch failed:", error)
+    logger.error("Background fetch failed:", error)
   }
 }
 
@@ -59,12 +61,12 @@ async function updateBadge() {
 
 chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
-    console.log("[JWT] Tab updated, checking token:", tab.url)
+    logger.debug("Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
       const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
 
-      console.log("[JWT] Current state:", {
+      logger.debug("Current state:", {
         hasToken: !!authData?.token,
         shouldFetchCookie: !authData?.token || authData?.type !== "api_key",
         tokenType: authData?.type
@@ -77,7 +79,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
           url: API_URLS.PACKY_BASE
         })
 
-        console.log("[JWT] Cookie result:", {
+        logger.debug("Cookie result:", {
           found: !!tokenCookie?.value,
           valueLength: tokenCookie?.value?.length || 0
         })
@@ -91,11 +93,11 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
             ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
           await storage.set(STORAGE_KEYS.AUTH, authData)
-          console.log("[JWT] Token stored successfully")
+          logger.info("Token stored successfully")
         }
       }
     } catch (error) {
-      console.error("[JWT] Error getting cookie:", error)
+      logger.error("Error getting cookie:", error)
     }
   }
 })
@@ -103,7 +105,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
     storage.get<AuthStorage>(STORAGE_KEYS.AUTH).then((authData) => {
-      console.log("[AUTH] Retrieved auth data:", authData)
+      logger.debug("Retrieved auth data:", authData)
       sendResponse({
         expiry: authData?.expiry || null,
         token: authData?.token || null,
@@ -131,7 +133,7 @@ function startPeriodicRefresh() {
 }
 
 function startPurchaseStatusCheck() {
-  console.log("[ALARM] Starting purchase status check alarm")
+  logger.debug("Starting purchase status check alarm")
   chrome.alarms.create("checkPurchaseStatus", {
     delayInMinutes: 0.5, // 30秒后首次执行
     periodInMinutes: 0.5 // 每30秒重复执行
@@ -147,12 +149,7 @@ function stopPurchaseStatusCheck() {
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  console.log(
-    "[ALARM] Alarm triggered:",
-    alarm.name,
-    "at",
-    new Date().toISOString()
-  )
+  logger.debug("Alarm triggered:", alarm.name, "at", new Date().toISOString())
   if (alarm.name === "refreshUserInfo") {
     backgroundFetchUserInfo()
   } else if (alarm.name === "checkPurchaseStatus") {
@@ -204,13 +201,13 @@ chrome.webRequest.onCompleted.addListener(
             }
             await storage.set(STORAGE_KEYS.AUTH, newAuthData)
 
-            console.log("API key stored successfully")
+            logger.info("API key stored successfully")
             // 触发重新获取用户信息以更新额度显示
             backgroundFetchUserInfo()
           }
         }
       } catch (error) {
-        console.error("Failed to fetch API key:", error)
+        logger.error("Failed to fetch API key:", error)
       }
     }
   },

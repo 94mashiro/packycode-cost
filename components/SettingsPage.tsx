@@ -2,9 +2,11 @@ import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
 import { AccountVersion, type UserPreferenceStorage } from "../types"
+import { loggers } from "../utils/logger"
 import { STORAGE_KEYS } from "../utils/storage-keys"
 
 const storage = new Storage()
+const logger = loggers.ui
 
 interface SettingsPageProps {
   onBack: () => void
@@ -46,9 +48,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         account_version: newVersion
       })
       setAccountVersion(newVersion)
-      console.log(`[Settings] Account version changed to: ${newVersion}`)
+      logger.info(`Account version changed to: ${newVersion}`)
     } catch (error) {
-      console.error("[Settings] Failed to save version:", error)
+      logger.error("Failed to save version:", error)
     } finally {
       setSaving(false)
     }

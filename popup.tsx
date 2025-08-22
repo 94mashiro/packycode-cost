@@ -1,5 +1,6 @@
 import "./reset.css"
 
+import eruda from "eruda"
 import { useEffect, useState } from "react"
 
 import { getTokenExpiration } from "~/modules/auth"
@@ -17,6 +18,11 @@ import { TokenType, ViewType } from "./types"
 
 // 启用 Popup 日志接收
 enablePopupLogging()
+
+// 在开发环境中启用 Eruda 调试工具
+if (process.env.NODE_ENV === "development") {
+  eruda.init()
+}
 
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)

@@ -1,8 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 import { useCallback, useEffect, useState } from "react"
 
-import { type UserInfoData } from "../types"
-import { fetchUserInfo, type UserInfo } from "../utils/userInfo"
+import { type UserInfoData, type UserInfoStorage } from "../types"
+import { STORAGE_KEYS } from "../utils/storage-keys"
+import { fetchUserInfo } from "../utils/userInfo"
 
 const storage = new Storage()
 
@@ -10,7 +11,7 @@ export function useUserInfo(token: null | string): UserInfoData {
   const [data, setData] = useState<{
     error: null | string
     loading: boolean
-    userInfo: null | UserInfo
+    userInfo: null | UserInfoStorage
   }>({
     error: null,
     loading: false,
@@ -20,10 +21,10 @@ export function useUserInfo(token: null | string): UserInfoData {
   useEffect(() => {
     const loadCachedData = async () => {
       try {
-        const cachedUserInfo = await storage.get<UserInfo>("user_info")
+        const cachedUserInfo = await storage.get<UserInfoStorage>(
+          STORAGE_KEYS.USER_INFO
+        )
 
-        // Just load whatever we have cached, period.
-        // The alarm keeps it fresh every 30 seconds.
         if (cachedUserInfo) {
           setData((prev) => ({
             ...prev,

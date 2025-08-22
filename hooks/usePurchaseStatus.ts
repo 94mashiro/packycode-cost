@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 import { type PurchaseStatusData } from "../types"
 import { getCurrentPurchaseConfig } from "../utils/purchaseStatus"
+import { STORAGE_KEYS } from "../utils/storage-keys"
 
 export function usePurchaseStatus() {
   const [data, setData] = useState<PurchaseStatusData>({
@@ -50,7 +51,7 @@ export function usePurchaseStatus() {
     const handleStorageChange = (
       changes: Record<string, chrome.storage.StorageChange>
     ) => {
-      if (changes.purchase_config) {
+      if (changes[STORAGE_KEYS.PURCHASE_CONFIG]) {
         fetchPurchaseStatus(false)
       }
     }

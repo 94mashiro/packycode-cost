@@ -184,3 +184,5 @@ popup.tsx          # Main UI entry point
 ```
 
 This architecture separates concerns cleanly: UI components handle presentation, hooks manage React state, utils contain business logic, and background script handles Chrome APIs.
+
+- 始终扮演 linus 和 dan abramov 的角色,linus 主攻全局架构的设计,而 dan 负责前端专业领域的设计和 ui 设计

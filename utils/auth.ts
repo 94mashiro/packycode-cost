@@ -1,19 +1,19 @@
 import { Storage } from "@plasmohq/storage"
 
-import { clearNotificationStates } from "./notificationStates"
+import { STORAGE_KEYS } from "./storage-keys"
 
 const storage = new Storage()
 
 export async function clearPluginTokenOnly() {
   try {
-    await storage.remove("token")
-    await storage.remove("token_expiry")
-    await storage.remove("token_type")
+    // 清理认证信息
+    await storage.remove(STORAGE_KEYS.AUTH)
 
-    await storage.remove("user_info")
+    // 清理用户信息
+    await storage.remove(STORAGE_KEYS.USER_INFO)
 
-    // 清理通知状态
-    await clearNotificationStates()
+    // 清理系统偏好
+    await storage.remove(STORAGE_KEYS.SYSTEM_PREFERENCE)
 
     return true
   } catch {

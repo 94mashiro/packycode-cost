@@ -136,10 +136,10 @@ function IndexPopup() {
 
                 {userInfo && (
                   <CombinedBudget
-                    dailyBudget={userInfo.daily_budget_usd}
-                    dailySpent={userInfo.daily_spent_usd}
-                    monthlyBudget={userInfo.monthly_budget_usd}
-                    monthlySpent={userInfo.monthly_spent_usd}
+                    dailyBudget={userInfo.budgets.daily.limit}
+                    dailySpent={userInfo.budgets.daily.spent}
+                    monthlyBudget={userInfo.budgets.monthly.limit}
+                    monthlySpent={userInfo.budgets.monthly.spent}
                   />
                 )}
               </div>

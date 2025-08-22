@@ -1,13 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { PackyConfig } from "../types"
+import type { PackyConfig, SystemPreferenceStorage } from "../types"
 
 import { packyApi } from "../api"
-import {
-  checkPurchaseNotification,
-  getPurchaseState,
-  setPurchaseState
-} from "./notificationStates"
+import { STORAGE_KEYS } from "./storage-keys"
 
 const storage = new Storage()
 
@@ -58,8 +54,10 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     }
 
     // 2. 检查购买状态变化并决定是否通知
-    // 职责分离：先获取，再判断，最后更新
-    const previousPurchaseState = await getPurchaseState()
+    const systemPref = await storage.get<SystemPreferenceStorage>(
+      STORAGE_KEYS.SYSTEM_PREFERENCE
+    )
+    const previousPurchaseState = systemPref?.purchase_disabled
     const shouldNotify = checkPurchaseNotification(
       previousPurchaseState,
       currentConfig.purchaseDisabled
@@ -77,9 +75,12 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
       notificationTriggered = true
     }
 
-    // 4. 更新存储状态 - 单一职责
-    await setPurchaseState(currentConfig.purchaseDisabled)
-    await storage.set("purchase_config", currentConfig)
+    // 4. 更新存储状态
+    await storage.set(STORAGE_KEYS.SYSTEM_PREFERENCE, {
+      ...systemPref,
+      purchase_disabled: currentConfig.purchaseDisabled
+    })
+    await storage.set(STORAGE_KEYS.PURCHASE_CONFIG, currentConfig)
 
     console.log("[STORAGE] Purchase status updated in storage")
 
@@ -103,11 +104,22 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
-    return await storage.get<PackyConfig>("purchase_config")
+    return await storage.get<PackyConfig>(STORAGE_KEYS.PURCHASE_CONFIG)
   } catch (error) {
     console.error("Failed to get current purchase config:", error)
     return null
   }
+}
+
+/**
+ * 检查是否需要购买状态通知
+ */
+function checkPurchaseNotification(
+  previousState: boolean | undefined,
+  currentDisabled: boolean
+): boolean {
+  // 仅在状态从Disabled变为Enabled时通知
+  return previousState === true && currentDisabled === false
 }
 
 /**

@@ -49,6 +49,14 @@ export interface ApiResponse<T> {
   success: boolean
 }
 
+// ===== 新的存储结构定义 =====
+// 认证信息
+export interface AuthStorage {
+  expiry?: number
+  token: string
+  type: TokenType
+}
+
 // ===== JWT相关 =====
 export interface JWTPayload {
   [key: string]: unknown // 不是any，是unknown！
@@ -94,7 +102,11 @@ export interface StorageChanges {
   [key: string]: chrome.storage.StorageChange
 }
 
-// ===== 认证相关 =====
+// 系统偏好
+export interface SystemPreferenceStorage {
+  opus_enabled?: boolean
+  purchase_disabled?: boolean
+}
 
 export interface TokenData {
   expiry: null | number
@@ -102,11 +114,14 @@ export interface TokenData {
   token: null | string
   tokenType: null | TokenType
 }
+
 // Token过期时间信息
 export interface TokenExpiration {
   formatted: string
   isExpired: boolean
 }
+
+// ===== 认证相关 =====
 
 export interface UserApiResponse {
   daily_budget_usd: number | string
@@ -116,18 +131,28 @@ export interface UserApiResponse {
   opus_enabled: boolean
 }
 
-// ===== 用户相关 =====
-export interface UserInfo {
-  daily_budget_usd: number
-  daily_spent_usd: number
-  monthly_budget_usd: number
-  monthly_spent_usd: number
-  opus_enabled: boolean
-}
-
 export interface UserInfoData {
   error: null | string
   loading: boolean
   refresh: () => void
-  userInfo: null | UserInfo
+  userInfo: null | UserInfoStorage
+}
+
+// 用户信息
+export interface UserInfoStorage {
+  budgets: {
+    daily: {
+      limit: number
+      spent: number
+    }
+    monthly: {
+      limit: number
+      spent: number
+    }
+  }
+}
+
+// 用户偏好
+export interface UserPreferenceStorage {
+  account_version: AccountVersion
 }

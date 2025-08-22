@@ -2,25 +2,50 @@
 
 ## 存储字段规范
 
-### 认证相关
-- `token`: 当前认证令牌（JWT或API Key）
-- `token_type`: 令牌类型 ("jwt" | "api_key")  
-- `token_expiry`: JWT过期时间戳（毫秒），仅JWT使用
-
-### 用户数据
-- `user_info`: 用户预算和使用信息
+### 认证领域
+- `auth`: 认证信息对象
   ```typescript
   {
-    daily_budget_usd: number
-    daily_spent_usd: number  
-    monthly_budget_usd: number
-    monthly_spent_usd: number
-    opus_enabled: boolean
+    token: string         // JWT或API Key
+    type: "jwt" | "api_key"  // 令牌类型
+    expiry?: number       // JWT过期时间戳（毫秒），仅JWT使用
   }
   ```
 
-### 购买状态
-- `purchase_config`: PackyCode购买配置
+### 用户领域
+- `user.info`: 用户预算和使用信息
+  ```typescript
+  {
+    budgets: {
+      daily: {
+        limit: number     // 每日预算限额
+        spent: number     // 每日已消费
+      }
+      monthly: {
+        limit: number     // 每月预算限额  
+        spent: number     // 每月已消费
+      }
+    }
+  }
+  ```
+
+- `user.preference`: 用户偏好设置
+  ```typescript
+  {
+    account_version: "shared" | "private"  // 账号版本类型
+  }
+  ```
+
+### 系统领域
+- `system.preference`: 系统偏好设置
+  ```typescript
+  {
+    opus_enabled?: boolean       // Opus模型开启状态
+    purchase_disabled?: boolean  // 购买禁用状态
+  }
+  ```
+
+- `purchase_config`: PackyCode购买配置（保留原有结构）
   ```typescript
   {
     anthropicBaseUrl: string
@@ -29,20 +54,6 @@
     supportEmail: string
   }
   ```
-
-### 通知状态
-- `notification_states`: 上次通知时的状态值
-  ```typescript
-  {
-    opus_enabled?: boolean      // Opus上次状态
-    purchase_disabled?: boolean  // 购买上次状态
-  }
-  ```
-
-### 用户设置
-- `account_version`: 账号版本类型 ("shared" | "private")
-  - "shared": 公交车版本（共享资源）
-  - "private": 私家车版本（独享资源）
 
 ## 设计原则
 

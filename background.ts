@@ -1,11 +1,17 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { ApiKeyResponse } from "./types"
+import type {
+  ApiKeyResponse,
+  AuthStorage,
+  TokenType,
+  UserInfoStorage
+} from "./types"
 
 import { API_URLS } from "./api"
 import { parseJWT } from "./utils/jwt"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
-import { fetchUserInfo, type UserInfo } from "./utils/userInfo"
+import { STORAGE_KEYS } from "./utils/storage-keys"
+import { fetchUserInfo } from "./utils/userInfo"
 
 const storage = new Storage()
 
@@ -33,11 +39,11 @@ async function backgroundFetchUserInfo() {
 
 async function updateBadge() {
   try {
-    const cachedUserInfo = await storage.get<UserInfo>("user_info")
+    const userInfo = await storage.get<UserInfoStorage>(STORAGE_KEYS.USER_INFO)
 
-    if (cachedUserInfo && cachedUserInfo.daily_budget_usd > 0) {
+    if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(
-        (cachedUserInfo.daily_spent_usd / cachedUserInfo.daily_budget_usd) * 100
+        (userInfo.budgets.daily.spent / userInfo.budgets.daily.limit) * 100
       )
 
       chrome.action.setBadgeText({
@@ -56,17 +62,16 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
     console.log("[JWT] Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const existingToken = await storage.get<string>("token")
-      const tokenType = await storage.get<string>("token_type")
+      const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
 
       console.log("[JWT] Current state:", {
-        hasToken: !!existingToken,
-        shouldFetchCookie: !existingToken || tokenType !== "api_key",
-        tokenType
+        hasToken: !!authData?.token,
+        shouldFetchCookie: !authData?.token || authData?.type !== "api_key",
+        tokenType: authData?.type
       })
 
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
-      if (!existingToken || tokenType !== "api_key") {
+      if (!authData?.token || authData?.type !== "api_key") {
         const tokenCookie = await chrome.cookies.get({
           name: "token",
           url: API_URLS.PACKY_BASE
@@ -78,13 +83,14 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
         })
 
         if (tokenCookie && tokenCookie.value) {
-          await storage.set("token", tokenCookie.value)
-          await storage.set("token_type", "jwt")
           // 解析JWT获取过期时间
           const payload = parseJWT(tokenCookie.value)
-          if (payload?.exp) {
-            await storage.set("token_expiry", payload.exp * 1000) // 转换为毫秒
+          const authData: AuthStorage = {
+            token: tokenCookie.value,
+            type: "jwt" as TokenType,
+            ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
+          await storage.set(STORAGE_KEYS.AUTH, authData)
           console.log("[JWT] Token stored successfully")
         }
       }
@@ -96,31 +102,23 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
-    Promise.all([
-      storage.get<string>("token"),
-      storage.get<number>("token_expiry"),
-      storage.get<string>("token_type")
-    ]).then(([token, expiry, tokenType]) => {
-      sendResponse({ expiry, token, tokenType })
+    storage.get<AuthStorage>(STORAGE_KEYS.AUTH).then((authData) => {
+      console.log("[AUTH] Retrieved auth data:", authData)
+      sendResponse({
+        expiry: authData?.expiry || null,
+        token: authData?.token || null,
+        tokenType: authData?.type || null
+      })
     })
-    return true
+    return true // 表示异步响应
   }
 
-  if (request.action === "updateBadge") {
-    updateBadge()
-    sendResponse({ success: true })
-    return true
-  }
-
-  if (request.action === "checkPurchaseStatus") {
-    backgroundCheckPurchaseStatus()
-    sendResponse({ success: true })
-    return true
-  }
+  return false
 })
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.user_info) {
+  // 监听新的用户信息字段
+  if (changes[STORAGE_KEYS.USER_INFO]) {
     updateBadge()
   }
 })
@@ -183,13 +181,13 @@ chrome.webRequest.onCompleted.addListener(
     if (details.statusCode === 200 && details.method === "GET") {
       try {
         // 获取当前token用于重放请求
-        const currentToken = await storage.get<string>("token")
-        if (!currentToken) return
+        const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
+        if (!authData?.token) return
 
         // 重放请求获取响应内容
         const response = await fetch(details.url, {
           headers: {
-            Authorization: `Bearer ${currentToken}`,
+            Authorization: `Bearer ${authData.token}`,
             "Content-Type": "application/json"
           },
           method: "GET"
@@ -199,10 +197,12 @@ chrome.webRequest.onCompleted.addListener(
           const data = (await response.json()) as ApiKeyResponse
           if (data.api_key) {
             // 存储API Key，覆盖现有token
-            await storage.set("token", data.api_key)
-            await storage.set("token_type", "api_key")
-            // API Key 不需要过期时间
-            await storage.remove("token_expiry")
+            const newAuthData: AuthStorage = {
+              token: data.api_key,
+              type: "api_key" as TokenType
+              // API Key 不需要过期时间
+            }
+            await storage.set(STORAGE_KEYS.AUTH, newAuthData)
 
             console.log("API key stored successfully")
             // 触发重新获取用户信息以更新额度显示

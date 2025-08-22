@@ -1,7 +1,8 @@
 import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
-import { AccountVersion } from "../types"
+import { AccountVersion, type UserPreferenceStorage } from "../types"
+import { STORAGE_KEYS } from "../utils/storage-keys"
 
 const storage = new Storage()
 
@@ -17,11 +18,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
   useEffect(() => {
     // 加载存储的版本
-    storage.get<AccountVersion>("account_version").then((version) => {
-      if (version) {
-        setAccountVersion(version)
-      }
-    })
+    storage
+      .get<UserPreferenceStorage>(STORAGE_KEYS.USER_PREFERENCE)
+      .then((pref) => {
+        if (pref?.account_version) {
+          setAccountVersion(pref.account_version)
+        }
+      })
   }, [])
 
   const handleVersionChange = async (
@@ -31,7 +34,17 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     setSaving(true)
 
     try {
-      await storage.set("account_version", newVersion)
+      // 获取当前偏好设置
+      const currentPref =
+        (await storage.get<UserPreferenceStorage>(
+          STORAGE_KEYS.USER_PREFERENCE
+        )) || {}
+
+      // 更新账号版本
+      await storage.set(STORAGE_KEYS.USER_PREFERENCE, {
+        ...currentPref,
+        account_version: newVersion
+      })
       setAccountVersion(newVersion)
       console.log(`[Settings] Account version changed to: ${newVersion}`)
     } catch (error) {

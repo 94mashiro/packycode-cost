@@ -1,40 +1,39 @@
 import { Storage } from "@plasmohq/storage"
 
 import { userApi } from "../api"
-import { TokenType, type UserInfo } from "../types"
-import { clearPluginTokenOnly } from "./auth"
 import {
-  checkOpusNotification,
-  getOpusState,
-  setOpusState
-} from "./notificationStates"
+  type AuthStorage,
+  type SystemPreferenceStorage,
+  TokenType,
+  type UserInfoStorage
+} from "../types"
+import { clearPluginTokenOnly } from "./auth"
+import { STORAGE_KEYS } from "./storage-keys"
 
 const storage = new Storage()
 
-export { type UserInfo }
-
-export async function fetchUserInfo(): Promise<null | UserInfo> {
+export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
   try {
-    const token = await storage.get<string>("token")
-    const tokenType = await storage.get<string>("token_type")
-    const tokenExpiry = await storage.get<number>("token_expiry")
+    const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
+    console.log("[fetchUserInfo] Auth data:", authData)
 
     // API Key不需要检查过期时间
-    if (!token) {
+    if (!authData?.token) {
+      console.log("[fetchUserInfo] No token found")
       return null
     }
 
     // JWT需要检查过期时间（如果有expiry的话）
     if (
-      tokenType === TokenType.JWT &&
-      tokenExpiry &&
-      tokenExpiry < Date.now()
+      authData.type === TokenType.JWT &&
+      authData.expiry &&
+      authData.expiry < Date.now()
     ) {
       await clearPluginTokenOnly()
       return null
     }
 
-    const result = await userApi.getUserInfo(token, tokenType as TokenType)
+    const result = await userApi.getUserInfo(authData.token, authData.type)
 
     if (!result.success) {
       // 检查是否是认证错误
@@ -50,37 +49,65 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     }
 
     const rawData = result.data
-    const userInfo: UserInfo = {
-      daily_budget_usd: Number(rawData.daily_budget_usd) || 0,
-      daily_spent_usd: Number(rawData.daily_spent_usd) || 0,
-      monthly_budget_usd: Number(rawData.monthly_budget_usd) || 0,
-      monthly_spent_usd: Number(rawData.monthly_spent_usd) || 0,
-      opus_enabled: Boolean(rawData.opus_enabled)
+
+    // 转换为新的存储格式
+    const userInfoStorage: UserInfoStorage = {
+      budgets: {
+        daily: {
+          limit: Number(rawData.daily_budget_usd) || 0,
+          spent: Number(rawData.daily_spent_usd) || 0
+        },
+        monthly: {
+          limit: Number(rawData.monthly_budget_usd) || 0,
+          spent: Number(rawData.monthly_spent_usd) || 0
+        }
+      }
     }
 
     // 检查 opus_enabled 状态变化
-    // 职责分离：先获取，再判断，最后更新
-    const previousOpusState = await getOpusState()
+    const systemPref = await storage.get<SystemPreferenceStorage>(
+      STORAGE_KEYS.SYSTEM_PREFERENCE
+    )
+    const previousOpusState = systemPref?.opus_enabled
+    const currentOpusState = Boolean(rawData.opus_enabled)
+
+    // 判断是否需要通知
     const shouldNotify = checkOpusNotification(
       previousOpusState,
-      userInfo.opus_enabled
+      currentOpusState
     )
 
     if (shouldNotify) {
       console.log(
-        `[OPUS STATUS] Changed: ${previousOpusState} → ${userInfo.opus_enabled}`
+        `[OPUS STATUS] Changed: ${previousOpusState} → ${currentOpusState}`
       )
-      await triggerOpusStatusNotification(userInfo.opus_enabled)
+      await triggerOpusStatusNotification(currentOpusState)
     }
 
-    // 更新状态 - 单一职责
-    await setOpusState(userInfo.opus_enabled)
-    await storage.set("user_info", userInfo)
+    // 更新系统偏好
+    await storage.set(STORAGE_KEYS.SYSTEM_PREFERENCE, {
+      ...systemPref,
+      opus_enabled: currentOpusState
+    })
 
-    return userInfo
+    // 存储用户信息
+    await storage.set(STORAGE_KEYS.USER_INFO, userInfoStorage)
+
+    return userInfoStorage
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : "获取用户信息失败")
   }
+}
+
+/**
+ * 检查是否需要Opus状态通知
+ */
+function checkOpusNotification(
+  previousState: boolean | undefined,
+  currentState: boolean
+): boolean {
+  // 仅在状态从其他值变为 true 时通知
+  return previousState !== true && currentState === true
 }
 
 /**

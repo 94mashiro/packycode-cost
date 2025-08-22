@@ -111,11 +111,6 @@ export type ReactChangeEvent<T = HTMLElement> = React.ChangeEvent<T>
 
 export type ReactMouseEvent<T = HTMLElement> = React.MouseEvent<T>
 
-// ===== Chrome Storage变更事件 =====
-export interface StorageChanges {
-  [key: string]: chrome.storage.StorageChange
-}
-
 // 系统偏好
 export interface SystemPreferenceStorage {
   opus_enabled?: boolean

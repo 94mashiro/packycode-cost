@@ -79,18 +79,29 @@ export function useStorage<T extends keyof StorageDomainMap>(
   useEffect(() => {
     let mounted = true
     let unsubscribeVersionChange: (() => void) | null = null
+    let unsubscribeDomainChange: (() => void) | null = null
 
     const initialize = async () => {
       try {
         // 初始化加载数据
         await refresh()
 
-        // 监听版本变化
+        // 监听版本变化和域数据变化
         if (mounted) {
           const storage = await getStorageManager()
+
+          // 版本变化监听（重新加载数据）
           unsubscribeVersionChange = storage.onVersionChange(() => {
             if (mounted) {
               logger.debug(`Version changed, refreshing data for: ${domain}`)
+              refresh()
+            }
+          })
+
+          // 域数据变化监听（使用 Plasmo Storage API）
+          unsubscribeDomainChange = storage.onDomainChange(domain, () => {
+            if (mounted) {
+              logger.debug(`Domain data changed, refreshing: ${domain}`)
               refresh()
             }
           })
@@ -111,6 +122,9 @@ export function useStorage<T extends keyof StorageDomainMap>(
       mounted = false
       if (unsubscribeVersionChange) {
         unsubscribeVersionChange()
+      }
+      if (unsubscribeDomainChange) {
+        unsubscribeDomainChange()
       }
     }
   }, [domain, refresh])

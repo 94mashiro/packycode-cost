@@ -157,15 +157,25 @@ chrome.runtime.onMessage.addListener(
   }
 )
 
-chrome.storage.onChanged.addListener((changes) => {
-  // 监听新的用户信息字段
-  if (
-    changes[`shared.${StorageDomain.USER_INFO}`] ||
-    changes[`private.${StorageDomain.USER_INFO}`]
-  ) {
-    updateBadge()
+// 设置基于 Plasmo Storage 的存储监听
+async function setupStorageListening() {
+  try {
+    const storageManager = await getStorageManager()
+
+    // 监听用户信息变化，更新 badge
+    storageManager.onDomainChange(StorageDomain.USER_INFO, () => {
+      logger.debug("User info changed, updating badge")
+      updateBadge()
+    })
+
+    logger.info("✅ Storage listening setup completed using Plasmo Storage API")
+  } catch (error) {
+    logger.error("❌ Failed to setup storage listening:", error)
   }
-})
+}
+
+// 启动时初始化存储监听
+setupStorageListening()
 
 // 使用统一配置启动所有任务执行轮询
 function startAllPeriodicTasks() {

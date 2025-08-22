@@ -1,8 +1,7 @@
-import { Storage } from "@plasmohq/storage"
-
 import type { NotificationStates } from "~/types"
 
-const storage = new Storage()
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
 
 export { type NotificationStates }
 
@@ -34,14 +33,18 @@ export function checkPurchaseNotification(
  * 清理通知状态（用于登出时）
  */
 export async function clearNotificationStates(): Promise<void> {
-  await storage.remove("notification_states")
+  const storageManager = await getStorageManager()
+  await storageManager.set(StorageDomain.NOTIFICATION_STATES, {})
 }
 
 /**
  * 获取通知状态
  */
 export async function getNotificationStates(): Promise<NotificationStates> {
-  const states = await storage.get<NotificationStates>("notification_states")
+  const storageManager = await getStorageManager()
+  const states = await storageManager.get<NotificationStates>(
+    StorageDomain.NOTIFICATION_STATES
+  )
   return states || {}
 }
 
@@ -66,8 +69,9 @@ export async function getPurchaseState(): Promise<boolean | undefined> {
  * 单一职责：只负责更新存储
  */
 export async function setOpusState(enabled: boolean): Promise<void> {
+  const storageManager = await getStorageManager()
   const states = await getNotificationStates()
-  await storage.set("notification_states", {
+  await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
     ...states,
     opus_enabled: enabled
   })
@@ -78,8 +82,9 @@ export async function setOpusState(enabled: boolean): Promise<void> {
  * 单一职责：只负责更新存储
  */
 export async function setPurchaseState(disabled: boolean): Promise<void> {
+  const storageManager = await getStorageManager()
   const states = await getNotificationStates()
-  await storage.set("notification_states", {
+  await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
     ...states,
     purchase_disabled: disabled
   })

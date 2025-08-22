@@ -62,9 +62,21 @@ const config = tseslint.config([
       "no-debugger": process.env.NODE_ENV === "production" ? "error" : "warn",
       "no-duplicate-imports": "error",
       "no-empty": "off",
+      // 防止抽象泄漏：禁止直接使用 Plasmo Storage API
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@plasmohq/storage"],
+              message: "不允许直接使用 @plasmohq/storage。请使用 ~/lib/storage 中的抽象层。"
+            }
+          ]
+        }
+      ],
       "no-var": "error",
-      "prefer-const": "error",
 
+      "prefer-const": "error",
       // 代码风格
       "prefer-destructuring": [
         "error",
@@ -73,9 +85,10 @@ const config = tseslint.config([
           object: true
         }
       ],
-      "prettier/prettier": "error",
 
+      "prettier/prettier": "error",
       "react-hooks/exhaustive-deps": "warn",
+
       // React Hooks相关
       "react-hooks/rules-of-hooks": "error",
 
@@ -84,6 +97,13 @@ const config = tseslint.config([
         "warn",
         { allowConstantExport: true }
       ]
+    }
+  },
+  {
+    // 存储层合法使用 Plasmo Storage
+    files: ["**/lib/storage/**/*.ts", "**/lib/storage/**/*.js"],
+    rules: {
+      "no-restricted-imports": "off" // 存储抽象层可以使用底层 API
     }
   },
   {

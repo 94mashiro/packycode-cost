@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
+
 import { type OpusStatusData, type SystemPreferenceStorage } from "../types"
-import { getStorageManager } from "../utils/storage"
-import { StorageDomain } from "../utils/storage/domains"
 
 export function useOpusStatus() {
   const [data, setData] = useState<OpusStatusData>({

@@ -2,7 +2,7 @@ import type {
   AuthStorage,
   PackyConfig,
   SystemPreferenceStorage,
-  UserInfoStorage,
+  UserInfo,
   UserPreferenceStorage
 } from "../../types"
 
@@ -35,12 +35,12 @@ export type StorageDataType<T extends keyof StorageDomainMap> =
  *
  * 这个映射实现了类型安全的自动推导:
  * - useVersionedStorage(StorageDomain.AUTH) 自动推导为 AuthStorage | null
- * - useVersionedStorage(StorageDomain.USER_INFO) 自动推导为 UserInfoStorage | null
+ * - useVersionedStorage(StorageDomain.USER_INFO) 自动推导为 UserInfo | null
  */
 export interface StorageDomainMap {
   [StorageDomain.AUTH]: AuthStorage
   [StorageDomain.PURCHASE_CONFIG]: PackyConfig
   [StorageDomain.SYSTEM_PREFERENCE]: SystemPreferenceStorage
-  [StorageDomain.USER_INFO]: UserInfoStorage
+  [StorageDomain.USER_INFO]: UserInfo
   [StorageDomain.USER_PREFERENCE]: UserPreferenceStorage
 }

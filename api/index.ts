@@ -4,6 +4,7 @@
  */
 
 import { loggers } from "~/lib/logger"
+import { get } from "~/lib/request"
 
 import {
   type ApiResponse,
@@ -11,7 +12,6 @@ import {
   TokenType,
   type UserApiResponse
 } from "../types"
-import { get } from "../utils/request"
 
 const logger = loggers.api
 

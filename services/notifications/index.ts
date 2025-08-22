@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import type { NotificationStates } from "../types"
+import type { NotificationStates } from "~/types"
 
 const storage = new Storage()
 

@@ -1,18 +1,17 @@
+import { userApi } from "~/api"
 import { loggers } from "~/lib/logger"
-
-import { userApi } from "../api"
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
+import { clearPluginTokenOnly } from "~/modules/auth"
 import {
   type AuthStorage,
   type SystemPreferenceStorage,
   TokenType,
-  type UserInfoStorage
-} from "../types"
-import { clearPluginTokenOnly } from "./auth"
-import { getStorageManager } from "./storage"
-import { StorageDomain } from "./storage/domains"
+  type UserInfo
+} from "~/types"
 const logger = loggers.auth
 
-export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
+export async function fetchUserInfo(): Promise<null | UserInfo> {
   try {
     const storageManager = await getStorageManager()
     const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
@@ -52,17 +51,25 @@ export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
     const rawData = result.data
 
     // 转换为新的存储格式
-    const userInfoStorage: UserInfoStorage = {
+    const dailyLimit = Number(rawData.daily_budget_usd) || 0
+    const dailySpent = Number(rawData.daily_spent_usd) || 0
+    const monthlyLimit = Number(rawData.monthly_budget_usd) || 0
+    const monthlySpent = Number(rawData.monthly_spent_usd) || 0
+
+    const userInfoStorage: UserInfo = {
       budgets: {
         daily: {
-          limit: Number(rawData.daily_budget_usd) || 0,
-          spent: Number(rawData.daily_spent_usd) || 0
+          limit: dailyLimit,
+          remaining: Math.max(0, dailyLimit - dailySpent),
+          spent: dailySpent
         },
         monthly: {
-          limit: Number(rawData.monthly_budget_usd) || 0,
-          spent: Number(rawData.monthly_spent_usd) || 0
+          limit: monthlyLimit,
+          remaining: Math.max(0, monthlyLimit - monthlySpent),
+          spent: monthlySpent
         }
-      }
+      },
+      id: "current-user" // 暂时硬编码，后续可从token中解析
     }
 
     // 检查 opus_enabled 状态变化

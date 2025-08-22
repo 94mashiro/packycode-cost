@@ -1,10 +1,9 @@
+import type { PackyConfig, SystemPreferenceStorage } from "~/types"
+
 import { loggers } from "~/lib/logger"
-
-import type { PackyConfig, SystemPreferenceStorage } from "../types"
-
-import { packyApi } from "../api"
-import { getStorageManager } from "./storage"
-import { StorageDomain } from "./storage/domains"
+import { packyApi } from "~/lib/request"
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
 
 const logger = loggers.purchase
 
@@ -173,3 +172,6 @@ async function triggerPurchaseAvailableNotification(): Promise<void> {
     logger.error("Error creating purchase notification:", error)
   }
 }
+
+// 重新导出以保持兼容性
+export { checkPurchaseStatus } from "./checker"

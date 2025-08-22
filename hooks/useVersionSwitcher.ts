@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react"
 
 import { loggers } from "~/lib/logger"
+import { getStorageManager } from "~/lib/storage"
 
 import { AccountVersion } from "../types"
-import { getStorageManager } from "../utils/storage"
 
 const logger = loggers.ui
 

@@ -7,7 +7,7 @@
  * Dan: "简单的抽象是最好的抽象"
  */
 
-import { executeAllTasks } from "./taskRegistry"
+import { executeAllTasks } from "./registry"
 
 /**
  * 执行所有数据获取任务

@@ -9,9 +9,8 @@
  */
 
 import { loggers } from "~/lib/logger"
-
-import { checkAndNotifyPurchaseStatus } from "./purchaseStatus"
-import { fetchUserInfo } from "./userInfo"
+import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/checker"
+import { fetchUserInfo } from "~/modules/user"
 
 const logger = loggers.ui
 

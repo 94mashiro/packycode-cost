@@ -1,4 +1,5 @@
-import { StorageDomain } from "../utils/storage/domains"
+import { StorageDomain } from "~/lib/storage/domains"
+
 import { useStorage } from "./useStorage"
 
 /**

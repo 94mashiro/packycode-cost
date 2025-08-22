@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 
+import { StorageDomain } from "~/lib/storage/domains"
+import { getCurrentPurchaseConfig } from "~/modules/purchase"
+
 import { type PurchaseStatusData } from "../types"
-import { getCurrentPurchaseConfig } from "../utils/purchaseStatus"
-import { StorageDomain } from "../utils/storage/domains"
 
 export function usePurchaseStatus() {
   const [data, setData] = useState<PurchaseStatusData>({

@@ -57,6 +57,20 @@ export interface AuthStorage {
   type: TokenType
 }
 
+// 用户预算信息
+export interface Budget {
+  daily: {
+    limit: number
+    remaining: number
+    spent: number
+  }
+  monthly: {
+    limit: number
+    remaining: number
+    spent: number
+  }
+}
+
 // ===== JWT相关 =====
 export interface JWTPayload {
   [key: string]: unknown // 不是any，是unknown！
@@ -131,25 +145,21 @@ export interface UserApiResponse {
   opus_enabled: boolean
 }
 
+// 用户信息
+export interface UserInfo {
+  budgets: Budget
+  createdAt?: string
+  email?: string
+  id: string
+  name?: string
+  updatedAt?: string
+}
+
 export interface UserInfoData {
   error: null | string
   loading: boolean
   refresh: () => void
-  userInfo: null | UserInfoStorage
-}
-
-// 用户信息
-export interface UserInfoStorage {
-  budgets: {
-    daily: {
-      limit: number
-      spent: number
-    }
-    monthly: {
-      limit: number
-      spent: number
-    }
-  }
+  userInfo: null | UserInfo
 }
 
 // 用户偏好

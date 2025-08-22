@@ -1,4 +1,4 @@
-import type { JWTPayload } from "../types"
+import type { JWTPayload } from "~/types"
 
 export { type JWTPayload }
 
@@ -54,6 +54,15 @@ export function getTokenExpiration(token: null | string): {
     formatted: formatExpirationTime(payload.exp),
     isExpired
   }
+}
+
+export function isTokenExpired(payload: JWTPayload | null): boolean {
+  if (!payload || !payload.exp) {
+    return true
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return payload.exp < now
 }
 
 export function parseJWT(token: string): JWTPayload | null {

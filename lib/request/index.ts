@@ -4,8 +4,7 @@
  */
 
 import { loggers } from "~/lib/logger"
-
-import { type ApiResponse, HttpMethod } from "../types"
+import { type ApiResponse, HttpMethod } from "~/types"
 
 const logger = loggers.api
 
@@ -107,5 +106,28 @@ export async function request<T>(
   return {
     error: "Request failed after all retries",
     success: false
+  }
+}
+
+/**
+ * PackyCode API 客户端
+ */
+export const packyApi = {
+  async getConfig<T>(): Promise<ApiResponse<T>> {
+    return get<T>("https://www.packycode.com/api/config")
+  }
+}
+
+/**
+ * 用户 API 客户端
+ */
+export const userApi = {
+  async getCurrentUser<T>(token: string): Promise<ApiResponse<T>> {
+    return get<T>("https://packy.te.sb/backend/users/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    })
   }
 }

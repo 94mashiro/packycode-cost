@@ -1,16 +1,7 @@
 import { loggers } from "~/lib/logger"
-
-import type {
-  ApiKeyResponse,
-  AuthStorage,
-  TokenType,
-  UserInfoStorage
-} from "./types"
-
-import { API_URLS } from "./api"
-import { parseJWT } from "./utils/jwt"
-import { getStorageManager } from "./utils/storage"
-import { StorageDomain } from "./utils/storage/domains"
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
+import { parseJWT } from "~/modules/auth"
 import {
   type BackgroundAction,
   BackgroundActionEnum,
@@ -18,7 +9,11 @@ import {
   executeTaskByAction,
   isBackgroundAction,
   isDataTaskAction
-} from "./utils/taskRegistry"
+} from "~/modules/tasks"
+
+import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
+
+import { API_URLS } from "./api"
 
 const logger = loggers.background
 
@@ -55,9 +50,7 @@ async function backgroundExecuteAllTasks() {
 async function updateBadge() {
   try {
     const storageManager = await getStorageManager()
-    const userInfo = await storageManager.get<UserInfoStorage>(
-      StorageDomain.USER_INFO
-    )
+    const userInfo = await storageManager.get<UserInfo>(StorageDomain.USER_INFO)
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(

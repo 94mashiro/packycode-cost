@@ -1,7 +1,8 @@
 import { Storage } from "@plasmohq/storage"
 
+import { loggers } from "~/lib/logger"
+
 import { AccountVersion, type UserPreferenceStorage } from "../../types"
-import { loggers } from "../logger"
 import { VersionedStorageManager } from "./VersionedStorageManager"
 
 const logger = loggers.storage

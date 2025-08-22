@@ -9,9 +9,13 @@ import { RefreshButton } from "./components/RefreshButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
 import { useAuth, useUserInfo } from "./hooks/useStorageHooks"
+import { enablePopupLogging } from "./lib/logger"
 import { TokenType, ViewType } from "./types"
 import { getTokenExpiration } from "./utils/jwt"
-import { checkPurchaseStatus } from "./utils/purchaseStatusChecker"
+import { fetchAllDataAsync } from "./utils/taskExecutor"
+
+// 启用 Popup 日志接收
+enablePopupLogging()
 
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
@@ -30,15 +34,17 @@ function IndexPopup() {
 
   const handleRefresh = () => {
     if (isTokenValid) {
+      // 触发所有数据获取任务的执行
+      fetchAllDataAsync()
+
+      // 同时触发 UI 层面的数据重新加载
       refresh()
-      // 同时刷新购买状态
-      checkPurchaseStatus()
     }
   }
 
   useEffect(() => {
-    // popup打开时立即检查购买状态
-    checkPurchaseStatus()
+    // popup打开时立即触发所有数据获取任务
+    fetchAllDataAsync()
   }, [])
 
   // 设置页面

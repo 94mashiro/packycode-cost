@@ -1,3 +1,5 @@
+import { loggers } from "~/lib/logger"
+
 import { userApi } from "../api"
 import {
   type AuthStorage,
@@ -6,7 +8,6 @@ import {
   type UserInfoStorage
 } from "../types"
 import { clearPluginTokenOnly } from "./auth"
-import { loggers } from "./logger"
 import { getStorageManager } from "./storage"
 import { StorageDomain } from "./storage/domains"
 const logger = loggers.auth

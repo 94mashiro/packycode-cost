@@ -1,7 +1,8 @@
+import { loggers } from "~/lib/logger"
+
 import { useUserPreference } from "../hooks/useStorageHooks"
 import { useVersionSwitcher } from "../hooks/useVersionSwitcher"
 import { AccountVersion } from "../types"
-import { loggers } from "../utils/logger"
 
 const logger = loggers.ui
 

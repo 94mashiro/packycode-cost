@@ -3,13 +3,14 @@
  * 不要再到处硬编码 URL 了！
  */
 
+import { loggers } from "~/lib/logger"
+
 import {
   type ApiResponse,
   type PackyConfig,
   TokenType,
   type UserApiResponse
 } from "../types"
-import { loggers } from "../utils/logger"
 import { get } from "../utils/request"
 
 const logger = loggers.api

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 
+import { loggers } from "~/lib/logger"
+
 import type { StorageDomainMap } from "../utils/storage/domains"
 
-import { loggers } from "../utils/logger"
 import { getStorageManager } from "../utils/storage"
 
 const logger = loggers.ui

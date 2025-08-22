@@ -1,3 +1,5 @@
+import { loggers } from "~/lib/logger"
+
 import type {
   ApiKeyResponse,
   AuthStorage,
@@ -7,34 +9,47 @@ import type {
 
 import { API_URLS } from "./api"
 import { parseJWT } from "./utils/jwt"
-import { loggers } from "./utils/logger"
-import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
 import { getStorageManager } from "./utils/storage"
 import { StorageDomain } from "./utils/storage/domains"
-import { fetchUserInfo } from "./utils/userInfo"
+import {
+  type BackgroundAction,
+  BackgroundActionEnum,
+  executeAllTasks,
+  executeTaskByAction,
+  isBackgroundAction,
+  isDataTaskAction
+} from "./utils/taskRegistry"
 
 const logger = loggers.background
 
-async function backgroundCheckPurchaseStatus() {
-  // 使用统一的购买状态检查方法，包含锁机制和通知逻辑
-  const result = await checkAndNotifyPurchaseStatus()
+// 立即发送测试日志
+;(() => {
+  logger.info("🚀 Background Service Worker 启动")
+  logger.debug("📡 日志桥梁已初始化")
+})()
+
+// 延迟测试日志
+setTimeout(() => {
+  logger.info("⏰ 延迟日志测试: Service Worker 运行中")
+  logger.warn("⚠️ 这是一条警告消息")
+  logger.error("❌ 这是一条错误消息（仅用于测试）")
+}, 2000)
+
+// 使用统一的任务执行机制替代原来的独立函数
+async function backgroundExecuteAllTasks() {
+  const result = await executeAllTasks()
 
   if (result.success) {
-    logger.info("Purchase status check completed successfully")
-    if (result.triggered) {
-      logger.info("Purchase notification was triggered")
-    }
+    logger.info("✅ Background 数据获取任务执行成功")
   } else {
-    logger.debug("Purchase status check failed or was skipped")
+    const errors = result.results.filter((r) => !r.success)
+    logger.warn(
+      `⚠️ Background 数据获取任务完成，${errors.length} 个失败`,
+      errors
+    )
   }
-}
 
-async function backgroundFetchUserInfo() {
-  try {
-    await fetchUserInfo()
-  } catch (error) {
-    logger.error("Background fetch failed:", error)
-  }
+  return result
 }
 
 async function updateBadge() {
@@ -104,22 +119,50 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   }
 })
 
-chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
-  if (request.action === "getStoredToken") {
-    getStorageManager().then(async (storageManager) => {
-      const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
-      logger.debug("Retrieved auth data:", authData)
+chrome.runtime.onMessage.addListener(
+  (request: { action: string }, _, sendResponse) => {
+    // 类型安全的 action 验证
+    if (!isBackgroundAction(request.action)) {
       sendResponse({
-        expiry: authData?.expiry || null,
-        token: authData?.token || null,
-        tokenType: authData?.type || null
+        error: `Invalid action: ${request.action}`,
+        success: false
       })
-    })
-    return true // 表示异步响应
-  }
+      return false
+    }
 
-  return false
-})
+    const action = request.action as BackgroundAction
+
+    if (action === BackgroundActionEnum.GET_STORED_TOKEN) {
+      getStorageManager().then(async (storageManager) => {
+        const authData = await storageManager.get<AuthStorage>(
+          StorageDomain.AUTH
+        )
+        logger.debug("Retrieved auth data:", authData)
+        sendResponse({
+          expiry: authData?.expiry || null,
+          token: authData?.token || null,
+          tokenType: authData?.type || null
+        })
+      })
+      return true // 表示异步响应
+    }
+
+    // 使用统一的任务执行机制处理所有数据获取任务 (类型安全)
+    if (isDataTaskAction(action)) {
+      executeTaskByAction(action)
+        .then((result) => {
+          sendResponse(result)
+        })
+        .catch((error) => {
+          logger.error(`手动数据获取任务失败: ${action}`, error)
+          sendResponse({ error: error.message, success: false })
+        })
+      return true // 表示异步响应
+    }
+
+    return false
+  }
+)
 
 chrome.storage.onChanged.addListener((changes) => {
   // 监听新的用户信息字段
@@ -131,51 +174,38 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 })
 
-function startPeriodicRefresh() {
-  chrome.alarms.create("refreshUserInfo", {
+// 使用统一配置启动所有任务执行轮询
+function startAllPeriodicTasks() {
+  logger.info("🚀 启动所有周期性数据获取任务")
+  chrome.alarms.create("executeAllTasks", {
     delayInMinutes: 0.5, // 30秒后首次执行
     periodInMinutes: 0.5 // 每30秒重复执行
   })
 }
 
-function startPurchaseStatusCheck() {
-  logger.debug("Starting purchase status check alarm")
-  chrome.alarms.create("checkPurchaseStatus", {
-    delayInMinutes: 0.5, // 30秒后首次执行
-    periodInMinutes: 0.5 // 每30秒重复执行
-  })
-}
-
-function stopPeriodicRefresh() {
-  chrome.alarms.clear("refreshUserInfo")
-}
-
-function stopPurchaseStatusCheck() {
-  chrome.alarms.clear("checkPurchaseStatus")
+function stopAllPeriodicTasks() {
+  logger.warn("⏹ 停止所有周期性任务")
+  chrome.alarms.clear("executeAllTasks")
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  logger.debug("Alarm triggered:", alarm.name, "at", new Date().toISOString())
-  if (alarm.name === "refreshUserInfo") {
-    backgroundFetchUserInfo()
-  } else if (alarm.name === "checkPurchaseStatus") {
-    backgroundCheckPurchaseStatus()
+  logger.debug("⏰ 定时器触发:", alarm.name, "时间:", new Date().toISOString())
+  if (alarm.name === "executeAllTasks") {
+    // 使用统一的任务执行机制，确保与手动触发行为一致
+    backgroundExecuteAllTasks()
   }
 })
 
 chrome.runtime.onSuspend.addListener(() => {
-  stopPeriodicRefresh()
-  stopPurchaseStatusCheck()
+  stopAllPeriodicTasks()
 })
 
 chrome.runtime.onStartup.addListener(() => {
-  startPeriodicRefresh()
-  startPurchaseStatusCheck()
+  startAllPeriodicTasks()
 })
 
 chrome.runtime.onInstalled.addListener(() => {
-  startPeriodicRefresh()
-  startPurchaseStatusCheck()
+  startAllPeriodicTasks()
 })
 
 // 监听 API keys 相关请求的响应
@@ -212,7 +242,7 @@ chrome.webRequest.onCompleted.addListener(
 
             logger.info("API key stored successfully")
             // 触发重新获取用户信息以更新额度显示
-            backgroundFetchUserInfo()
+            backgroundExecuteAllTasks()
           }
         }
       } catch (error) {
@@ -236,5 +266,4 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 })
 
 updateBadge()
-startPeriodicRefresh()
-startPurchaseStatusCheck()
+startAllPeriodicTasks()

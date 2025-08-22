@@ -1,7 +1,8 @@
+import { loggers } from "~/lib/logger"
+
 import type { PackyConfig, SystemPreferenceStorage } from "../types"
 
 import { packyApi } from "../api"
-import { loggers } from "./logger"
 import { getStorageManager } from "./storage"
 import { StorageDomain } from "./storage/domains"
 

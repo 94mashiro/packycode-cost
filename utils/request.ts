@@ -3,8 +3,9 @@
  * 包含重试、超时、错误处理等机制
  */
 
+import { loggers } from "~/lib/logger"
+
 import { type ApiResponse, HttpMethod } from "../types"
-import { loggers } from "./logger"
 
 const logger = loggers.api
 

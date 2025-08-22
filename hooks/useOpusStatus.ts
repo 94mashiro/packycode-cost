@@ -1,10 +1,8 @@
-import { Storage } from "@plasmohq/storage"
 import { useEffect, useState } from "react"
 
 import { type OpusStatusData, type SystemPreferenceStorage } from "../types"
-import { STORAGE_KEYS } from "../utils/storage-keys"
-
-const storage = new Storage()
+import { getStorageManager } from "../utils/storage"
+import { StorageDomain } from "../utils/storage/domains"
 
 export function useOpusStatus() {
   const [data, setData] = useState<OpusStatusData>({
@@ -20,8 +18,9 @@ export function useOpusStatus() {
       }
 
       // 从系统偏好中获取 opus_enabled 状态
-      const systemPref = await storage.get<SystemPreferenceStorage>(
-        STORAGE_KEYS.SYSTEM_PREFERENCE
+      const storageManager = await getStorageManager()
+      const systemPref = await storageManager.get<SystemPreferenceStorage>(
+        StorageDomain.SYSTEM_PREFERENCE
       )
 
       if (systemPref && typeof systemPref.opus_enabled === "boolean") {
@@ -65,7 +64,10 @@ export function useOpusStatus() {
     const handleStorageChange = (
       changes: Record<string, chrome.storage.StorageChange>
     ) => {
-      if (changes[STORAGE_KEYS.SYSTEM_PREFERENCE]) {
+      if (
+        changes[`shared.${StorageDomain.SYSTEM_PREFERENCE}`] ||
+        changes[`private.${StorageDomain.SYSTEM_PREFERENCE}`]
+      ) {
         fetchOpusStatus(false)
       }
     }

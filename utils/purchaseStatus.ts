@@ -1,12 +1,10 @@
-import { Storage } from "@plasmohq/storage"
-
 import type { PackyConfig, SystemPreferenceStorage } from "../types"
 
 import { packyApi } from "../api"
 import { loggers } from "./logger"
-import { STORAGE_KEYS } from "./storage-keys"
+import { getStorageManager } from "./storage"
+import { StorageDomain } from "./storage/domains"
 
-const storage = new Storage()
 const logger = loggers.purchase
 
 // 全局锁，防止并发调用
@@ -56,8 +54,9 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     }
 
     // 2. 检查购买状态变化并决定是否通知
-    const systemPref = await storage.get<SystemPreferenceStorage>(
-      STORAGE_KEYS.SYSTEM_PREFERENCE
+    const storageManager = await getStorageManager()
+    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+      StorageDomain.SYSTEM_PREFERENCE
     )
     const previousPurchaseState = systemPref?.purchase_disabled
     const shouldNotify = checkPurchaseNotification(
@@ -78,11 +77,11 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     }
 
     // 4. 更新存储状态
-    await storage.set(STORAGE_KEYS.SYSTEM_PREFERENCE, {
+    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
       ...systemPref,
       purchase_disabled: currentConfig.purchaseDisabled
     })
-    await storage.set(STORAGE_KEYS.PURCHASE_CONFIG, currentConfig)
+    await storageManager.set(StorageDomain.PURCHASE_CONFIG, currentConfig)
 
     logger.debug("[STORAGE] Purchase status updated in storage")
 
@@ -106,7 +105,8 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
-    return await storage.get<PackyConfig>(STORAGE_KEYS.PURCHASE_CONFIG)
+    const storageManager = await getStorageManager()
+    return await storageManager.get<PackyConfig>(StorageDomain.PURCHASE_CONFIG)
   } catch (error) {
     logger.error("Failed to get current purchase config:", error)
     return null

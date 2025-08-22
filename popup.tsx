@@ -8,20 +8,28 @@ import { CombinedStatus } from "./components/CombinedStatus"
 import { RefreshButton } from "./components/RefreshButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
-import { usePackyToken } from "./hooks/usePackyToken"
-import { useUserInfo } from "./hooks/useUserInfo"
+import { useAuth, useUserInfo } from "./hooks/useStorageHooks"
 import { TokenType, ViewType } from "./types"
 import { getTokenExpiration } from "./utils/jwt"
 import { checkPurchaseStatus } from "./utils/purchaseStatusChecker"
 
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
-  const tokenData = usePackyToken()
-  const { error, loading, refresh, userInfo } = useUserInfo(tokenData.token)
-  const tokenExpiration = getTokenExpiration(tokenData.token)
+  const { data: authData } = useAuth()
+  const {
+    data: userInfo,
+    error,
+    loading: userInfoLoading,
+    refresh
+  } = useUserInfo()
+
+  const tokenExpiration = authData?.token
+    ? getTokenExpiration(authData.token)
+    : null
+  const isTokenValid = !!(authData?.token && authData?.type)
 
   const handleRefresh = () => {
-    if (tokenData.isValid) {
+    if (isTokenValid) {
       refresh()
       // 同时刷新购买状态
       checkPurchaseStatus()
@@ -78,8 +86,8 @@ function IndexPopup() {
                   </svg>
                 </button>
                 <RefreshButton
-                  isVisible={tokenData.isValid}
-                  loading={loading}
+                  isVisible={isTokenValid}
+                  loading={userInfoLoading}
                   onRefresh={handleRefresh}
                 />
               </div>
@@ -90,13 +98,20 @@ function IndexPopup() {
           </div>
 
           <CombinedStatus
-            tokenData={tokenData}
-            tokenExpiration={tokenExpiration}
+            tokenData={{
+              expiry: null,
+              isValid: isTokenValid || false,
+              token: authData?.token || null,
+              tokenType: authData?.type || null
+            }}
+            tokenExpiration={
+              tokenExpiration || { exp: 0, formatted: "", isExpired: true }
+            }
           />
 
-          {tokenData.isValid &&
-            (tokenData.tokenType === TokenType.API_KEY ||
-              !tokenExpiration.isExpired) && (
+          {isTokenValid &&
+            (authData?.type === TokenType.API_KEY ||
+              !tokenExpiration?.isExpired) && (
               <div className="space-y-4">
                 {error && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
@@ -106,7 +121,7 @@ function IndexPopup() {
                   </div>
                 )}
 
-                {!userInfo && loading && (
+                {!userInfo && userInfoLoading && (
                   <div className="bg-gray-50/40 dark:bg-gray-800/30 border border-gray-200/60 dark:border-gray-700/50 rounded-lg p-3 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-24"></div>

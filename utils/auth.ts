@@ -1,19 +1,18 @@
-import { Storage } from "@plasmohq/storage"
-
-import { STORAGE_KEYS } from "./storage-keys"
-
-const storage = new Storage()
+import { getStorageManager } from "./storage"
+import { StorageDomain } from "./storage/domains"
 
 export async function clearPluginTokenOnly() {
   try {
+    const storageManager = await getStorageManager()
+
     // 清理认证信息
-    await storage.remove(STORAGE_KEYS.AUTH)
+    await storageManager.set(StorageDomain.AUTH, null)
 
     // 清理用户信息
-    await storage.remove(STORAGE_KEYS.USER_INFO)
+    await storageManager.set(StorageDomain.USER_INFO, null)
 
     // 清理系统偏好
-    await storage.remove(STORAGE_KEYS.SYSTEM_PREFERENCE)
+    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, null)
 
     return true
   } catch {

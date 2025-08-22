@@ -1,5 +1,3 @@
-import { Storage } from "@plasmohq/storage"
-
 import type {
   ApiKeyResponse,
   AuthStorage,
@@ -11,10 +9,10 @@ import { API_URLS } from "./api"
 import { parseJWT } from "./utils/jwt"
 import { loggers } from "./utils/logger"
 import { checkAndNotifyPurchaseStatus } from "./utils/purchaseStatus"
-import { STORAGE_KEYS } from "./utils/storage-keys"
+import { getStorageManager } from "./utils/storage"
+import { StorageDomain } from "./utils/storage/domains"
 import { fetchUserInfo } from "./utils/userInfo"
 
-const storage = new Storage()
 const logger = loggers.background
 
 async function backgroundCheckPurchaseStatus() {
@@ -41,7 +39,10 @@ async function backgroundFetchUserInfo() {
 
 async function updateBadge() {
   try {
-    const userInfo = await storage.get<UserInfoStorage>(STORAGE_KEYS.USER_INFO)
+    const storageManager = await getStorageManager()
+    const userInfo = await storageManager.get<UserInfoStorage>(
+      StorageDomain.USER_INFO
+    )
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(
@@ -64,7 +65,8 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
     logger.debug("Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
+      const storageManager = await getStorageManager()
+      const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
 
       logger.debug("Current state:", {
         hasToken: !!authData?.token,
@@ -92,7 +94,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
             type: "jwt" as TokenType,
             ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
-          await storage.set(STORAGE_KEYS.AUTH, authData)
+          await storageManager.set(StorageDomain.AUTH, authData)
           logger.info("Token stored successfully")
         }
       }
@@ -104,7 +106,8 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
   if (request.action === "getStoredToken") {
-    storage.get<AuthStorage>(STORAGE_KEYS.AUTH).then((authData) => {
+    getStorageManager().then(async (storageManager) => {
+      const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
       logger.debug("Retrieved auth data:", authData)
       sendResponse({
         expiry: authData?.expiry || null,
@@ -120,7 +123,10 @@ chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
 
 chrome.storage.onChanged.addListener((changes) => {
   // 监听新的用户信息字段
-  if (changes[STORAGE_KEYS.USER_INFO]) {
+  if (
+    changes[`shared.${StorageDomain.USER_INFO}`] ||
+    changes[`private.${StorageDomain.USER_INFO}`]
+  ) {
     updateBadge()
   }
 })
@@ -178,7 +184,10 @@ chrome.webRequest.onCompleted.addListener(
     if (details.statusCode === 200 && details.method === "GET") {
       try {
         // 获取当前token用于重放请求
-        const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
+        const storageManager = await getStorageManager()
+        const authData = await storageManager.get<AuthStorage>(
+          StorageDomain.AUTH
+        )
         if (!authData?.token) return
 
         // 重放请求获取响应内容
@@ -199,7 +208,7 @@ chrome.webRequest.onCompleted.addListener(
               type: "api_key" as TokenType
               // API Key 不需要过期时间
             }
-            await storage.set(STORAGE_KEYS.AUTH, newAuthData)
+            await storageManager.set(StorageDomain.AUTH, newAuthData)
 
             logger.info("API key stored successfully")
             // 触发重新获取用户信息以更新额度显示

@@ -1,5 +1,3 @@
-import { Storage } from "@plasmohq/storage"
-
 import { userApi } from "../api"
 import {
   type AuthStorage,
@@ -9,14 +7,14 @@ import {
 } from "../types"
 import { clearPluginTokenOnly } from "./auth"
 import { loggers } from "./logger"
-import { STORAGE_KEYS } from "./storage-keys"
-
-const storage = new Storage()
+import { getStorageManager } from "./storage"
+import { StorageDomain } from "./storage/domains"
 const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
   try {
-    const authData = await storage.get<AuthStorage>(STORAGE_KEYS.AUTH)
+    const storageManager = await getStorageManager()
+    const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
     logger.debug("Auth data:", authData)
 
     // API Key不需要检查过期时间
@@ -67,8 +65,8 @@ export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
     }
 
     // 检查 opus_enabled 状态变化
-    const systemPref = await storage.get<SystemPreferenceStorage>(
-      STORAGE_KEYS.SYSTEM_PREFERENCE
+    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+      StorageDomain.SYSTEM_PREFERENCE
     )
     const previousOpusState = systemPref?.opus_enabled
     const currentOpusState = Boolean(rawData.opus_enabled)
@@ -87,13 +85,13 @@ export async function fetchUserInfo(): Promise<null | UserInfoStorage> {
     }
 
     // 更新系统偏好
-    await storage.set(STORAGE_KEYS.SYSTEM_PREFERENCE, {
+    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
       ...systemPref,
       opus_enabled: currentOpusState
     })
 
     // 存储用户信息
-    await storage.set(STORAGE_KEYS.USER_INFO, userInfoStorage)
+    await storageManager.set(StorageDomain.USER_INFO, userInfoStorage)
 
     return userInfoStorage
   } catch (error) {

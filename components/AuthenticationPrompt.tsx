@@ -1,4 +1,6 @@
-import { API_URLS } from "../api"
+import { useEffect, useState } from "react"
+
+import { dynamicApiUrls } from "../api/dynamic"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface AuthenticationPromptProps {
@@ -10,6 +12,20 @@ export function AuthenticationPrompt({
   tokenData,
   tokenExpiration
 }: AuthenticationPromptProps) {
+  const [dashboardUrl, setDashboardUrl] = useState<string>("")
+
+  useEffect(() => {
+    const loadUrl = async () => {
+      try {
+        const url = await dynamicApiUrls.getDashboardUrl()
+        setDashboardUrl(url)
+      } catch (error) {
+        console.error("Failed to load dashboard URL:", error)
+      }
+    }
+    loadUrl()
+  }, [])
+
   const isApiKey = tokenData.tokenType === TokenType.API_KEY
 
   // API Key不需要检查过期，只要isValid就显示正常
@@ -28,9 +44,7 @@ export function AuthenticationPrompt({
         <button
           className="w-full rounded-md bg-yellow-600 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors dark:bg-yellow-700 dark:hover:bg-yellow-600"
           onClick={() =>
-            chrome.tabs.create({
-              url: API_URLS.PACKY_DASHBOARD
-            })
+            dashboardUrl && chrome.tabs.create({ url: dashboardUrl })
           }>
           {!tokenData.isValid ? "前往登录" : "重新登录"}
         </button>

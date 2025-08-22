@@ -3,6 +3,8 @@ import { loggers } from "~/lib/logger"
 import { useUserPreference } from "../hooks/useStorageHooks"
 import { useVersionSwitcher } from "../hooks/useVersionSwitcher"
 import { AccountVersion } from "../types"
+import { AccountTypeSwitcher } from "./AccountTypeSwitcher"
+import { DeveloperPanel } from "./DeveloperPanel"
 
 const logger = loggers.ui
 
@@ -30,6 +32,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     }
   }
 
+  // 检查是否为开发环境
+  const isDevelopment = process.env.NODE_ENV === "development"
+
   return (
     <div className="flex flex-col space-y-6 p-6">
       {/* 头部 */}
@@ -55,7 +60,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       </div>
 
       {/* 设置内容 */}
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* 账号版本设置 */}
         <div className="space-y-2">
           <label
             className="block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -80,6 +86,14 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
           )}
         </div>
+
+        {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
+        {(isDevelopment || window.location.search.includes("dev=true")) && (
+          <>
+            <AccountTypeSwitcher />
+            <DeveloperPanel />
+          </>
+        )}
       </div>
     </div>
   )

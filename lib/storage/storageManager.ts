@@ -67,7 +67,10 @@ export class StorageManager {
       this.domainChangeCallbacks.set(domain, new Set())
     }
 
-    const callbacks = this.domainChangeCallbacks.get(domain)!
+    const callbacks = this.domainChangeCallbacks.get(domain)
+    if (!callbacks) {
+      throw new Error(`Failed to get callbacks for domain: ${domain}`)
+    }
     callbacks.add(callback)
 
     logger.debug(`Added domain change subscriber for: ${domain}`)
@@ -181,7 +184,10 @@ export class StorageManager {
    * 设置域监听（使用 Plasmo Storage watch API）
    */
   private setupDomainWatch(domain: string): void {
-    const watchKeys: Record<string, (change: any) => void> = {}
+    const watchKeys: Record<
+      string,
+      (change: { newValue?: unknown; oldValue?: unknown }) => void
+    > = {}
     const watcherKeys: string[] = []
 
     // 监听当前版本的域
@@ -216,7 +222,10 @@ export class StorageManager {
       const cleanup = () => {
         // Plasmo Storage 的 watch API 可能需要特殊的清理方式
         // 这里我们通过重新设置空的 watch 来清理
-        const emptyWatch: Record<string, (change: any) => void> = {}
+        const emptyWatch: Record<
+          string,
+          (change: { newValue?: unknown; oldValue?: unknown }) => void
+        > = {}
         watcherKeys.forEach((key) => {
           emptyWatch[key] = () => {} // 空回调
         })

@@ -19,21 +19,23 @@ PackyCode Cost Monitor is a Chrome browser extension built with Plasmo framework
 ### 添加新的数据获取任务
 
 1. **添加任务类型枚举** (在 `utils/taskRegistry.ts`):
+
 ```typescript
 export enum DataTaskType {
-  FETCH_USER_INFO = 'fetchUserInfo',
-  CHECK_PURCHASE_STATUS = 'checkPurchaseStatus',
-  YOUR_NEW_TASK = 'yourNewTask'  // 添加新任务类型
+  FETCH_USER_INFO = "fetchUserInfo",
+  CHECK_PURCHASE_STATUS = "checkPurchaseStatus",
+  YOUR_NEW_TASK = "yourNewTask" // 添加新任务类型
 }
 ```
 
 2. **添加任务配置** (TypeScript 会强制要求):
+
 ```typescript
 export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
   // 现有任务...
   [DataTaskType.YOUR_NEW_TASK]: {
     type: DataTaskType.YOUR_NEW_TASK,
-    description: '你的任务描述',
+    description: "你的任务描述",
     handler: yourDataFetchFunction,
     priority: 10
   }
@@ -52,8 +54,8 @@ export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
 
 ```
 用户点击刷新 ──┐
-Alarm 定时器 ──┤ 
-Background 消息 ──┘ 
+Alarm 定时器 ──┤
+Background 消息 ──┘
                │
                ▼
         taskExecutor.fetchAllDataAsync()
@@ -104,7 +106,7 @@ pnpm type-check         # TypeScript type checking
 
 ### Core Components
 
-- **popup.tsx**: Main UI entry point with budget monitoring interface  
+- **popup.tsx**: Main UI entry point with budget monitoring interface
 - **background.ts**: Service worker handling alarms, token management, and data task execution
 - **CombinedStatus.tsx**: Unified authentication and purchase status display
 
@@ -113,23 +115,26 @@ pnpm type-check         # TypeScript type checking
 统一的数据获取任务管理系统，确保所有执行路径的行为完全一致：
 
 #### 核心文件
+
 - **utils/taskRegistry.ts**: 数据获取任务的注册表，定义所有可执行的数据任务
-- **utils/taskExecutor.ts**: 任务执行器，提供统一的批量执行接口  
+- **utils/taskExecutor.ts**: 任务执行器，提供统一的批量执行接口
 - **background.ts**: 通过 Chrome alarms 和消息处理调用任务系统
 - **popup.tsx**: 通过任务执行器触发手动数据获取
 
 #### 设计约束
+
 - **类型安全**: 所有任务都通过 `DataTaskType` 枚举定义，防止字符串字面量逃逸
 - **编译时检查**: `TASK_REGISTRY` 必须包含所有枚举值的配置，否则编译失败
 - **单一配置源**: alarm 轮询、手动触发、background 消息使用完全相同的任务配置
 - **优先级执行**: 任务按 priority 排序执行，确保数据依赖关系
 
 #### 执行流程统一性
+
 ```typescript
 // 所有执行路径都汇聚到同一个函数
 executeAllTasks() // 从 TASK_REGISTRY 按优先级执行所有任务
   ├── alarm 轮询调用
-  ├── 手动刷新调用  
+  ├── 手动刷新调用
   └── background 消息调用
 ```
 
@@ -144,7 +149,7 @@ Dual token system supporting both JWT (from web cookies) and API Keys:
 ### Data Task Monitoring
 
 - **任务轮询**: 每30秒通过 Chrome alarms 执行 `executeAllTasks()`
-- **状态检测**: 监控 `purchaseDisabled` 字段变化 (true→false) 和用户预算使用情况  
+- **状态检测**: 监控 `purchaseDisabled` 字段变化 (true→false) 和用户预算使用情况
 - **通知推送**: 当购买可用时发送 Chrome notifications
 - **数据流**: background.ts → taskRegistry.executeAllTasks() → Chrome Storage → UI components
 
@@ -205,7 +210,7 @@ Uses Plasmo Storage API with these key data:
 ### Task System
 
 - **executeAllTasks**: 按优先级执行 TASK_REGISTRY 中的所有数据获取任务
-- **taskRegistry**: 统一的任务配置源，确保 alarm 和手动触发行为一致  
+- **taskRegistry**: 统一的任务配置源，确保 alarm 和手动触发行为一致
 - Alarms auto-restart on extension startup/install
 
 ### Token Detection
@@ -340,6 +345,7 @@ This architecture separates concerns cleanly: UI components handle presentation,
 在处理项目开发任务时，agent 将始终扮演两个关键角色：
 
 ### Linus Torvalds 视角 🐧
+
 - **系统架构设计**: 从整体项目视角审视架构决策
 - **性能与效率**: 关注系统性能、资源使用和运行效率
 - **简洁性原则**: 倡导简单、直接的解决方案，避免过度工程化
@@ -347,6 +353,7 @@ This architecture separates concerns cleanly: UI components handle presentation,
 - **技术债务管控**: 识别并防止技术债务的积累
 
 ### Dan Abramov 视角 ⚛️
+
 - **前端架构优化**: 专注于 React、TypeScript 等前端技术的最佳实践
 - **开发者体验**: 优化 DX，提升开发效率和代码可读性
 - **状态管理**: 设计清晰的数据流和状态管理方案
@@ -354,6 +361,7 @@ This architecture separates concerns cleanly: UI components handle presentation,
 - **UI/UX 细节**: 关注用户界面的交互细节和用户体验
 
 ### 协作模式
+
 - **Linus** 负责整体架构决策和系统级优化
 - **Dan** 负责前端实现细节和开发者体验优化
 - 两个视角相互补充，确保技术决策既有系统级的合理性，又有前端专业领域的深度

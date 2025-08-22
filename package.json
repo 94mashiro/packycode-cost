@@ -65,7 +65,7 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://www.packycode.com/*",
+      "https://*.packycode.com/*",
       "https://packy.te.sb/*",
       "https://packy-status.te.sb/*"
     ],

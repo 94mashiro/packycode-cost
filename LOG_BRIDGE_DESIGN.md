@@ -47,11 +47,11 @@ const useLogStream = () => {
 // 声明式的UI组件
 const LogConsole = () => {
   const { logs, isConnected } = useLogStream()
-  
-  const filteredLogs = useMemo(() => 
+
+  const filteredLogs = useMemo(() =>
     logs.filter(/* 过滤逻辑 */), [logs, filters]
   )
-  
+
   return <VirtualizedLogList logs={filteredLogs} />
 }
 ```
@@ -71,13 +71,13 @@ const LogConsole = () => {
 class LogBridge {
   private messageQueue: LogEntry[] = []
   private readonly MAX_QUEUE_SIZE = 200
-  
+
   sendLog(namespace: string, level: LogLevel, args: unknown[]): void {
     // 生产环境零开销
     if (this.isProduction()) return
-    
+
     const entry = this.createLogEntry(namespace, level, args)
-    
+
     // 简单的发送或队列逻辑
     if (this.isPopupConnected) {
       this.sendImmediate(entry)
@@ -85,16 +85,16 @@ class LogBridge {
       this.queueEntry(entry)
     }
   }
-  
+
   // 安全序列化 - 处理边界情况
   private safeSerialize(args: unknown[]): unknown[] {
-    return args.map(arg => {
+    return args.map((arg) => {
       try {
-        if (typeof arg !== 'object') return arg
+        if (typeof arg !== "object") return arg
         JSON.stringify(arg) // 检查循环引用
         return arg
       } catch {
-        return '[Unserializable Object]'
+        return "[Unserializable Object]"
       }
     })
   }
@@ -120,6 +120,7 @@ class LogBridge {
 ## 🚀 使用方式
 
 ### 1. Service Worker端 (无需修改)
+
 ```typescript
 // 现有代码自动获得日志桥梁功能
 const logger = loggers.background
@@ -128,6 +129,7 @@ logger.warn("API速率限制接近", { remaining: 10 })
 ```
 
 ### 2. Popup端 (自动集成)
+
 ```typescript
 // LogConsole组件自动出现在开发环境
 function IndexPopup() {
@@ -135,7 +137,7 @@ function IndexPopup() {
     <div>
       {/* 正常的UI组件 */}
       <UserInterface />
-      
+
       {/* 开发者日志控制台 - 仅开发环境 */}
       <LogConsole />
     </div>
@@ -146,11 +148,13 @@ function IndexPopup() {
 ## 🔒 安全和性能
 
 ### 生产环境保护
+
 - 自动检测生产环境，完全禁用日志桥梁
 - 零运行时开销，零安全风险
 - 构建时可选择性移除开发工具代码
 
 ### 内存和性能优化
+
 - 消息队列大小限制 (200条)
 - 批量发送减少IPC开销
 - 虚拟化列表处理大量日志
@@ -159,20 +163,23 @@ function IndexPopup() {
 ## 🛠️ 扩展性设计
 
 ### 消息协议扩展
+
 ```typescript
 interface LogBridgeMessage {
-  type: 'LOG_ENTRY' | 'LOG_BATCH' | 'POPUP_CONNECTED' | 'LOG_LEVEL_CHANGE'
+  type: "LOG_ENTRY" | "LOG_BATCH" | "POPUP_CONNECTED" | "LOG_LEVEL_CHANGE"
   payload: any
 }
 ```
 
 ### 过滤器扩展
+
 - 正则表达式搜索
 - 时间范围过滤
 - 自定义标签系统
 - 保存过滤器配置
 
 ### UI主题扩展
+
 - 多种配色方案
 - 字体大小调节
 - 布局自定义

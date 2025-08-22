@@ -69,7 +69,8 @@ const config = tseslint.config([
           patterns: [
             {
               group: ["@plasmohq/storage"],
-              message: "不允许直接使用 @plasmohq/storage。请使用 ~/lib/storage 中的抽象层。"
+              message:
+                "不允许直接使用 @plasmohq/storage。请使用 ~/lib/storage 中的抽象层。"
             }
           ]
         }

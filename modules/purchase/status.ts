@@ -1,7 +1,7 @@
 import type { PackyConfig, SystemPreferenceStorage } from "~/types"
 
+import { dynamicPackyApi } from "~/api/dynamic"
 import { loggers } from "~/lib/logger"
-import { packyApi } from "~/lib/request"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 
@@ -38,7 +38,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
   try {
     // 1. 获取最新的API数据
     logger.debug("[API] Fetching latest purchase status")
-    const result = await packyApi.getConfig()
+    const result = await dynamicPackyApi.getConfig()
 
     if (!result.success || !result.data) {
       logger.debug("[API] Failed to fetch current config:", result.error)

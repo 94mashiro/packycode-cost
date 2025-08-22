@@ -3,6 +3,7 @@
 ## 🎯 项目背景
 
 PackyCode Cost Monitor 现在支持两个账号版本：
+
 - **🚌 公交车版本** (共享资源，价格实惠)
 - **🚗 私家车版本** (独享资源，性能更优)
 
@@ -11,6 +12,7 @@ PackyCode Cost Monitor 现在支持两个账号版本：
 ## 🏗️ 架构设计
 
 ### 存储层次结构
+
 ```
 ┌─────────────────────┐
 │   React Components  │ ← useAuth(), useUserInfo() 等业务 Hooks
@@ -24,7 +26,8 @@ PackyCode Cost Monitor 现在支持两个账号版本：
 ```
 
 ### 存储键命名规则
-- **版本化数据**: `{version}.{domain}` 
+
+- **版本化数据**: `{version}.{domain}`
   - 示例: `shared.auth`, `private.user.info`
 - **全局数据**: `global.{domain}`
   - 示例: `global.user.preference`
@@ -53,17 +56,18 @@ components/
 ```typescript
 export enum StorageDomain {
   // 版本化域
-  AUTH = 'auth',
-  USER_INFO = 'user.info',
-  PURCHASE_CONFIG = 'purchase_config',
-  SYSTEM_PREFERENCE = 'system.preference',
-  
+  AUTH = "auth",
+  USER_INFO = "user.info",
+  PURCHASE_CONFIG = "purchase_config",
+  SYSTEM_PREFERENCE = "system.preference",
+
   // 全局域
-  USER_PREFERENCE = 'global.user.preference'
+  USER_PREFERENCE = "global.user.preference"
 }
 ```
 
 **优势:**
+
 - ✅ 编译时类型检查
 - ✅ IDE 自动补全
 - ✅ 重构时自动更新
@@ -72,12 +76,14 @@ export enum StorageDomain {
 ### 2. StorageManager 类
 
 **核心功能:**
+
 - 🔄 **同步版本管理** - 避免异步获取版本的性能问题
 - 🔧 **自动键生成** - 根据版本和域生成正确的存储键
 - 📡 **响应式通知** - 版本切换时通知所有订阅者
 - 🧪 **测试友好** - 支持依赖注入
 
 **关键方法:**
+
 ```typescript
 getCurrentVersion(): AccountVersion          // 同步获取当前版本
 setCurrentVersion(version): Promise<void>    // 切换版本并通知
@@ -89,14 +95,21 @@ onVersionChange(callback): () => void        // 订阅版本变化
 ### 3. useStorage Hook
 
 **特性:**
+
 - 🎯 **类型安全** - 自动推导数据类型
 - 🔄 **响应式** - 版本切换时自动重新加载
 - ⚠️ **错误处理** - 统一的错误状态管理
 - 🚀 **性能优化** - 避免不必要的重新渲染
 
 **使用示例:**
+
 ```typescript
-const { data: userInfo, loading, error, update } = useStorage(StorageDomain.USER_INFO)
+const {
+  data: userInfo,
+  loading,
+  error,
+  update
+} = useStorage(StorageDomain.USER_INFO)
 // data 自动推导为 UserInfoStorage | null 类型
 ```
 
@@ -104,12 +117,13 @@ const { data: userInfo, loading, error, update } = useStorage(StorageDomain.USER
 
 ```typescript
 export const useAuth = () => useStorage(StorageDomain.AUTH)
-export const useUserInfo = () => useStorage(StorageDomain.USER_INFO)  
+export const useUserInfo = () => useStorage(StorageDomain.USER_INFO)
 export const useUserPreference = () => useStorage(StorageDomain.USER_PREFERENCE)
 // 等等...
 ```
 
 **优势:**
+
 - 🎯 **零配置** - 无需传入参数
 - 📝 **语义清晰** - 函数名直接表达意图
 - 🔒 **类型安全** - 自动类型推导
@@ -117,6 +131,7 @@ export const useUserPreference = () => useStorage(StorageDomain.USER_PREFERENCE)
 ### 5. useVersionSwitcher Hook
 
 **完整的版本切换功能:**
+
 - 📊 状态管理 (切换进度、错误状态)
 - 🔄 响应式更新 (自动触发组件重新加载)
 - ⚠️ 错误处理和恢复机制
@@ -125,6 +140,7 @@ export const useUserPreference = () => useStorage(StorageDomain.USER_PREFERENCE)
 ## 🚀 开发者体验
 
 ### Before (复杂)
+
 ```typescript
 const storage = new Storage()
 const [userInfo, setUserInfo] = useState(null)
@@ -142,24 +158,26 @@ useEffect(() => {
 ```
 
 ### After (简洁)
+
 ```typescript
 const { data: userInfo, loading } = useUserInfo()
 // 完成！版本切换、存储键、响应式更新都被抽象掉了
 ```
 
 ### 版本切换示例
+
 ```typescript
 const SettingsPage = () => {
   const { data: userPref } = useUserPreference()
   const { switchVersion, switching } = useVersionSwitcher()
-  
+
   const handleVersionChange = async (e) => {
     const newVersion = e.target.value as AccountVersion
     await switchVersion(newVersion) // 一行代码完成版本切换！
   }
-  
+
   const currentVersion = userPref?.account_version || AccountVersion.SHARED
-  
+
   return (
     <select value={currentVersion} onChange={handleVersionChange} disabled={switching}>
       <option value={AccountVersion.SHARED}>🚌 公交车</option>
@@ -179,16 +197,16 @@ const SettingsPage = () => {
   "shared.auth": { "token": "jwt_token", "type": "jwt" },
   "shared.user.info": { "budgets": { "daily": {...} } },
   "shared.system.preference": { "api_endpoints": {...} },
-  
-  // 私家车版本数据  
+
+  // 私家车版本数据
   "private.auth": { "token": "api_key_abc", "type": "api_key" },
   "private.user.info": { "budgets": { "daily": {...} } },
   "private.system.preference": { "api_endpoints": {...} },
-  
+
   // 全局共享数据
-  "global.user.preference": { 
-    "account_version": "shared", 
-    "theme": "dark" 
+  "global.user.preference": {
+    "account_version": "shared",
+    "theme": "dark"
   }
 }
 ```

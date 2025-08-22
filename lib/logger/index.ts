@@ -95,6 +95,7 @@ export const loggers = {
   api: new Logger("API", { color: "#2196F3" }),
   auth: new Logger("AUTH", { color: "#4CAF50" }),
   background: new Logger("BACKGROUND", { color: "#9C27B0" }),
+  debug: new Logger("DEBUG", { color: "#E91E63", level: "debug" }),
   notification: new Logger("NOTIFICATION", { color: "#607D8B" }),
   purchase: new Logger("PURCHASE", { color: "#F44336" }),
   storage: new Logger("STORAGE", { color: "#FF9800" }),

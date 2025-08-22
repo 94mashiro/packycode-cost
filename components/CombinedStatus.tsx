@@ -1,4 +1,6 @@
-import { API_URLS } from "../api"
+import { useEffect, useState } from "react"
+
+import { dynamicApiUrls } from "../api/dynamic"
 import { useOpusStatus } from "../hooks/useOpusStatus"
 import { usePurchaseStatus } from "../hooks/usePurchaseStatus"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
@@ -15,6 +17,27 @@ export function CombinedStatus({
   const { config: purchaseConfig, loading: purchaseLoading } =
     usePurchaseStatus()
   const { enabled: opusEnabled, loading: opusLoading } = useOpusStatus()
+
+  // 动态获取URL状态
+  const [dashboardUrl, setDashboardUrl] = useState<string>("")
+  const [pricingUrl, setPricingUrl] = useState<string>("")
+
+  useEffect(() => {
+    // 获取动态URL
+    const loadUrls = async () => {
+      try {
+        const [dashboard, pricing] = await Promise.all([
+          dynamicApiUrls.getDashboardUrl(),
+          dynamicApiUrls.getPricingUrl()
+        ])
+        setDashboardUrl(dashboard)
+        setPricingUrl(pricing)
+      } catch (error) {
+        console.error("Failed to load dynamic URLs:", error)
+      }
+    }
+    loadUrls()
+  }, [])
 
   const isApiKey = tokenData.tokenType === TokenType.API_KEY
   const isAuthenticated =
@@ -52,9 +75,7 @@ export function CombinedStatus({
                 <button
                   className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
                   onClick={() =>
-                    chrome.tabs.create({
-                      url: API_URLS.PACKY_DASHBOARD
-                    })
+                    dashboardUrl && chrome.tabs.create({ url: dashboardUrl })
                   }>
                   点击登录
                 </button>
@@ -90,9 +111,7 @@ export function CombinedStatus({
                 <button
                   className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
                   onClick={() =>
-                    chrome.tabs.create({
-                      url: API_URLS.PACKY_PRICING
-                    })
+                    pricingUrl && chrome.tabs.create({ url: pricingUrl })
                   }>
                   立即购买
                 </button>

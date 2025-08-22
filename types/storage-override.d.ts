@@ -34,7 +34,12 @@ declare module "@plasmohq/storage" {
     /**
      * @deprecated 请使用 storageManager.onDomainChange()
      */
-    watch(config: Record<string, (change: any) => void>): void
+    watch(
+      config: Record<
+        string,
+        (change: { newValue?: unknown; oldValue?: unknown }) => void
+      >
+    ): void
   }
 }
 

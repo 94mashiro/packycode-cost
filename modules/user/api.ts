@@ -1,4 +1,4 @@
-import { userApi } from "~/api"
+import { dynamicUserApi } from "~/api/dynamic"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
@@ -33,7 +33,10 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       return null
     }
 
-    const result = await userApi.getUserInfo(authData.token, authData.type)
+    const result = await dynamicUserApi.getUserInfo(
+      authData.token,
+      authData.type
+    )
 
     if (!result.success) {
       // 检查是否是认证错误

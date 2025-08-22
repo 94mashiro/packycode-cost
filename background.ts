@@ -1,7 +1,7 @@
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { parseJWT } from "~/modules/auth"
+import { getCurrentCookieDomain, parseJWT } from "~/modules/auth"
 import {
   type BackgroundAction,
   BackgroundActionEnum,
@@ -13,7 +13,7 @@ import {
 
 import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
 
-import { API_URLS } from "./api"
+import { dynamicApiUrls } from "./api/dynamic"
 
 const logger = loggers.background
 
@@ -84,9 +84,10 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
       if (!authData?.token || authData?.type !== "api_key") {
+        const cookieDomain = await getCurrentCookieDomain()
         const tokenCookie = await chrome.cookies.get({
           name: "token",
-          url: API_URLS.PACKY_BASE
+          url: cookieDomain
         })
 
         logger.debug("Cookie result:", {
@@ -211,58 +212,126 @@ chrome.runtime.onInstalled.addListener(() => {
   startAllPeriodicTasks()
 })
 
-// 监听 API keys 相关请求的响应
-chrome.webRequest.onCompleted.addListener(
-  async (details) => {
-    if (details.statusCode === 200 && details.method === "GET") {
-      try {
-        // 获取当前token用于重放请求
-        const storageManager = await getStorageManager()
-        const authData = await storageManager.get<AuthStorage>(
-          StorageDomain.AUTH
-        )
-        if (!authData?.token) return
+// 全局监听器变量，用于管理webRequest监听器
+let currentWebRequestListener:
+  | ((details: chrome.webRequest.WebResponseDetails) => void)
+  | null = null
 
-        // 重放请求获取响应内容
-        const response = await fetch(details.url, {
-          headers: {
-            Authorization: `Bearer ${authData.token}`,
-            "Content-Type": "application/json"
-          },
-          method: "GET"
-        })
+// 设置动态webRequest监听器 - 根据当前账号类型监听对应的API
+async function setupDynamicWebRequestListener() {
+  try {
+    // 清除现有监听器（如果有）
+    if (currentWebRequestListener) {
+      chrome.webRequest.onCompleted.removeListener(currentWebRequestListener)
+      currentWebRequestListener = null
+      logger.info("🧹 清除旧的webRequest监听器")
+    }
 
-        if (response.ok) {
-          const data = (await response.json()) as ApiKeyResponse
-          if (data.api_key) {
-            // 存储API Key，覆盖现有token
-            const newAuthData: AuthStorage = {
-              token: data.api_key,
-              type: "api_key" as TokenType
-              // API Key 不需要过期时间
-            }
-            await storageManager.set(StorageDomain.AUTH, newAuthData)
+    // 获取当前账号类型对应的API Keys Pattern
+    const apiKeysPattern = await dynamicApiUrls.getApiKeysPattern()
 
-            logger.info("API key stored successfully")
-            // 触发重新获取用户信息以更新额度显示
-            backgroundExecuteAllTasks()
+    logger.info("🔗 设置webRequest监听器，模式:", apiKeysPattern)
+
+    // 创建新的监听器函数
+    currentWebRequestListener = async (details) => {
+      if (details.statusCode === 200) {
+        // 检查URL是否匹配API Key模式
+        const isApiKeyRequest =
+          details.url.includes("/api/backend/users/") &&
+          details.url.includes("/api-keys/")
+
+        if (!isApiKeyRequest) return
+
+        logger.info("🔑 检测到API Key请求:", details.url)
+
+        try {
+          // 获取当前token用于重放请求
+          const storageManager = await getStorageManager()
+          const authData = await storageManager.get<AuthStorage>(
+            StorageDomain.AUTH
+          )
+          if (!authData?.token) {
+            logger.debug("⚠️ 没有token，跳过API Key处理")
+            return
           }
+
+          // 重放请求获取响应内容
+          const response = await fetch(details.url, {
+            headers: {
+              Authorization: `Bearer ${authData.token}`,
+              "Content-Type": "application/json"
+            },
+            method: "GET"
+          })
+
+          if (response.ok) {
+            const data = (await response.json()) as ApiKeyResponse
+            if (data.api_key) {
+              // 存储API Key，覆盖现有token
+              const newAuthData: AuthStorage = {
+                token: data.api_key,
+                type: "api_key" as TokenType
+                // API Key 不需要过期时间
+              }
+              await storageManager.set(StorageDomain.AUTH, newAuthData)
+
+              logger.info("✅ API key存储成功，来源:", details.url)
+              // 触发重新获取用户信息以更新额度显示
+              backgroundExecuteAllTasks()
+            } else {
+              logger.debug("⚠️ 响应中没有找到api_key字段")
+            }
+          } else {
+            logger.warn(
+              "⚠️ API Key请求重放失败:",
+              response.status,
+              response.statusText
+            )
+          }
+        } catch (error) {
+          logger.error("❌ 处理API Key请求失败:", error)
         }
-      } catch (error) {
-        logger.error("Failed to fetch API key:", error)
       }
     }
-  },
-  {
-    urls: [API_URLS.API_KEYS_PATTERN]
+
+    // 注册新的监听器
+    chrome.webRequest.onCompleted.addListener(currentWebRequestListener, {
+      urls: [apiKeysPattern]
+    })
+
+    logger.info("✅ 动态webRequest监听器设置完成")
+  } catch (error) {
+    logger.error("❌ 动态webRequest监听器设置失败:", error)
   }
-)
+}
+
+// 监听用户偏好变化，动态更新webRequest监听器
+async function setupUserPreferenceWatcher() {
+  try {
+    const storageManager = await getStorageManager()
+
+    // 监听用户偏好变化
+    storageManager.onDomainChange(StorageDomain.USER_PREFERENCE, async () => {
+      logger.info("🔄 检测到用户偏好变化，重新设置webRequest监听器")
+
+      // 延迟一点时间确保存储已完全更新
+      setTimeout(() => {
+        setupDynamicWebRequestListener()
+      }, 500)
+    })
+
+    logger.info("✅ 用户偏好监听器设置完成")
+  } catch (error) {
+    logger.error("❌ 用户偏好监听器设置失败:", error)
+  }
+}
 
 // 监听通知点击事件
-chrome.notifications.onClicked.addListener((notificationId) => {
+chrome.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith("purchase-available-")) {
     // 打开购买页面
-    chrome.tabs.create({ url: API_URLS.PACKY_PRICING })
+    const pricingUrl = await dynamicApiUrls.getPricingUrl()
+    chrome.tabs.create({ url: pricingUrl })
     // 清除通知
     chrome.notifications.clear(notificationId)
   }
@@ -270,3 +339,5 @@ chrome.notifications.onClicked.addListener((notificationId) => {
 
 updateBadge()
 startAllPeriodicTasks()
+setupDynamicWebRequestListener()
+setupUserPreferenceWatcher()

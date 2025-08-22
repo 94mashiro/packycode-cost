@@ -1,11 +1,8 @@
-import { Storage } from "@plasmohq/storage"
-import { useEffect, useState } from "react"
-
-import { AccountVersion, type UserPreferenceStorage } from "../types"
+import { useUserPreference } from "../hooks/useStorageHooks"
+import { useVersionSwitcher } from "../hooks/useVersionSwitcher"
+import { AccountVersion } from "../types"
 import { loggers } from "../utils/logger"
-import { STORAGE_KEYS } from "../utils/storage-keys"
 
-const storage = new Storage()
 const logger = loggers.ui
 
 interface SettingsPageProps {
@@ -13,46 +10,22 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const [accountVersion, setAccountVersion] = useState<AccountVersion>(
-    AccountVersion.SHARED
-  )
-  const [saving, setSaving] = useState(false)
+  const { data: userPreference } = useUserPreference()
+  const { error, switching, switchVersion } = useVersionSwitcher()
 
-  useEffect(() => {
-    // 加载存储的版本
-    storage
-      .get<UserPreferenceStorage>(STORAGE_KEYS.USER_PREFERENCE)
-      .then((pref) => {
-        if (pref?.account_version) {
-          setAccountVersion(pref.account_version)
-        }
-      })
-  }, [])
+  const currentVersion =
+    userPreference?.account_version || AccountVersion.SHARED
 
   const handleVersionChange = async (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newVersion = e.target.value as AccountVersion
-    setSaving(true)
 
     try {
-      // 获取当前偏好设置
-      const currentPref =
-        (await storage.get<UserPreferenceStorage>(
-          STORAGE_KEYS.USER_PREFERENCE
-        )) || {}
-
-      // 更新账号版本
-      await storage.set(STORAGE_KEYS.USER_PREFERENCE, {
-        ...currentPref,
-        account_version: newVersion
-      })
-      setAccountVersion(newVersion)
-      logger.info(`Account version changed to: ${newVersion}`)
+      await switchVersion(newVersion)
+      logger.info(`Account version switched to: ${newVersion}`)
     } catch (error) {
-      logger.error("Failed to save version:", error)
-    } finally {
-      setSaving(false)
+      logger.error("Failed to switch version:", error)
     }
   }
 
@@ -90,18 +63,21 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           </label>
           <select
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-            disabled={saving}
+            disabled={switching}
             id="account-version"
             onChange={handleVersionChange}
-            value={accountVersion}>
+            value={currentVersion}>
             <option value={AccountVersion.SHARED}>🚌 公交车</option>
             <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
           </select>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {accountVersion === AccountVersion.SHARED
+            {currentVersion === AccountVersion.SHARED
               ? "公交车版本：共享资源，价格实惠"
               : "私家车版本：独享资源，性能更优"}
           </p>
+          {error && (
+            <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
+          )}
         </div>
       </div>
     </div>

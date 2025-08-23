@@ -22,7 +22,6 @@ const logger = loggers.storage
 export class StorageManager {
   private _storage: Storage
   private currentVersion: AccountVersion = AccountVersion.SHARED
-  private versionChangeCallbacks = new Set<(version: AccountVersion) => void>()
 
   constructor(storage: Storage) {
     this._storage = storage
@@ -118,21 +117,17 @@ export class StorageManager {
       (change?: { newValue?: unknown; oldValue?: unknown }) => void
     >
   ): void {
-    const activeWatchers = new Map<string, () => void>()
+    // 存储原始的监听配置，用于版本切换时重新设置
+    const originalConfig = { ...watchConfig }
 
-    // 设置监听的函数
+    // 设置监听器的函数
     const setupWatchers = () => {
-      // 清理旧的监听器
-      activeWatchers.forEach((cleanup) => cleanup())
-      activeWatchers.clear()
-
-      // 为每个域设置新的版本化监听
       const versionedWatchConfig: Record<
         string,
         (change?: { newValue?: unknown; oldValue?: unknown }) => void
       > = {}
 
-      Object.entries(watchConfig).forEach(([domain, callback]) => {
+      Object.entries(originalConfig).forEach(([domain, callback]) => {
         const versionedKey = this.getVersionedKey(domain)
         versionedWatchConfig[versionedKey] = callback
         logger.debug(`Setup watch: ${domain} -> ${versionedKey}`)
@@ -144,19 +139,27 @@ export class StorageManager {
     // 初始设置
     setupWatchers()
 
-    // 监听版本变化，重新设置所有监听器
-    this.onVersionChange(() => {
-      logger.debug("Version changed, updating all watchers")
-      setupWatchers()
+    // 监听USER_PREFERENCE变化，自动重新设置监听器
+    // 这是唯一合理的版本变化感知方式
+    this._storage.watch({
+      [StorageDomain.USER_PREFERENCE]: () => {
+        logger.debug("User preference changed, updating watchers")
+        // 重新加载版本状态
+        this.syncVersionFromStorage().then(() => {
+          // 重新设置所有监听器以使用新版本的键
+          setupWatchers()
 
-      // 版本切换后，通知所有回调数据可能已变化
-      Object.values(watchConfig).forEach((callback) => {
-        callback({ newValue: undefined, oldValue: undefined })
-      })
+          // 通知业务方数据可能已变化（版本切换时数据结构相同但来源不同）
+          Object.values(originalConfig).forEach((callback) => {
+            callback({ newValue: undefined, oldValue: undefined })
+          })
+        })
+      }
     })
 
-    // 存储清理函数（注意：这里无法返回清理函数，因为要保持与 Plasmo API 一致）
-    // 实际项目中可能需要提供单独的清理方法，或者在组件卸载时自动清理
+    logger.debug(
+      `Registered ${Object.keys(watchConfig).length} watch listeners with version awareness`
+    )
   }
 
   /**
@@ -184,26 +187,6 @@ export class StorageManager {
     } catch (error) {
       logger.error("Failed to load version from storage:", error)
       this.currentVersion = AccountVersion.SHARED // 故障回退
-    }
-  }
-
-  /**
-   * 监听版本变化 - 解决版本切换后数据不更新的问题
-   * @private 内部使用，遵循最小权限原则
-   */
-  private onVersionChange(
-    callback: (version: AccountVersion) => void
-  ): () => void {
-    this.versionChangeCallbacks.add(callback)
-    logger.debug(
-      `Added version change subscriber (total: ${this.versionChangeCallbacks.size})`
-    )
-
-    return () => {
-      this.versionChangeCallbacks.delete(callback)
-      logger.debug(
-        `Removed version change subscriber (remaining: ${this.versionChangeCallbacks.size})`
-      )
     }
   }
 
@@ -237,8 +220,8 @@ export class StorageManager {
         this.currentVersion = newVersion
         logger.info(`🔄 Version auto-sync: ${oldVersion} -> ${newVersion}`)
 
-        // 注意：版本变化后，业务层需要重新获取数据
-        // 这由 useStorage 等消费者通过同时监听版本变化来处理
+        // 版本变化后，业务层需要通过监听 USER_PREFERENCE 来感知变化
+        // StorageManager 只负责版本抽象，不管理业务回调
       }
     } catch (error) {
       logger.error("❌ Version sync error:", error)

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react"
 
-import type { StorageDomainMap } from "~/lib/storage/domains"
-
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
+import { type StorageDomainMap } from "~/lib/storage/domains"
 
 const logger = loggers.ui
 
@@ -12,9 +11,13 @@ const logger = loggers.ui
  *
  * 特性:
  * 1. 类型安全 - 根据存储域自动推导数据类型
- * 2. 响应式 - 直接使用 Plasmo Storage watch，版本切换时自动重新加载数据
+ * 2. 响应式 - 监听目标域和版本变化，自动重新加载数据
  * 3. 错误处理 - 统一的错误状态管理
- * 4. 性能优化 - 避免不必要的重新渲染
+ * 4. 性能优化 - 避免不必要的重新渲染和重复监听
+ *
+ * 版本感知机制:
+ * - 对于版本化域（如USER_INFO），同时监听目标域和USER_PREFERENCE变化
+ * - 当账号版本切换时，自动refresh以获取新版本的数据
  *
  * @param domain 存储域 (使用 StorageDomain 枚举)
  * @returns 类型安全的存储数据和操作函数
@@ -94,6 +97,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
           )
 
           // ✅ 使用 StorageManager 的版本感知 watch
+          // StorageManager 会自动处理版本切换，无需业务层额外监听
           storage.watch({
             [domain]: () => {
               if (mounted) {
@@ -105,8 +109,10 @@ export function useStorage<T extends keyof StorageDomainMap>(
             }
           })
 
+          const watchDescription = domain
+
           logger.debug(
-            `🔗 useStorage StorageManager watch registered for: ${domain}`
+            `🔗 useStorage watch registered for: ${watchDescription}`
           )
         }
       } catch (err) {

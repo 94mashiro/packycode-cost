@@ -17,19 +17,6 @@ import { dynamicApiUrls } from "./api/dynamic"
 
 const logger = loggers.background
 
-// 立即发送测试日志
-;(() => {
-  logger.info("🚀 Background Service Worker 启动")
-  logger.debug("📡 日志桥梁已初始化")
-})()
-
-// 延迟测试日志
-setTimeout(() => {
-  logger.info("⏰ 延迟日志测试: Service Worker 运行中")
-  logger.warn("⚠️ 这是一条警告消息")
-  logger.error("❌ 这是一条错误消息（仅用于测试）")
-}, 2000)
-
 // 使用统一的任务执行机制替代原来的独立函数
 async function backgroundExecuteAllTasks() {
   const result = await executeAllTasks()

@@ -119,7 +119,7 @@ pnpm build
 
 - **[📖 完整文档中心](docs/README.md)** - 技术文档导航中心
 - **[👨‍💻 开发者指南](docs/developers/)** - 贡献和编码规范
-- **[📚 功能指南](docs/guides/)** - 版本化存储和私家车模式
+- **[📚 功能指南](docs/guides/)** - 版本化存储和滴滴车模式
 - **[🏗️ 架构设计](docs/architecture/)** - 核心系统设计文档
 
 ### 常用文档

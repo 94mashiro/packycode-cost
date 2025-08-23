@@ -58,7 +58,7 @@ export function AccountTypeSwitcher({
       if (showNotification) {
         chrome.notifications.create({
           iconUrl: "assets/icon.png",
-          message: `已切换到${newType === AccountVersion.PRIVATE ? "私家车" : "公交车"}模式，请重新加载扩展以应用更改`,
+          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}模式，请重新加载扩展以应用更改`,
           title: "账号类型已切换",
           type: "basic"
         })
@@ -98,13 +98,13 @@ export function AccountTypeSwitcher({
           onChange={handleDropdownChange}
           value={currentAccountType}>
           <option value={AccountVersion.SHARED}>🚌 公交车</option>
-          <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
+          <option value={AccountVersion.PRIVATE}>🚗 滴滴车</option>
         </select>
         {showDescription && (
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {currentAccountType === AccountVersion.SHARED
               ? "公交车版本：共享资源，价格实惠"
-              : "私家车版本：独享资源，性能更优"}
+              : "滴滴车版本：独享资源，性能更优"}
           </p>
         )}
       </div>
@@ -119,7 +119,7 @@ export function AccountTypeSwitcher({
           账号类型
         </h3>
         <span className="text-xs text-gray-500 dark:text-gray-400">
-          {currentAccountType === AccountVersion.PRIVATE ? "私家车" : "公交车"}
+          {currentAccountType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}
           模式
         </span>
       </div>
@@ -152,7 +152,7 @@ export function AccountTypeSwitcher({
               }`}
               disabled={isLoading}
               onClick={() => handleAccountTypeChange(AccountVersion.PRIVATE)}>
-              🚗 私家车
+              🚗 滴滴车
             </button>
           </div>
         </div>
@@ -163,7 +163,7 @@ export function AccountTypeSwitcher({
               • <strong>公交车模式：</strong>使用 www.packycode.com（共享账号）
             </p>
             <p>
-              • <strong>私家车模式：</strong>使用{" "}
+              • <strong>滴滴车模式：</strong>使用{" "}
               share.packycode.com（私有账号）
             </p>
           </div>

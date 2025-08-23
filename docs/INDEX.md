@@ -18,7 +18,7 @@
 | 功能           | 用户指南                                                    | 技术文档                                              |
 | -------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
 | **双账号支持** | [版本化存储系统](guides/versioned-storage-guide.md)         | [存储架构设计](architecture/storage-architecture.md)  |
-| **私家车模式** | [私家车模式指南](guides/private-car-mode.md)                | [账号适配层设计](guides/private-car-mode.md#架构说明) |
+| **滴滴车模式** | [滴滴车模式指南](guides/private-car-mode.md)                | [账号适配层设计](guides/private-car-mode.md#架构说明) |
 | **调试工具**   | [开发者工具使用](guides/private-car-mode.md#开发者测试工具) | [日志通信机制](architecture/log-bridge-design.md)     |
 
 ---
@@ -40,7 +40,7 @@
 
 - **[README.md](guides/README.md)** - 功能指南目录
 - **[versioned-storage-guide.md](guides/versioned-storage-guide.md)** - 版本化存储系统详解
-- **[private-car-mode.md](guides/private-car-mode.md)** - 私家车模式配置和使用
+- **[private-car-mode.md](guides/private-car-mode.md)** - 滴滴车模式配置和使用
 
 ### 🏗️ 架构设计 (`architecture/`)
 

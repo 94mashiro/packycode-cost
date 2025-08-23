@@ -1,15 +1,15 @@
 # 版本化存储系统 - 双账号数据隔离
 
-> 本文档介绍 PackyCode Cost Monitor 的版本化存储架构实现，支持公交车和私家车两种账号模式的数据隔离。
+> 本文档介绍 PackyCode Cost Monitor 的版本化存储架构实现，支持公交车和滴滴车两种账号模式的数据隔离。
 >
-> **相关文档**: [存储架构设计](../architecture/storage-architecture.md) | [私家车模式指南](private-car-mode.md)
+> **相关文档**: [存储架构设计](../architecture/storage-architecture.md) | [滴滴车模式指南](private-car-mode.md)
 
 ## 🎯 项目背景
 
 PackyCode Cost Monitor 现在支持两个账号版本：
 
 - **🚌 公交车版本** (共享资源，价格实惠)
-- **🚗 私家车版本** (独享资源，性能更优)
+- **🚗 滴滴车版本** (独享资源，性能更优)
 
 每个版本对应不同的系统环境，需要隔离存储数据，同时保持开发体验的简洁性。
 
@@ -185,7 +185,7 @@ const SettingsPage = () => {
   return (
     <select value={currentVersion} onChange={handleVersionChange} disabled={switching}>
       <option value={AccountVersion.SHARED}>🚌 公交车</option>
-      <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
+      <option value={AccountVersion.PRIVATE}>🚗 滴滴车</option>
     </select>
   )
 }
@@ -202,7 +202,7 @@ const SettingsPage = () => {
   "shared.user.info": { "budgets": { "daily": {...} } },
   "shared.system.preference": { "api_endpoints": {...} },
 
-  // 私家车版本数据
+  // 滴滴车版本数据
   "private.auth": { "token": "api_key_abc", "type": "api_key" },
   "private.user.info": { "budgets": { "daily": {...} } },
   "private.system.preference": { "api_endpoints": {...} },
@@ -247,7 +247,7 @@ const SettingsPage = () => {
 
 ### 功能使用指南
 
-- [私家车模式指南](private-car-mode.md) - 私有账号模式配置和使用
+- [滴滴车模式指南](private-car-mode.md) - 私有账号模式配置和使用
 - [贡献指南](../developers/contributing.md) - 参与项目开发流程
 
 ### 导航

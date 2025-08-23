@@ -1,7 +1,7 @@
 /**
  * 账号类型适配层测试工具
  *
- * 用于验证私家车模式认证流程是否正常工作
+ * 用于验证滴滴车模式认证流程是否正常工作
  */
 
 import { loggers } from "~/lib/logger"
@@ -59,8 +59,8 @@ export async function testAccountTypeSwitching() {
     logger.info(`默认账号类型: ${defaultAdapter.getAccountType()}`)
     logger.info(`默认基础URL: ${defaultBaseUrl}`)
 
-    // 2. 切换到私家车模式
-    logger.info("\n2. 切换到私家车模式...")
+    // 2. 切换到滴滴车模式
+    logger.info("\n2. 切换到滴滴车模式...")
     const storageManager = await getStorageManager()
     await storageManager.set(StorageDomain.USER_PREFERENCE, {
       account_version: AccountVersion.PRIVATE
@@ -71,8 +71,8 @@ export async function testAccountTypeSwitching() {
 
     const privateAdapter = await getCurrentAccountAdapter()
     const privateBaseUrl = await getCurrentBaseUrl()
-    logger.info(`私家车账号类型: ${privateAdapter.getAccountType()}`)
-    logger.info(`私家车基础URL: ${privateBaseUrl}`)
+    logger.info(`滴滴车账号类型: ${privateAdapter.getAccountType()}`)
+    logger.info(`滴滴车基础URL: ${privateBaseUrl}`)
 
     // 3. 验证URL配置
     logger.info("\n3. 验证URL配置...")
@@ -89,8 +89,8 @@ export async function testAccountTypeSwitching() {
     const isSharedUrl = privateAdapter.isUrlBelongsToAccount(
       "https://www.packycode.com/dashboard"
     )
-    logger.info(`share.packycode.com 属于私家车: ${isPrivateUrl}`)
-    logger.info(`www.packycode.com 属于私家车: ${isSharedUrl}`)
+    logger.info(`share.packycode.com 属于滴滴车: ${isPrivateUrl}`)
+    logger.info(`www.packycode.com 属于滴滴车: ${isSharedUrl}`)
 
     // 5. 切换回共享模式
     logger.info("\n5. 切换回共享模式...")

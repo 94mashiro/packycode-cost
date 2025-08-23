@@ -1,6 +1,6 @@
 /**
  * API Key 检测测试工具
- * 用于验证私家车模式下的API Key自动切换功能
+ * 用于验证滴滴车模式下的API Key自动切换功能
  */
 
 import { loggers } from "~/lib/logger"

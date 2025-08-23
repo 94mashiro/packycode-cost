@@ -8,7 +8,7 @@
 
 PackyCode Cost Monitor 使用基于 Plasmo Storage 的多层存储架构，核心特点：
 
-- **版本感知存储管理**：支持公交车/私家车模式的数据隔离
+- **版本感知存储管理**：支持公交车/滴滴车模式的数据隔离
 - **跨环境数据同步**：popup 与 background 间的无缝数据共享
 - **响应式数据更新**：基于 Plasmo Storage watch 的实时 UI 同步
 
@@ -398,7 +398,7 @@ storageManager.watch({
 ### 版本切换操作
 
 ```typescript
-// 切换到私家车模式 - 使用智能合并，无需手动获取现有数据
+// 切换到滴滴车模式 - 使用智能合并，无需手动获取现有数据
 await storageManager.set(StorageDomain.USER_PREFERENCE, {
   account_version: AccountVersion.PRIVATE
 })
@@ -463,7 +463,7 @@ await storageManager.set(StorageDomain.USER_PREFERENCE, {
 ### 实际应用指南
 
 - [版本化存储系统](../guides/versioned-storage-guide.md) - 双账号数据隔离的用户视角
-- [私家车模式指南](../guides/private-car-mode.md) - 私有账号认证配置
+- [滴滴车模式指南](../guides/private-car-mode.md) - 私有账号认证配置
 
 ### 系统设计文档
 

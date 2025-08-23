@@ -43,7 +43,7 @@ export const ACCOUNT_CONFIG_REGISTRY: Record<AccountVersion, AccountConfig> = {
   [AccountVersion.PRIVATE]: {
     baseUrl: "https://share.packycode.com",
     cookieDomain: "https://share.packycode.com",
-    description: "私家车模式 - 私有账号系统",
+    description: "滴滴车模式 - 私有账号系统",
     endpoints: {
       apiKeysPattern: "/api/backend/users/*/api-keys/*",
       config: "/api/config",

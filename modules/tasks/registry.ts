@@ -10,6 +10,7 @@
 
 import { loggers } from "~/lib/logger"
 import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/checker"
+import { fetchPrivateOpusStatus } from "~/modules/sharedSpace"
 import { fetchSubscriptionInfo } from "~/modules/subscription"
 import { fetchUserInfo } from "~/modules/user"
 
@@ -23,6 +24,7 @@ export enum BackgroundActionEnum {
 // 2. 数据获取任务类型枚举
 export enum DataTaskType {
   CHECK_PURCHASE_STATUS = "checkPurchaseStatus",
+  FETCH_PRIVATE_OPUS_STATUS = "fetchPrivateOpusStatus",
   FETCH_SUBSCRIPTION_INFO = "fetchSubscriptionInfo",
   FETCH_USER_INFO = "fetchUserInfo"
 }
@@ -46,6 +48,12 @@ export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
     handler: checkAndNotifyPurchaseStatus,
     priority: 2,
     type: DataTaskType.CHECK_PURCHASE_STATUS
+  },
+  [DataTaskType.FETCH_PRIVATE_OPUS_STATUS]: {
+    description: "获取滴滴车模式 Opus 状态",
+    handler: fetchPrivateOpusStatus,
+    priority: 4,
+    type: DataTaskType.FETCH_PRIVATE_OPUS_STATUS
   },
   [DataTaskType.FETCH_SUBSCRIPTION_INFO]: {
     description: "获取用户订阅状态和计划信息",

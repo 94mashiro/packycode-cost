@@ -14,6 +14,7 @@ import { httpClient } from "~/lib/request/AuthenticatedClient"
 import {
   ApiEndpointType,
   type PackyConfig,
+  type SharedSpaceApiResponse,
   type SubscriptionApiResponse,
   type UserApiResponse
 } from "~/types"
@@ -45,6 +46,15 @@ export class PackyCodeApiClient {
     }
 
     return response.data
+  }
+
+  /**
+   * 获取共享空间信息
+   * 自动处理认证和URL适配
+   */
+  async getSharedSpace(): Promise<SharedSpaceApiResponse> {
+    const sharedSpaceUrl = await getCurrentApiUrl(ApiEndpointType.SHARED_SPACE)
+    return httpClient.get<SharedSpaceApiResponse>(sharedSpaceUrl)
   }
 
   /**
@@ -99,6 +109,11 @@ export const api = {
   getConfig: () => packyCodeApi.getConfig(),
 
   /**
+   * 获取共享空间信息
+   */
+  getSharedSpace: () => packyCodeApi.getSharedSpace(),
+
+  /**
    * 获取用户订阅信息
    */
   getSubscriptions: () => packyCodeApi.getSubscriptions(),
@@ -107,6 +122,7 @@ export const api = {
    * 获取用户信息
    */
   getUserInfo: () => packyCodeApi.getUserInfo(),
+
   post: <T>(endpoint: ApiEndpointType, data?: unknown) =>
     packyCodeApi.post<T>(endpoint, data)
 }
@@ -114,4 +130,9 @@ export const api = {
 /**
  * 导出类型定义供其他模块使用
  */
-export type { PackyConfig, SubscriptionApiResponse, UserApiResponse }
+export type {
+  PackyConfig,
+  SharedSpaceApiResponse,
+  SubscriptionApiResponse,
+  UserApiResponse
+}

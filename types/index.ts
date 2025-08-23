@@ -20,6 +20,8 @@ export enum ApiEndpointType {
   API_KEYS_PATTERN = "apiKeysPattern",
   /** 配置 API */
   CONFIG = "config",
+  /** 共享空间 API */
+  SHARED_SPACE = "sharedSpace",
   /** 订阅信息 API */
   SUBSCRIPTIONS = "subscriptions",
   /** 用户信息 API */
@@ -77,6 +79,11 @@ export interface ApiResponse<T> {
   success: boolean
 }
 
+/**
+ * 账号分配类型
+ */
+export type AssignmentType = "auto_assigned" | "user_selected"
+
 // ===== 新的存储结构定义 =====
 // 认证信息
 export interface AuthStorage {
@@ -128,6 +135,11 @@ export interface PackyConfig {
   supportEmail: string
 }
 
+/**
+ * 账号订阅计划类型
+ */
+export type PlanType = "basic" | "premium" | "pro"
+
 export interface PurchaseStatusData {
   config: null | PackyConfig
   error: null | string
@@ -138,6 +150,42 @@ export interface PurchaseStatusData {
 export type ReactChangeEvent<T = HTMLElement> = React.ChangeEvent<T>
 
 export type ReactMouseEvent<T = HTMLElement> = React.MouseEvent<T>
+
+// ===== SharedSpace相关 =====
+/**
+ * 分配的账号信息
+ */
+export interface SharedAccountAssignment {
+  /** 账号ID */
+  account_id: string
+  /** 分配时间 */
+  assigned_at: string
+  /** 分配类型 */
+  assignment_type: AssignmentType
+  /** 描述 */
+  description: string
+  /** 显示名称 */
+  display_name: string
+  /** 是否启用 Opus 模型 */
+  opus_enabled: boolean
+  /** 速率限制重置时间 */
+  rate_limit_reset_at: null | string
+}
+
+/**
+ * SharedSpace API 响应结构
+ * 仅用于 API 调用，不存储
+ */
+export interface SharedSpaceApiResponse {
+  /** 分配的账号列表 */
+  assignments: SharedAccountAssignment[]
+  /** 最大账号数量 */
+  max_accounts: number
+  /** 订阅计划类型 */
+  plan_type: PlanType
+  /** 剩余可用插槽数 */
+  remaining_slots: number
+}
 
 // ===== 认证相关 =====
 /**
@@ -209,6 +257,8 @@ export interface SystemPreferenceStorage {
   purchase_disabled?: boolean
 }
 
+// ===== 订阅系统类型定义 =====
+
 export interface TokenData {
   expiry: null | number
   isValid: boolean
@@ -229,8 +279,6 @@ export interface UserApiResponse {
   monthly_spent_usd: number | string
   opus_enabled: boolean
 }
-
-// ===== 订阅系统类型定义 =====
 
 // 用户信息
 export interface UserInfo {

@@ -16,10 +16,10 @@ import type {
  * - 全局域: 以 global. 开头，在所有版本间共享
  */
 export enum StorageDomain {
-  // === 版本化域 ===
   AUTH = "auth",
   NOTIFICATION_STATES = "notification.states",
   PURCHASE_CONFIG = "purchase_config",
+  // === 版本化域 ===
   SUBSCRIPTION_INFO = "subscription.info",
   SYSTEM_PREFERENCE = "system.preference",
   USER_INFO = "user.info",

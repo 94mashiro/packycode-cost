@@ -58,7 +58,13 @@ export function useVersionSwitcher() {
         // 1. 更新存储管理器的当前版本
         // 2. 保存全局用户偏好
         // 3. 触发版本变化回调，通知所有订阅者
+        logger.info(
+          `🔄 [useVersionSwitcher] Calling setCurrentVersion: ${currentVersion} -> ${newVersion}`
+        )
         await storage.setCurrentVersion(newVersion)
+        logger.info(
+          `✅ [useVersionSwitcher] setCurrentVersion completed successfully`
+        )
 
         logger.info(
           `Version switch completed: ${currentVersion} -> ${newVersion}`

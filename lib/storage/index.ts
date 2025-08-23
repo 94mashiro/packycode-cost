@@ -10,6 +10,7 @@ const logger = loggers.storage
 
 // 全局存储管理器实例 (Linus 建议的工厂模式，避免单例问题)
 let globalStorageManager: null | StorageManager = null
+let initializationPromise: null | Promise<StorageManager> = null
 
 /**
  * 获取全局存储管理器实例
@@ -17,25 +18,41 @@ let globalStorageManager: null | StorageManager = null
  * 特性:
  * 1. 懒加载 - 第一次调用时初始化
  * 2. 版本感知 - 启动时从存储中读取当前版本
- * 3. 单例模式 - 但支持测试时重置
+ * 3. 单例模式 - 支持并发调用，避免竞态条件
  */
 export async function getStorageManager(): Promise<StorageManager> {
+  // 如果已经初始化完成，直接返回
   if (globalStorageManager) {
     return globalStorageManager
   }
 
-  const storage = new Storage()
+  // 如果正在初始化，等待初始化完成
+  if (initializationPromise) {
+    logger.debug("Waiting for ongoing StorageManager initialization...")
+    return initializationPromise
+  }
 
-  // 从存储中读取当前版本，默认为 SHARED
-  const userPref = await storage.get<UserPreferenceStorage>(
-    StorageDomain.USER_PREFERENCE
-  )
-  const currentVersion = userPref?.account_version || AccountVersion.SHARED
+  // 开始初始化
+  logger.debug("Starting StorageManager initialization...")
+  initializationPromise = (async () => {
+    const storage = new Storage()
 
-  logger.info(`Initializing storage manager with version: ${currentVersion}`)
+    // 从存储中读取当前版本，默认为 SHARED
+    const userPref = await storage.get<UserPreferenceStorage>(
+      StorageDomain.USER_PREFERENCE
+    )
+    const currentVersion = userPref?.account_version || AccountVersion.SHARED
 
-  globalStorageManager = new StorageManager(storage, currentVersion)
-  return globalStorageManager
+    logger.info(`Initializing storage manager with version: ${currentVersion}`)
+
+    const manager = new StorageManager(storage, currentVersion)
+    globalStorageManager = manager
+    initializationPromise = null // 清理初始化 Promise
+
+    return manager
+  })()
+
+  return initializationPromise
 }
 
 /**
@@ -54,4 +71,6 @@ export function resetStorageManager(): void {
     globalStorageManager = null
     logger.debug("Global storage manager reset")
   }
+  // 也清理初始化 Promise
+  initializationPromise = null
 }

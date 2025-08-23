@@ -95,11 +95,15 @@ export class StorageManager {
 
   onVersionChange(callback: (version: AccountVersion) => void): () => void {
     this.versionChangeCallbacks.add(callback)
-    logger.debug("Added version change subscriber")
+    logger.debug(
+      `🔗 [StorageManager] Added version change subscriber (total: ${this.versionChangeCallbacks.size})`
+    )
 
     return () => {
       this.versionChangeCallbacks.delete(callback)
-      logger.debug("Removed version change subscriber")
+      logger.debug(
+        `🗑️ [StorageManager] Removed version change subscriber (remaining: ${this.versionChangeCallbacks.size})`
+      )
     }
   }
 
@@ -118,7 +122,12 @@ export class StorageManager {
     const oldVersion = this.currentVersion
     this.currentVersion = version
 
-    logger.info(`Version switched: ${oldVersion} -> ${version}`)
+    logger.info(
+      `🔄 [StorageManager] Version switching: ${oldVersion} -> ${version}`
+    )
+    logger.debug(
+      `📊 [StorageManager] Active version change callbacks: ${this.versionChangeCallbacks.size}`
+    )
 
     try {
       const currentPref =
@@ -129,18 +138,42 @@ export class StorageManager {
         ...currentPref,
         account_version: version
       })
+      logger.debug(
+        `💾 [StorageManager] Updated user preference with new version: ${version}`
+      )
     } catch (error) {
-      logger.error("Failed to update user preference:", error)
+      logger.error(
+        "❌ [StorageManager] Failed to update user preference:",
+        error
+      )
     }
 
     if (oldVersion !== version) {
+      logger.info(
+        `🔔 [StorageManager] Notifying ${this.versionChangeCallbacks.size} version change callbacks`
+      )
+
+      let callbackIndex = 0
       this.versionChangeCallbacks.forEach((callback) => {
+        callbackIndex++
         try {
+          logger.debug(
+            `📨 [StorageManager] Calling version change callback ${callbackIndex}/${this.versionChangeCallbacks.size}`
+          )
           callback(version)
+          logger.debug(
+            `✅ [StorageManager] Version change callback ${callbackIndex} completed`
+          )
         } catch (error) {
-          logger.error("Version change callback error:", error)
+          logger.error(
+            `❌ [StorageManager] Version change callback ${callbackIndex} error:`,
+            error
+          )
         }
       })
+      logger.info(`🎉 [StorageManager] All version change callbacks completed`)
+    } else {
+      logger.debug(`⏭️ [StorageManager] Version unchanged, skipping callbacks`)
     }
   }
 

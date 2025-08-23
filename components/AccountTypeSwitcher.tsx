@@ -37,9 +37,14 @@ export function AccountTypeSwitcher() {
     setIsLoading(true)
     try {
       const storageManager = await getStorageManager()
-      await storageManager.set(StorageDomain.USER_PREFERENCE, {
-        account_version: newType
-      } as UserPreferenceStorage)
+
+      // 使用 setCurrentVersion 而不是直接设置 storage
+      // 这会触发所有版本变化监听器，确保整个系统状态同步
+      console.log(
+        `🔄 [AccountTypeSwitcher] Switching version: ${currentAccountType} -> ${newType}`
+      )
+      await storageManager.setCurrentVersion(newType)
+      console.log(`✅ [AccountTypeSwitcher] Version switch completed`)
 
       setCurrentAccountType(newType)
 

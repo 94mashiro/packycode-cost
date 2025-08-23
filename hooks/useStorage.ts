@@ -83,31 +83,58 @@ export function useStorage<T extends keyof StorageDomainMap>(
 
     const initialize = async () => {
       try {
+        logger.debug(`🔧 useStorage initializing for domain: ${domain}`)
+
         // 初始化加载数据
         await refresh()
+        logger.debug(`✅ useStorage initial refresh completed for: ${domain}`)
 
         // 监听版本变化和域数据变化
         if (mounted) {
           const storage = await getStorageManager()
+          const currentVersion = storage.getCurrentVersion()
+          logger.debug(
+            `📊 useStorage setting up listeners for domain: ${domain}, current version: ${currentVersion}`
+          )
 
           // 版本变化监听（重新加载数据）
-          unsubscribeVersionChange = storage.onVersionChange(() => {
+          unsubscribeVersionChange = storage.onVersionChange((newVersion) => {
             if (mounted) {
-              logger.debug(`Version changed, refreshing data for: ${domain}`)
+              logger.info(
+                `🔄 [useStorage] Version change detected for domain: ${domain}`
+              )
+              // 不要在闭包中捕获 currentVersion，直接从 storage 获取最新值
+              logger.info(`📋 [useStorage] Version changed to: ${newVersion}`)
               refresh()
+            } else {
+              logger.warn(
+                `⚠️ [useStorage] Version change detected but component unmounted: ${domain}`
+              )
             }
           })
+          logger.debug(
+            `🔗 useStorage version change listener registered for: ${domain}`
+          )
 
           // 域数据变化监听（使用 Plasmo Storage API）
           unsubscribeDomainChange = storage.onDomainChange(domain, () => {
             if (mounted) {
-              logger.debug(`Domain data changed, refreshing: ${domain}`)
+              logger.debug(
+                `📝 [useStorage] Domain data changed, refreshing: ${domain}`
+              )
               refresh()
+            } else {
+              logger.warn(
+                `⚠️ [useStorage] Domain change detected but component unmounted: ${domain}`
+              )
             }
           })
+          logger.debug(
+            `🔗 useStorage domain change listener registered for: ${domain}`
+          )
         }
       } catch (err) {
-        logger.error(`useStorage initialization error: ${domain}`, err)
+        logger.error(`❌ useStorage initialization error: ${domain}`, err)
         if (mounted) {
           setError("Initialization failed")
           setLoading(false)
@@ -119,13 +146,21 @@ export function useStorage<T extends keyof StorageDomainMap>(
 
     // 清理函数
     return () => {
+      logger.debug(`🧹 useStorage cleanup starting for domain: ${domain}`)
       mounted = false
       if (unsubscribeVersionChange) {
         unsubscribeVersionChange()
+        logger.debug(
+          `🗑️ useStorage version change listener cleaned up for: ${domain}`
+        )
       }
       if (unsubscribeDomainChange) {
         unsubscribeDomainChange()
+        logger.debug(
+          `🗑️ useStorage domain change listener cleaned up for: ${domain}`
+        )
       }
+      logger.debug(`✅ useStorage cleanup completed for domain: ${domain}`)
     }
   }, [domain, refresh])
 

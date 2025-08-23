@@ -1,9 +1,9 @@
 import { useState } from "react"
 
 import {
-  runAccountAdapterTests,
+  runApiConfigManagerTests,
   testAllPermissions,
-  validateAccountConfigs,
+  validateApiEnvironmentConfigs,
   validateApiKeysPattern
 } from "../debug"
 
@@ -34,7 +34,7 @@ export function DeveloperPanel() {
       }
 
       // 运行测试
-      await runAccountAdapterTests()
+      await runApiConfigManagerTests()
 
       // 恢复console
       console.log = originalLog
@@ -125,7 +125,7 @@ export function DeveloperPanel() {
       originalError(...args)
     }
 
-    const isValid = validateAccountConfigs()
+    const isValid = validateApiEnvironmentConfigs()
 
     console.log = originalLog
     console.error = originalError

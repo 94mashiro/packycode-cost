@@ -9,6 +9,7 @@ import { fetchAllDataAsync } from "~/modules/tasks"
 import { ActionButtons } from "./components/ActionButtons"
 import { CombinedBudget } from "./components/CombinedBudget"
 import { CombinedStatus } from "./components/CombinedStatus"
+import { PackageExpiry } from "./components/PackageExpiry"
 import { RefreshButton } from "./components/RefreshButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
@@ -168,6 +169,15 @@ function IndexPopup() {
                     dailySpent={userInfo.budgets.daily.spent}
                     monthlyBudget={userInfo.budgets.monthly.limit}
                     monthlySpent={userInfo.budgets.monthly.spent}
+                  />
+                )}
+
+                {/* 临时测试数据 - 套餐到期组件 */}
+                {userInfo && (
+                  <PackageExpiry
+                    endDate={new Date("2024-12-31")}
+                    packageType="企业版套餐"
+                    startDate={new Date("2024-01-01")}
                   />
                 )}
               </div>

@@ -3,8 +3,8 @@
  * 用于验证滴滴车模式下的API Key自动切换功能
  */
 
+import { getCurrentBaseUrl } from "~/api/config"
 import { loggers } from "~/lib/logger"
-import { getCurrentBaseUrl } from "~/modules/auth"
 
 const logger = loggers.debug
 

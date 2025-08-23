@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { dynamicApiUrls } from "../api/dynamic"
+import { dynamicApiUrls } from "../api"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface AuthenticationPromptProps {

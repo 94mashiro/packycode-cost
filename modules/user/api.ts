@@ -1,4 +1,4 @@
-import { dynamicUserApi } from "~/api/dynamic"
+import { dynamicUserApi } from "~/api"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"

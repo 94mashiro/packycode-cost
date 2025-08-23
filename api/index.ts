@@ -1,99 +1,103 @@
 /**
- * API 模块 - 统一管理所有 API 端点和请求
- * 不要再到处硬编码 URL 了！
+ * 动态API模块 - 基于账号类型适配的统一API接口
+ *
+ * Linus: "统一的接口比分散的配置更容易维护"
+ * Dan: "API应该对账号类型的差异透明"
  */
 
 import { loggers } from "~/lib/logger"
 import { get } from "~/lib/request"
-
 import {
   type ApiResponse,
   type PackyConfig,
   TokenType,
   type UserApiResponse
-} from "../types"
+} from "~/types"
+
+import { getCurrentApiUrl, getCurrentPageUrl } from "./config"
 
 const logger = loggers.api
 
 /**
- * API 基础配置
+ * 动态PackyCode API - 基于当前账号类型
  */
-const API_ENDPOINTS = {
-  PACKY: {
-    // WebRequest 监听模式
-    API_KEYS_PATTERN: "/api/backend/users/*/api-keys/*",
-    BASE: "https://www.packycode.com",
-    CONFIG: "/api/config",
-    USER_INFO: "/api/backend/users/info"
-  }
-} as const
-
-/**
- * PackyCode API
- */
-export const packyApi = {
+export const dynamicPackyApi = {
   /**
    * 获取购买配置
-   * @returns 购买状态、URL等配置信息
+   * 自动使用当前账号类型的配置端点
    */
   async getConfig(): Promise<ApiResponse<PackyConfig>> {
-    return get<PackyConfig>(
-      `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.CONFIG}`
-    )
+    const configUrl = await getCurrentApiUrl("config")
+    return get<PackyConfig>(configUrl)
   }
 }
 
 /**
- * 后端用户 API
+ * 动态用户API - 基于当前账号类型
  */
-export const userApi = {
+export const dynamicUserApi = {
   /**
    * 获取用户信息（预算、使用量等）
+   * 自动使用当前账号类型的用户信息端点
    * @param token 认证令牌
-   * @param tokenType 令牌类型
-   * @returns 用户预算和使用信息
+   * @param _tokenType 令牌类型（保留兼容性）
    */
   async getUserInfo(
     token: string,
-    _tokenType: TokenType // 暂时保留参数签名兼容性，但不使用
+    _tokenType: TokenType
   ): Promise<ApiResponse<UserApiResponse>> {
-    // 目前只有一个端点，都用 Bearer token
-    const url = `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.USER_INFO}`
+    const userInfoUrl = await getCurrentApiUrl("userInfo")
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json"
     }
 
-    return get<UserApiResponse>(url, { headers })
+    return get<UserApiResponse>(userInfoUrl, { headers })
   }
 }
 
 /**
- * 导出 API 端点常量（用于需要直接访问的场景）
+ * 动态API URL获取器
+ * 基于当前账号类型提供所有相关URL
  */
-export const API_URLS = {
-  API_KEYS_PATTERN: `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.API_KEYS_PATTERN}`,
+export const dynamicApiUrls = {
+  /**
+   * 获取API Keys监听模式URL
+   */
+  async getApiKeysPattern(): Promise<string> {
+    // 直接返回完整的API Keys Pattern URL
+    return getCurrentApiUrl("apiKeysPattern")
+  },
 
-  // 其他服务 - 这些暂时硬编码，因为不属于主 API
-  NETWORK_TEST: "https://packy.te.sb/",
-  // 基础 URL
-  PACKY_BASE: API_ENDPOINTS.PACKY.BASE,
-  // API 端点
-  PACKY_CONFIG: `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.CONFIG}`,
+  /**
+   * 获取配置API URL
+   */
+  async getConfigUrl(): Promise<string> {
+    return getCurrentApiUrl("config")
+  },
 
-  // 页面 URL
-  PACKY_DASHBOARD: `${API_ENDPOINTS.PACKY.BASE}/dashboard`,
-  PACKY_PRICING: `${API_ENDPOINTS.PACKY.BASE}/pricing`,
+  /**
+   * 获取仪表板页面URL
+   */
+  async getDashboardUrl(): Promise<string> {
+    return getCurrentPageUrl("dashboard")
+  },
 
-  STATUS_MONITOR: "https://packy-status.te.sb/status/api",
-  USER_INFO: `${API_ENDPOINTS.PACKY.BASE}${API_ENDPOINTS.PACKY.USER_INFO}`
-} as const
+  /**
+   * 获取定价页面URL
+   */
+  async getPricingUrl(): Promise<string> {
+    return getCurrentPageUrl("pricing")
+  },
 
-/**
- * API 响应类型定义
- */
-export { type ApiResponse }
+  /**
+   * 获取用户信息API URL
+   */
+  async getUserInfoUrl(): Promise<string> {
+    return getCurrentApiUrl("userInfo")
+  }
+}
 
 /**
  * 统一的错误处理
@@ -111,3 +115,8 @@ export function handleApiError(error: unknown, context: string): string {
 
   return `Unknown error in ${context}`
 }
+
+/**
+ * API 响应类型定义
+ */
+export { type ApiResponse }

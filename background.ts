@@ -1,7 +1,7 @@
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { getCurrentCookieDomain, parseJWT } from "~/modules/auth"
+import { parseJWT } from "~/modules/auth"
 import {
   type BackgroundAction,
   BackgroundActionEnum,
@@ -13,7 +13,8 @@ import {
 
 import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
 
-import { dynamicApiUrls } from "./api/dynamic"
+import { dynamicApiUrls } from "./api"
+import { getCurrentCookieDomain } from "./api/config"
 
 const logger = loggers.background
 

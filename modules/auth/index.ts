@@ -5,7 +5,6 @@
  * Dan: "认证状态应该易于理解和使用"
  */
 
-export * from "./accountAdapter"
 // 导出所有认证相关功能
 export * from "./auth"
 export * from "./jwt"

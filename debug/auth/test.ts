@@ -4,16 +4,16 @@
  * 用于验证滴滴车模式认证流程是否正常工作
  */
 
+import {
+  API_ENVIRONMENT_REGISTRY,
+  apiConfigManagerController,
+  type ApiEnvironmentConfig,
+  getCurrentApiConfigManager,
+  getCurrentBaseUrl
+} from "~/api/config"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import {
-  ACCOUNT_CONFIG_REGISTRY,
-  accountAdapterManager,
-  type AccountConfig,
-  getCurrentAccountAdapter,
-  getCurrentBaseUrl
-} from "~/modules/auth"
 import { AccountVersion, type UserPreferenceStorage } from "~/types"
 
 const logger = loggers.debug
@@ -21,11 +21,11 @@ const logger = loggers.debug
 /**
  * 在浏览器控制台中运行测试的便捷函数
  */
-export function runAccountAdapterTests() {
+export function runApiConfigManagerTests() {
   logger.info("🚀 运行账号适配层测试套件...\n")
 
   // 验证配置
-  const configValid = validateAccountConfigs()
+  const configValid = validateApiEnvironmentConfigs()
   if (!configValid) {
     logger.error("❌ 配置验证失败，终止测试")
     return
@@ -54,7 +54,7 @@ export async function testAccountTypeSwitching() {
   try {
     // 1. 测试默认配置（应该是共享模式）
     logger.info("\n1. 测试默认配置...")
-    const defaultAdapter = await getCurrentAccountAdapter()
+    const defaultAdapter = await getCurrentApiConfigManager()
     const defaultBaseUrl = await getCurrentBaseUrl()
     logger.info(`默认账号类型: ${defaultAdapter.getAccountType()}`)
     logger.info(`默认基础URL: ${defaultBaseUrl}`)
@@ -67,9 +67,9 @@ export async function testAccountTypeSwitching() {
     } as UserPreferenceStorage)
 
     // 刷新适配器缓存
-    await accountAdapterManager.refreshAdapter()
+    await apiConfigManagerController.refreshConfigManager()
 
-    const privateAdapter = await getCurrentAccountAdapter()
+    const privateAdapter = await getCurrentApiConfigManager()
     const privateBaseUrl = await getCurrentBaseUrl()
     logger.info(`滴滴车账号类型: ${privateAdapter.getAccountType()}`)
     logger.info(`滴滴车基础URL: ${privateBaseUrl}`)
@@ -83,10 +83,10 @@ export async function testAccountTypeSwitching() {
 
     // 4. 测试URL检测
     logger.info("\n4. 测试URL检测...")
-    const isPrivateUrl = privateAdapter.isUrlBelongsToAccount(
+    const isPrivateUrl = privateAdapter.isUrlBelongsToEnvironment(
       "https://share.packycode.com/dashboard"
     )
-    const isSharedUrl = privateAdapter.isUrlBelongsToAccount(
+    const isSharedUrl = privateAdapter.isUrlBelongsToEnvironment(
       "https://www.packycode.com/dashboard"
     )
     logger.info(`share.packycode.com 属于滴滴车: ${isPrivateUrl}`)
@@ -98,8 +98,8 @@ export async function testAccountTypeSwitching() {
       account_version: AccountVersion.SHARED
     } as UserPreferenceStorage)
 
-    await accountAdapterManager.refreshAdapter()
-    const sharedAdapter = await getCurrentAccountAdapter()
+    await apiConfigManagerController.refreshConfigManager()
+    const sharedAdapter = await getCurrentApiConfigManager()
     const sharedBaseUrl = await getCurrentBaseUrl()
     logger.info(`共享账号类型: ${sharedAdapter.getAccountType()}`)
     logger.info(`共享基础URL: ${sharedBaseUrl}`)
@@ -107,12 +107,12 @@ export async function testAccountTypeSwitching() {
     // 6. 验证配置完整性
     logger.info("\n6. 验证配置完整性...")
     const allAccountTypes = Object.values(AccountVersion)
-    const allConfigs = Object.keys(ACCOUNT_CONFIG_REGISTRY)
+    const allConfigs = Object.keys(API_ENVIRONMENT_REGISTRY)
     logger.info(`支持的账号类型: ${allAccountTypes.join(", ")}`)
     logger.info(`配置的账号类型: ${allConfigs.join(", ")}`)
 
     const missingConfigs = allAccountTypes.filter(
-      (type) => !ACCOUNT_CONFIG_REGISTRY[type]
+      (type) => !API_ENVIRONMENT_REGISTRY[type]
     )
     if (missingConfigs.length > 0) {
       logger.error(`❌ 缺少配置的账号类型: ${missingConfigs.join(", ")}`)
@@ -139,14 +139,14 @@ export async function testAccountTypeSwitching() {
 /**
  * 验证配置结构完整性
  */
-export function validateAccountConfigs(): boolean {
+export function validateApiEnvironmentConfigs(): boolean {
   logger.info("🔍 验证账号配置结构...")
 
   const allAccountTypes = Object.values(AccountVersion)
   const errors: string[] = []
 
   for (const accountType of allAccountTypes) {
-    const config = ACCOUNT_CONFIG_REGISTRY[accountType]
+    const config = API_ENVIRONMENT_REGISTRY[accountType]
 
     if (!config) {
       errors.push(`缺少 ${accountType} 的配置`)
@@ -154,7 +154,7 @@ export function validateAccountConfigs(): boolean {
     }
 
     // 验证必需字段
-    const requiredFields: (keyof AccountConfig)[] = [
+    const requiredFields: (keyof ApiEnvironmentConfig)[] = [
       "type",
       "baseUrl",
       "cookieDomain",
@@ -210,9 +210,9 @@ export function validateAccountConfigs(): boolean {
 
 // 如果在浏览器环境中，将测试函数添加到全局对象
 if (typeof window !== "undefined") {
-  ;(window as Record<string, unknown> & typeof window).testAccountAdapter =
-    runAccountAdapterTests
+  ;(window as Record<string, unknown> & typeof window).testApiConfigManager =
+    runApiConfigManagerTests
   logger.info(
-    "💡 提示: 在浏览器控制台中运行 testAccountAdapter() 来测试账号适配层"
+    "💡 提示: 在浏览器控制台中运行 testApiConfigManager() 来测试账号适配层"
   )
 }

@@ -2,9 +2,9 @@
  * API Keys Pattern URL 验证工具
  */
 
-import { dynamicApiUrls } from "~/api/dynamic"
+import { dynamicApiUrls } from "~/api"
+import { getCurrentApiConfigManager } from "~/api/config"
 import { loggers } from "~/lib/logger"
-import { getCurrentAccountAdapter } from "~/modules/auth"
 
 const logger = loggers.debug
 
@@ -39,7 +39,7 @@ export async function validateApiKeysPattern(): Promise<{
   logger.info("🔍 验证API Keys Pattern URL格式...")
 
   try {
-    const adapter = await getCurrentAccountAdapter()
+    const adapter = await getCurrentApiConfigManager()
     const accountType = adapter.getAccountType()
     const baseUrl = adapter.getBaseUrl()
 

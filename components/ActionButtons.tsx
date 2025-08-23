@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { dynamicApiUrls } from "../api/dynamic"
+import { dynamicApiUrls } from "../api"
 
 // 硬编码的URL（不会因账号类型变化）
 const STATIC_URLS = {

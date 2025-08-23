@@ -21,7 +21,7 @@ export {
 } from "./auth/permissionTest"
 
 export {
-  runAccountAdapterTests,
+  runApiConfigManagerTests,
   testAccountTypeSwitching,
-  validateAccountConfigs
+  validateApiEnvironmentConfigs
 } from "./auth/test"

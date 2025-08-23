@@ -3,8 +3,8 @@
  * 用于测试扩展是否有访问不同域名的权限
  */
 
+import { getCurrentBaseUrl, getCurrentCookieDomain } from "~/api/config"
 import { loggers } from "~/lib/logger"
-import { getCurrentBaseUrl, getCurrentCookieDomain } from "~/modules/auth"
 
 const logger = loggers.debug
 

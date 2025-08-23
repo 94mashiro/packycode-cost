@@ -1,6 +1,6 @@
 import type { PackyConfig, SystemPreferenceStorage } from "~/types"
 
-import { dynamicPackyApi } from "~/api/dynamic"
+import { dynamicPackyApi } from "~/api"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"

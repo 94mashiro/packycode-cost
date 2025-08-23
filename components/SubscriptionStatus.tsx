@@ -81,30 +81,6 @@ export function SubscriptionStatus({
 
   const statusConfig = getStatusConfig()
 
-  // 格式化主要时间信息 - 右上角显示更精确信息
-  const getPrimaryTimeInfo = () => {
-    if (actuallyExpired) {
-      const expiredDays = Math.abs(remainingDays)
-      return `已过期 ${expiredDays} 天`
-    }
-
-    // 根据紧急程度显示不同精度的信息
-    if (isUrgent) {
-      // 3天内显示更精确的倒计时
-      const hours = Math.floor(remainingDuration / (1000 * 60 * 60))
-      const minutes = Math.floor(
-        (remainingDuration % (1000 * 60 * 60)) / (1000 * 60)
-      )
-
-      if (remainingDays < 1) {
-        return `剩余 ${hours}小时${minutes}分钟`
-      }
-      return `剩余 ${remainingDays}天 ${hours % 24}小时`
-    }
-
-    return `剩余 ${remainingDays} 天`
-  }
-
   // 格式化日期范围 - shadcn 风格
   const formatDateRange = () => {
     const formatDate = (date: Date) => {
@@ -123,9 +99,6 @@ export function SubscriptionStatus({
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           套餐状态
         </h3>
-        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-          <span>{getPrimaryTimeInfo()}</span>
-        </div>
       </div>
 
       {/* 主要内容容器 - 使用项目统一样式 */}

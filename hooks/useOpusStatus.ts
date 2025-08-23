@@ -9,7 +9,7 @@ import { type OpusStatusData } from "../types"
  * - 移除直接使用 chrome.storage.onChanged 的监听
  * - 使用统一的 useSystemPreference Hook（基于 Plasmo Storage）
  * - 从系统偏好中提取 opus_enabled 字段
- * - 保持相同的 API 接口，确保向后兼容
+ * - 保持相同的 API 接口
  */
 export function useOpusStatus(): OpusStatusData & {
   refresh: () => Promise<void>

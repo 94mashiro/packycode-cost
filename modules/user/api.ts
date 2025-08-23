@@ -1,57 +1,14 @@
-import { dynamicUserApi } from "~/api"
+import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { clearPluginTokenOnly } from "~/modules/auth"
-import {
-  type AuthStorage,
-  type SystemPreferenceStorage,
-  TokenType,
-  type UserInfo
-} from "~/types"
+import { type SystemPreferenceStorage, type UserInfo } from "~/types"
 const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
   try {
-    const storageManager = await getStorageManager()
-    const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
-    logger.debug("Auth data:", authData)
-
-    // API Key不需要检查过期时间
-    if (!authData?.token) {
-      logger.debug("No token found")
-      return null
-    }
-
-    // JWT需要检查过期时间（如果有expiry的话）
-    if (
-      authData.type === TokenType.JWT &&
-      authData.expiry &&
-      authData.expiry < Date.now()
-    ) {
-      await clearPluginTokenOnly()
-      return null
-    }
-
-    const result = await dynamicUserApi.getUserInfo(
-      authData.token,
-      authData.type
-    )
-
-    if (!result.success) {
-      // 检查是否是认证错误
-      if (
-        result.error?.includes("400") ||
-        result.error?.includes("401") ||
-        result.error?.includes("403")
-      ) {
-        await clearPluginTokenOnly()
-        return null
-      }
-      throw new Error(result.error || "获取用户信息失败")
-    }
-
-    const rawData = result.data
+    // 使用统一的API客户端，自动处理URL适配、认证和错误处理
+    const rawData = await api.getUserInfo()
 
     // 转换为新的存储格式
     const dailyLimit = Number(rawData.daily_budget_usd) || 0
@@ -74,6 +31,8 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       },
       id: "current-user" // 暂时硬编码，后续可从token中解析
     }
+
+    const storageManager = await getStorageManager()
 
     // 检查 opus_enabled 状态变化
     const systemPref = await storageManager.get<SystemPreferenceStorage>(
@@ -105,7 +64,18 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
 
     return userInfoStorage
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : "获取用户信息失败")
+    // 统一API客户端已经处理了认证错误和token清理
+    // 这里只需要处理业务逻辑错误
+    if (error instanceof Error && error.name === "AuthenticationError") {
+      logger.debug("Authentication failed, returning null")
+      return null
+    }
+
+    // 其他错误继续抛出
+    const errorMessage =
+      error instanceof Error ? error.message : "获取用户信息失败"
+    logger.error("Failed to fetch user info:", errorMessage)
+    throw new Error(errorMessage)
   }
 }
 

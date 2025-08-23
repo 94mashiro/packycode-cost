@@ -1,6 +1,6 @@
 import type { PackyConfig, SystemPreferenceStorage } from "~/types"
 
-import { dynamicPackyApi } from "~/api"
+import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
@@ -38,14 +38,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
   try {
     // 1. 获取最新的API数据
     logger.debug("[API] Fetching latest purchase status")
-    const result = await dynamicPackyApi.getConfig()
-
-    if (!result.success || !result.data) {
-      logger.debug("[API] Failed to fetch current config:", result.error)
-      return { success: false, triggered: false }
-    }
-
-    const currentConfig = result.data
+    const currentConfig = await api.getConfig()
 
     // 验证响应数据结构
     if (!isValidPackyConfig(currentConfig)) {
@@ -100,7 +93,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 }
 
 /**
- * 兼容性方法：获取当前配置（供UI组件使用）
+ * 获取当前配置（供UI组件使用）
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
@@ -172,5 +165,4 @@ async function triggerPurchaseAvailableNotification(): Promise<void> {
   }
 }
 
-// 重新导出以保持兼容性
 export { checkPurchaseStatus } from "./checker"

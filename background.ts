@@ -1,4 +1,5 @@
 import { loggers } from "~/lib/logger"
+import { httpClient } from "~/lib/request/AuthenticatedClient"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { parseJWT } from "~/modules/auth"
@@ -237,51 +238,27 @@ async function setupDynamicWebRequestListener() {
         logger.info("🔑 检测到API Key请求:", details.url)
 
         try {
-          // 获取当前token用于重放请求
-          const storageManager = await getStorageManager()
-          const authData = await storageManager.get<AuthStorage>(
-            StorageDomain.AUTH
-          )
-          if (!authData?.token) {
-            logger.debug("⚠️ 没有token，跳过API Key处理")
-            return
-          }
+          // 重放请求获取响应内容 - 使用统一的HTTP客户端
+          const data = await httpClient.get<ApiKeyResponse>(details.url)
 
-          // 重放请求获取响应内容
-          const response = await fetch(details.url, {
-            headers: {
-              Authorization: `Bearer ${authData.token}`,
-              "Content-Type": "application/json"
-            },
-            method: "GET"
-          })
-
-          if (response.ok) {
-            const data = (await response.json()) as ApiKeyResponse
-            if (data.api_key) {
-              // 存储API Key，覆盖现有token
-              const newAuthData: AuthStorage = {
-                token: data.api_key,
-                type: "api_key" as TokenType
-                // API Key 不需要过期时间
-              }
-              await storageManager.set(StorageDomain.AUTH, newAuthData, true)
-
-              logger.info("✅ API key存储成功，来源:", details.url)
-              // 触发重新获取用户信息以更新额度显示
-              backgroundExecuteAllTasks()
-            } else {
-              logger.debug("⚠️ 响应中没有找到api_key字段")
+          if (data.api_key) {
+            // 存储API Key，覆盖现有token
+            const storageManager = await getStorageManager()
+            const newAuthData: AuthStorage = {
+              token: data.api_key,
+              type: "api_key" as TokenType
+              // API Key不需要过期时间
             }
+            await storageManager.set(StorageDomain.AUTH, newAuthData, true)
+
+            logger.info("✅ API key存储成功，来源:", details.url)
+            // 触发重新获取用户信息以更新额度显示
+            backgroundExecuteAllTasks()
           } else {
-            logger.warn(
-              "⚠️ API Key请求重放失败:",
-              response.status,
-              response.statusText
-            )
+            logger.debug("⚠️ 响应中没有找到api_key字段")
           }
         } catch (error) {
-          logger.error("❌ 处理API Key请求失败:", error)
+          logger.warn("⚠️ API Key请求重放失败:", error)
         }
       }
     }

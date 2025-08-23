@@ -6,6 +6,6 @@ export const checkPurchaseStatus = async (): Promise<void> => {
 }
 
 /**
- * 检查并通知购买状态 - 别名以保持兼容性
+ * 检查并通知购买状态
  */
 export const checkAndNotifyPurchaseStatus = checkPurchaseStatus

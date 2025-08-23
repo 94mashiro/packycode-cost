@@ -1,46 +1,49 @@
 import { useState } from "react"
 
-import {
-  runApiConfigManagerTests,
-  testAllPermissions,
-  validateApiEnvironmentConfigs,
-  validateApiKeysPattern
-} from "../debug"
-
-/* eslint-disable no-console */
+import { devTools, type ValidationResult } from "../dev-tools"
 
 export function DeveloperPanel() {
   const [isTestRunning, setIsTestRunning] = useState(false)
   const [testResults, setTestResults] = useState<string>("")
+
+  /**
+   * 格式化验证结果为可读文本
+   */
+  const formatValidationResults = (results: ValidationResult[]): string => {
+    let output = ""
+
+    results.forEach((result) => {
+      output += `\n🔍 ${result.validatorId} (${result.timestamp.toLocaleTimeString()})\n`
+      output += `${result.success ? "✅" : "❌"} ${result.summary}\n`
+
+      if (result.issues.length > 0) {
+        result.issues.forEach((issue) => {
+          const icon =
+            issue.level === "error"
+              ? "❌"
+              : issue.level === "warning"
+                ? "⚠️"
+                : "ℹ️"
+          output += `  ${icon} ${issue.message}\n`
+          if (issue.suggestion) {
+            output += `     💡 ${issue.suggestion}\n`
+          }
+        })
+      }
+      output += "\n"
+    })
+
+    return output
+  }
 
   const handleRunTests = async () => {
     setIsTestRunning(true)
     setTestResults("🚀 开始运行测试...\n")
 
     try {
-      // 重定向console.log到结果显示
-      const originalLog = console.log
-      const originalError = console.error
-      let results = ""
-
-      console.log = (...args) => {
-        results += args.join(" ") + "\n"
-        originalLog(...args)
-      }
-
-      console.error = (...args) => {
-        results += "❌ " + args.join(" ") + "\n"
-        originalError(...args)
-      }
-
-      // 运行测试
-      await runApiConfigManagerTests()
-
-      // 恢复console
-      console.log = originalLog
-      console.error = originalError
-
-      setTestResults(results)
+      const results = await devTools.validateAll()
+      const formattedResults = formatValidationResults(results)
+      setTestResults(formattedResults)
     } catch (error) {
       setTestResults(
         `❌ 测试执行失败: ${error instanceof Error ? error.message : String(error)}`
@@ -51,88 +54,33 @@ export function DeveloperPanel() {
   }
 
   const handleTestPermissions = async () => {
-    const originalLog = console.log
-    const originalError = console.error
-    let results = ""
-
-    console.log = (...args) => {
-      results += args.join(" ") + "\n"
-      originalLog(...args)
-    }
-
-    console.error = (...args) => {
-      results += "❌ " + args.join(" ") + "\n"
-      originalError(...args)
-    }
-
     try {
-      const permissionResult = await testAllPermissions()
-      results += permissionResult.success
-        ? "\n✅ 权限测试通过"
-        : "\n❌ 权限测试失败"
+      const result = await devTools.validatePermissions()
+      const formatted = formatValidationResults([result])
+      setTestResults(formatted)
     } catch (error) {
-      results += `\n❌ 权限测试异常: ${error}`
+      setTestResults(`❌ 权限测试异常: ${error}`)
     }
-
-    console.log = originalLog
-    console.error = originalError
-
-    setTestResults(results)
   }
 
   const handleValidateUrls = async () => {
-    const originalLog = console.log
-    const originalError = console.error
-    let results = ""
-
-    console.log = (...args) => {
-      results += args.join(" ") + "\n"
-      originalLog(...args)
-    }
-
-    console.error = (...args) => {
-      results += "❌ " + args.join(" ") + "\n"
-      originalError(...args)
-    }
-
     try {
-      const urlResult = await validateApiKeysPattern()
-      results += urlResult.success
-        ? "\n✅ URL模式验证通过"
-        : "\n❌ URL模式验证失败"
+      const result = await devTools.validateApiConfig()
+      const formatted = formatValidationResults([result])
+      setTestResults(formatted)
     } catch (error) {
-      results += `\n❌ URL验证异常: ${error}`
+      setTestResults(`❌ API配置验证异常: ${error}`)
     }
-
-    console.log = originalLog
-    console.error = originalError
-
-    setTestResults(results)
   }
 
-  const handleValidateConfigs = () => {
-    const originalLog = console.log
-    const originalError = console.error
-    let results = ""
-
-    console.log = (...args) => {
-      results += args.join(" ") + "\n"
-      originalLog(...args)
+  const handleValidateConfigs = async () => {
+    try {
+      const result = await devTools.validateAccountSwitching()
+      const formatted = formatValidationResults([result])
+      setTestResults(formatted)
+    } catch (error) {
+      setTestResults(`❌ 账号切换验证异常: ${error}`)
     }
-
-    console.error = (...args) => {
-      results += "❌ " + args.join(" ") + "\n"
-      originalError(...args)
-    }
-
-    const isValid = validateApiEnvironmentConfigs()
-
-    console.log = originalLog
-    console.error = originalError
-
-    setTestResults(
-      results + (isValid ? "\n✅ 配置验证通过" : "\n❌ 配置验证失败")
-    )
   }
 
   const clearResults = () => {
@@ -170,13 +118,13 @@ export function DeveloperPanel() {
           <button
             className="px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-200 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
             onClick={handleValidateConfigs}>
-            验证配置
+            账号切换
           </button>
 
           <button
             className="px-3 py-2 text-xs font-medium text-green-700 bg-green-100 border border-green-200 rounded-md hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors dark:bg-green-900 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-800"
             onClick={handleValidateUrls}>
-            URL验证
+            API验证
           </button>
         </div>
 
@@ -202,11 +150,11 @@ export function DeveloperPanel() {
         )}
 
         <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <p>• 完整测试：验证账号类型切换和URL配置</p>
-          <p>• 权限测试：验证域名访问和Cookie权限</p>
-          <p>• 验证配置：检查配置结构完整性</p>
-          <p>• URL验证：检查API Keys Pattern URL格式（🆕 修复重复域名问题）</p>
-          <p>• 详细日志请查看浏览器开发者工具控制台</p>
+          <p>• 完整测试：运行所有验证器，全面检查系统配置</p>
+          <p>• 权限测试：验证Chrome扩展权限和网络访问</p>
+          <p>• API验证：检查API配置和基础URL</p>
+          <p>• 账号切换：验证滴滴车/共享模式切换逻辑</p>
+          <p>• 🆕 统一接口：问题分级显示，提供修复建议</p>
         </div>
       </div>
     </div>

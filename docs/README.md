@@ -13,6 +13,7 @@
 
 - [贡献指南](developers/contributing.md) - 如何参与项目开发
 - [编码标准](developers/coding-standards.md) - 代码规范和最佳实践
+- [开发工具设计规范](developers/dev-tools-design.md) - 调试工具架构与扩展
 
 ### 📚 功能指南
 
@@ -49,7 +50,8 @@ docs/
 ├── README.md                    # 文档导航中心
 ├── developers/                  # 开发者资源
 │   ├── contributing.md          # 贡献指南
-│   └── coding-standards.md      # 编码规范
+│   ├── coding-standards.md      # 编码规范
+│   └── dev-tools-design.md      # 开发工具设计规范
 ├── guides/                      # 功能使用指南
 │   ├── versioned-storage-guide.md
 │   └── private-car-mode.md
@@ -68,11 +70,12 @@ docs/
 
 ## 🔗 快速链接
 
-| 文档类型                                             | 目标读者 | 核心价值         |
-| ---------------------------------------------------- | -------- | ---------------- |
-| [Contributing](developers/contributing.md)           | 新贡献者 | 快速参与项目开发 |
-| [Storage Guide](guides/versioned-storage-guide.md)   | 开发者   | 理解数据隔离机制 |
-| [Architecture](architecture/storage-architecture.md) | 架构师   | 深度技术设计细节 |
+| 文档类型                                             | 目标读者   | 核心价值           |
+| ---------------------------------------------------- | ---------- | ------------------ |
+| [Contributing](developers/contributing.md)           | 新贡献者   | 快速参与项目开发   |
+| [Dev Tools Design](developers/dev-tools-design.md)   | 工具开发者 | 规范化调试工具设计 |
+| [Storage Guide](guides/versioned-storage-guide.md)   | 开发者     | 理解数据隔离机制   |
+| [Architecture](architecture/storage-architecture.md) | 架构师     | 深度技术设计细节   |
 
 ---
 

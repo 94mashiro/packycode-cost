@@ -1,7 +1,7 @@
 # 统一日志通信机制设计
 
 > 本文档介绍 Chrome Extension Service Worker 与 Popup 之间的统一日志通信系统，融合了 Dan Abramov 的前端最佳实践和 Linus Torvalds 的系统设计哲学。
-> 
+>
 > **相关文档**: [存储架构设计](storage-architecture.md) | [贡献指南](../developers/contributing.md)
 
 ## 🎯 总览
@@ -219,13 +219,16 @@ popup.tsx                 # Popup UI (已集成LogConsole)
 ## 🔗 相关文档
 
 ### 系统架构文档
+
 - [存储架构设计](storage-architecture.md) - 了解 StorageManager 和数据层设计
 - [版本化存储系统](../guides/versioned-storage-guide.md) - 存储系统的使用视角
 
 ### 开发者资源
+
 - [贡献指南](../developers/contributing.md) - 参与日志系统开发和调试
 - [编码标准](../developers/coding-standards.md) - 调试工具开发规范
 
 ### 导航
+
 - [返回架构设计目录](README.md)
 - [返回文档中心](../README.md)

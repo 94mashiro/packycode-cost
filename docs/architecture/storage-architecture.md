@@ -1,7 +1,7 @@
 # Chrome Extension 存储架构设计
 
 > 本文档深度解析 PackyCode Cost Monitor 的存储系统架构，重点介绍 StorageManager 重构历程和技术实现细节。
-> 
+>
 > **相关文档**: [版本化存储系统](../guides/versioned-storage-guide.md) | [日志通信机制](log-bridge-design.md)
 
 ## 1. 架构概览
@@ -25,8 +25,8 @@ StorageManager 的**唯一职责**是抹平 AccountVersion 给 storage key 带�
  * StorageManager - 版本感知的存储管理器
  */
 export class StorageManager {
-  private _storage: Storage                     // Plasmo Storage 实例
-  private currentVersion: AccountVersion        // 当前版本状态缓存
+  private _storage: Storage // Plasmo Storage 实例
+  private currentVersion: AccountVersion // 当前版本状态缓存
   private versionChangeCallbacks = new Set<Callback>()
 
   // 受控的存储操作 API
@@ -48,10 +48,10 @@ export class StorageManager {
 ```
 版本变更触发链：
 
-用户操作修改偏好 
+用户操作修改偏好
     ↓
 Plasmo Storage 检测到 user.preference 变化
-    ↓  
+    ↓
 StorageManager.syncVersionFromStorage()
     ↓
 更新内部 currentVersion 状态
@@ -102,12 +102,12 @@ return `${this.currentVersion}.${domain}` // 其他域按版本隔离
   {
     budgets: {
       daily: {
-        limit: number   // 每日预算限额
-        spent: number   // 每日已消费
+        limit: number // 每日预算限额
+        spent: number // 每日已消费
       }
       monthly: {
-        limit: number   // 每月预算限额  
-        spent: number   // 每月已消费
+        limit: number // 每月预算限额
+        spent: number // 每月已消费
       }
     }
   }
@@ -129,7 +129,7 @@ return `${this.currentVersion}.${domain}` // 其他域按版本隔离
   {
     anthropicBaseUrl: string
     purchaseDisabled: boolean
-    purchaseUrl: string  
+    purchaseUrl: string
     supportEmail: string
   }
   ```
@@ -183,10 +183,10 @@ StorageManager.syncVersionFromStorage()
 ```typescript
 const useStorage = <T>(domain: string) => {
   const [data, setData] = useState<T | null>(null)
-  
+
   useEffect(() => {
     const storageManager = await getStorageManager()
-    
+
     // 使用 StorageManager 的版本感知 watch
     storageManager.watch({
       [domain]: () => {
@@ -196,7 +196,7 @@ const useStorage = <T>(domain: string) => {
       }
     })
   }, [])
-  
+
   return { data, refresh }
 }
 ```
@@ -217,7 +217,7 @@ executeAllTasks() 执行数据获取任务
 storageManager.set() 存储获取的数据
     ↓
 Plasmo Storage watch 检测变化
-    ↓  
+    ↓
 Popup UI 自动刷新显示
 ```
 
@@ -228,7 +228,6 @@ Popup UI 自动刷新显示
 1. **JWT Token**: 从 PackyCode 网站 cookie 自动提取
    - 自动解析过期时间存储
    - 页面访问时自动刷新
-   
 2. **API Key**: 通过 webRequest API 拦截检测
    - 长期有效，无过期概念
    - 优先级高于 JWT
@@ -241,7 +240,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
     const storageManager = await getStorageManager()
     const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
-    
+
     // 仅在没有 API Key 时才使用 JWT
     if (!authData?.token || authData?.type !== "api_key") {
       // 从 cookie 获取 JWT...
@@ -261,29 +260,32 @@ chrome.webRequest.onCompleted.addListener(async (details) => {
 
 ### 重构前后对比
 
-| 方面 | 重构前 | 重构后 |
-|-----|--------|-------|
-| 代码行数 | ~275 行 | ~247 行 |
-| 核心职责 | 通用存储封装 + 版本管理 + 回调系统 | 专注版本抽象 |
-| 基础设施 | 自制回调 + Plasmo Storage | lodash merge + Plasmo Storage |
-| API 复杂度 | 多套接口混用 | 统一的受控 API |
-| 版本初始化 | 外部传入 | 从存储读取 |
-| 权限控制 | 部分方法暴露过多 | 严格的最小权限原则 |
+| 方面       | 重构前                             | 重构后                        |
+| ---------- | ---------------------------------- | ----------------------------- |
+| 代码行数   | ~275 行                            | ~247 行                       |
+| 核心职责   | 通用存储封装 + 版本管理 + 回调系统 | 专注版本抽象                  |
+| 基础设施   | 自制回调 + Plasmo Storage          | lodash merge + Plasmo Storage |
+| API 复杂度 | 多套接口混用                       | 统一的受控 API                |
+| 版本初始化 | 外部传入                           | 从存储读取                    |
+| 权限控制   | 部分方法暴露过多                   | 严格的最小权限原则            |
 
 ### 设计优势
 
 1. **性能优化**：
+
    - 移除冗余回调系统，减少内存占用
    - 使用 lodash merge 的高效深度合并算法
    - 直接基于 Plasmo Storage，调试更直观
 
 2. **架构简化**：
+
    - 单一职责原则，专注版本抽象
    - 复用成熟基础设施，无重复造轮子
    - 严格的最小权限控制，防止 API 滥用
    - **智能深度合并**：使用 lodash merge 正确处理嵌套对象，减少 90% 手动合并操作
 
 3. **安全与封装**：
+
    - **最小权限原则**：仅暴露 6 个必要的公共方法
    - **内部实现隐藏**：5 个私有方法处理复杂的版本管理逻辑
    - **防绕过设计**：业务代码无法直接访问存储键生成或版本变化监听
@@ -343,11 +345,11 @@ private loadVersionFromStorage(): Promise<void>
 
 ```typescript
 // 编译时类型检查
-await storageManager.set(StorageDomain.USER_INFO, userData)  // ✅ 类型安全
-await storageManager.get<UserInfo>(StorageDomain.USER_INFO)   // ✅ 类型推断
+await storageManager.set(StorageDomain.USER_INFO, userData) // ✅ 类型安全
+await storageManager.get<UserInfo>(StorageDomain.USER_INFO) // ✅ 类型推断
 
 // 防止错误使用
-storageManager.getVersionedKey(domain)  // ❌ 编译错误 - private 方法
+storageManager.getVersionedKey(domain) // ❌ 编译错误 - private 方法
 ```
 
 ### 设计收益
@@ -370,13 +372,13 @@ const userData = await storageManager.get<UserInfo>(StorageDomain.USER_INFO)
 
 // 智能深度合并写入（推荐）- 自动深度合并现有数据
 await storageManager.set(StorageDomain.USER_PREFERENCE, {
-  account_version: AccountVersion.PRIVATE  // 只设置需要修改的字段
+  account_version: AccountVersion.PRIVATE // 只设置需要修改的字段
 })
 
 // 深度合并的优势 - 处理嵌套对象
 await storageManager.set(StorageDomain.USER_INFO, {
   budgets: {
-    daily: { spent: 15.5 }  // 只更新 daily.spent，保留其他字段
+    daily: { spent: 15.5 } // 只更新 daily.spent，保留其他字段
   }
 })
 // 结果：原有的 budgets.daily.limit 和 budgets.monthly 都会保留
@@ -448,23 +450,27 @@ await storageManager.set(StorageDomain.USER_PREFERENCE, {
 **文档整合的设计考量**: 将两个独立文档合并为统一架构文档，通过从宏观到微观的层次化组织，让开发者能够快速理解整个存储系统的设计理念、实现细节和使用方式。
 
 **关键整合策略**:
+
 - 以 StorageManager 为核心展开架构说明
 - 将具体的存储域设计整合到统一的版本管理体系中
 - 强调响应式数据流和跨环境同步的实现原理
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
 ---
 
 ## 🔗 相关文档
 
 ### 实际应用指南
+
 - [版本化存储系统](../guides/versioned-storage-guide.md) - 双账号数据隔离的用户视角
 - [私家车模式指南](../guides/private-car-mode.md) - 私有账号认证配置
 
 ### 系统设计文档
+
 - [日志通信机制](log-bridge-design.md) - Chrome Extension 调试系统架构
 - [贡献指南](../developers/contributing.md) - 参与存储系统开发
 
 ### 导航
+
 - [返回架构设计目录](README.md)
 - [返回文档中心](../README.md)

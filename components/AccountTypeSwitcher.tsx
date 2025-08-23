@@ -4,13 +4,24 @@ import { getStorageManager } from "../lib/storage"
 import { StorageDomain } from "../lib/storage/domains"
 import { AccountVersion, type UserPreferenceStorage } from "../types"
 
-export function AccountTypeSwitcher() {
+interface AccountTypeSwitcherProps {
+  className?: string
+  showDescription?: boolean
+  showNotification?: boolean
+  variant?: "dropdown" | "segmented"
+}
+
+export function AccountTypeSwitcher({
+  className = "",
+  showDescription = true,
+  showNotification = true,
+  variant = "segmented"
+}: AccountTypeSwitcherProps) {
   const [currentAccountType, setCurrentAccountType] = useState<AccountVersion>(
     AccountVersion.SHARED
   )
   const [isLoading, setIsLoading] = useState(true)
 
-  // 加载当前账号类型
   useEffect(() => {
     const loadAccountType = async () => {
       try {
@@ -38,48 +49,71 @@ export function AccountTypeSwitcher() {
     try {
       const storageManager = await getStorageManager()
 
-      // 直接修改用户偏好，让 StorageManager 自动同步版本
       await storageManager.set(StorageDomain.USER_PREFERENCE, {
         account_version: newType
       })
 
       setCurrentAccountType(newType)
 
-      // 提示用户重新加载扩展以应用更改
-      chrome.notifications.create({
-        iconUrl: "assets/icon.png",
-        message: `已切换到${newType === AccountVersion.PRIVATE ? "私家车" : "公交车"}模式，请重新加载扩展以应用更改`,
-        title: "账号类型已切换",
-        type: "basic"
-      })
+      if (showNotification) {
+        chrome.notifications.create({
+          iconUrl: "assets/icon.png",
+          message: `已切换到${newType === AccountVersion.PRIVATE ? "私家车" : "公交车"}模式，请重新加载扩展以应用更改`,
+          title: "账号类型已切换",
+          type: "basic"
+        })
+      }
     } catch (error) {
       console.error("Failed to switch account type:", error)
-      chrome.notifications.create({
-        iconUrl: "assets/icon.png",
-        message: "账号类型切换失败，请重试",
-        title: "切换失败",
-        type: "basic"
-      })
+      if (showNotification) {
+        chrome.notifications.create({
+          iconUrl: "assets/icon.png",
+          message: "账号类型切换失败，请重试",
+          title: "切换失败",
+          type: "basic"
+        })
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (isLoading) {
+  const handleDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as AccountVersion
+    handleAccountTypeChange(newType)
+  }
+
+  if (variant === "dropdown") {
     return (
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <div className="flex items-center justify-center py-4">
-          <div className="w-4 h-4 border border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-            加载中...
-          </span>
-        </div>
+      <div className={`space-y-2 ${className}`}>
+        <label
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          htmlFor="account-version">
+          账号版本
+        </label>
+        <select
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+          disabled={isLoading}
+          id="account-version"
+          onChange={handleDropdownChange}
+          value={currentAccountType}>
+          <option value={AccountVersion.SHARED}>🚌 公交车</option>
+          <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
+        </select>
+        {showDescription && (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {currentAccountType === AccountVersion.SHARED
+              ? "公交车版本：共享资源，价格实惠"
+              : "私家车版本：独享资源，性能更优"}
+          </p>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
+    <div
+      className={`border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           账号类型
@@ -91,41 +125,49 @@ export function AccountTypeSwitcher() {
       </div>
 
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className={`px-3 py-2 text-xs font-medium rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              currentAccountType === AccountVersion.SHARED
-                ? "bg-blue-600 text-white border-blue-600 focus:ring-blue-500"
-                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-            }`}
-            disabled={isLoading}
-            onClick={() => handleAccountTypeChange(AccountVersion.SHARED)}>
-            公交车
-          </button>
-
-          <button
-            className={`px-3 py-2 text-xs font-medium rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              currentAccountType === AccountVersion.PRIVATE
-                ? "bg-purple-600 text-white border-purple-600 focus:ring-purple-500"
-                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
-            }`}
-            disabled={isLoading}
-            onClick={() => handleAccountTypeChange(AccountVersion.PRIVATE)}>
-            私家车
-          </button>
+        <div className="relative bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+          <div className="grid grid-cols-2 relative">
+            <div
+              className={`absolute top-1 bottom-1 rounded-md bg-white dark:bg-gray-700 shadow-sm transition-transform duration-200 ease-out ${
+                currentAccountType === AccountVersion.SHARED
+                  ? "left-1 right-1/2"
+                  : "left-1/2 right-1"
+              }`}
+            />
+            <button
+              className={`relative px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md z-10 ${
+                currentAccountType === AccountVersion.SHARED
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+              disabled={isLoading}
+              onClick={() => handleAccountTypeChange(AccountVersion.SHARED)}>
+              🚌 公交车
+            </button>
+            <button
+              className={`relative px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 rounded-md z-10 ${
+                currentAccountType === AccountVersion.PRIVATE
+                  ? "text-purple-600 dark:text-purple-400"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+              }`}
+              disabled={isLoading}
+              onClick={() => handleAccountTypeChange(AccountVersion.PRIVATE)}>
+              🚗 私家车
+            </button>
+          </div>
         </div>
 
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <p>
-            • <strong>公交车模式：</strong>使用 www.packycode.com（共享账号）
-          </p>
-          <p>
-            • <strong>私家车模式：</strong>使用 share.packycode.com（私有账号）
-          </p>
-          <p className="text-orange-600 dark:text-orange-400">
-            ⚠️ 切换后需要重新加载扩展并重新登录
-          </p>
-        </div>
+        {showDescription && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+            <p>
+              • <strong>公交车模式：</strong>使用 www.packycode.com（共享账号）
+            </p>
+            <p>
+              • <strong>私家车模式：</strong>使用{" "}
+              share.packycode.com（私有账号）
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

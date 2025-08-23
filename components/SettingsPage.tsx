@@ -1,37 +1,11 @@
-import { loggers } from "~/lib/logger"
-
-import { useUserPreference } from "../hooks/useStorageHooks"
-import { useVersionSwitcher } from "../hooks/useVersionSwitcher"
-import { AccountVersion } from "../types"
 import { AccountTypeSwitcher } from "./AccountTypeSwitcher"
 import { DeveloperPanel } from "./DeveloperPanel"
-
-const logger = loggers.ui
 
 interface SettingsPageProps {
   onBack: () => void
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const { data: userPreference } = useUserPreference()
-  const { error, switching, switchVersion } = useVersionSwitcher()
-
-  const currentVersion =
-    userPreference?.account_version || AccountVersion.SHARED
-
-  const handleVersionChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const newVersion = e.target.value as AccountVersion
-
-    try {
-      await switchVersion(newVersion)
-      logger.info(`Account version switched to: ${newVersion}`)
-    } catch (error) {
-      logger.error("Failed to switch version:", error)
-    }
-  }
-
   // 检查是否为开发环境
   const isDevelopment = process.env.NODE_ENV === "development"
 
@@ -62,35 +36,11 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       {/* 设置内容 */}
       <div className="space-y-6">
         {/* 账号版本设置 */}
-        <div className="space-y-2">
-          <label
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-            htmlFor="account-version">
-            账号版本
-          </label>
-          <select
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-            disabled={switching}
-            id="account-version"
-            onChange={handleVersionChange}
-            value={currentVersion}>
-            <option value={AccountVersion.SHARED}>🚌 公交车</option>
-            <option value={AccountVersion.PRIVATE}>🚗 私家车</option>
-          </select>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {currentVersion === AccountVersion.SHARED
-              ? "公交车版本：共享资源，价格实惠"
-              : "私家车版本：独享资源，性能更优"}
-          </p>
-          {error && (
-            <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
-          )}
-        </div>
+        <AccountTypeSwitcher />
 
         {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
         {(isDevelopment || window.location.search.includes("dev=true")) && (
           <>
-            <AccountTypeSwitcher />
             <DeveloperPanel />
           </>
         )}

@@ -7,4 +7,7 @@
 
 // 统一的购买状态检查
 export { checkAndNotifyPurchaseStatus } from "./checker"
+// 🆕 导出购买相关hooks
+export * from "./hooks"
+
 export { getCurrentPurchaseConfig } from "./status"

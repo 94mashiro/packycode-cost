@@ -1,6 +1,5 @@
-import { useSystemPreference } from "~/hooks/useStorageHooks"
-
-import { type OpusStatusData } from "../types"
+import { useSystemPreference } from "~/hooks/infrastructure/useStorageHooks"
+import { type OpusStatusData } from "~/types"
 
 /**
  * Opus 状态 Hook

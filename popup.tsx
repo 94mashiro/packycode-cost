@@ -13,7 +13,7 @@ import { PackageExpiry } from "./components/PackageExpiry"
 import { RefreshButton } from "./components/RefreshButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
-import { useAuth, useUserInfo } from "./hooks/useStorageHooks"
+import { useAuth, useUserInfo } from "./hooks"
 import { enablePopupLogging } from "./lib/logger"
 import { TokenType, ViewType } from "./types"
 

@@ -6,6 +6,7 @@
  */
 
 export * from "./api"
+export * from "./hooks" // 🆕 导出用户相关hooks
 export type { Budget, UserInfo } from "~/types"
 
 import type { UserInfo } from "~/types"

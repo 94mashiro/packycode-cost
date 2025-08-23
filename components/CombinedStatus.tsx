@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { dynamicApiUrls } from "../api"
-import { useOpusStatus } from "../hooks/useOpusStatus"
-import { usePurchaseStatus } from "../hooks/usePurchaseStatus"
+import { useOpusStatus, usePurchaseStatus } from "../hooks"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
 
 interface CombinedStatusProps {

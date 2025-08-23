@@ -1,4 +1,4 @@
-import { usePurchaseStatus } from "../hooks/usePurchaseStatus"
+import { usePurchaseStatus } from "../hooks"
 
 export function PurchaseStatus() {
   const { config, error, loading, refresh } = usePurchaseStatus()

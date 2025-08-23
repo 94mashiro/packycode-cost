@@ -3,8 +3,7 @@ import { useCallback, useState } from "react"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-
-import { AccountVersion, type UserPreferenceStorage } from "../types"
+import { AccountVersion, type UserPreferenceStorage } from "~/types"
 
 const logger = loggers.ui
 

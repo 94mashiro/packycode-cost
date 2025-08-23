@@ -1,6 +1,5 @@
-import { usePurchaseConfig } from "~/hooks/useStorageHooks"
-
-import { type PurchaseStatusData } from "../types"
+import { usePurchaseConfig } from "~/hooks/infrastructure/useStorageHooks"
+import { type PurchaseStatusData } from "~/types"
 
 /**
  * 购买状态 Hook

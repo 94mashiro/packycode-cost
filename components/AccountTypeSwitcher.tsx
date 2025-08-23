@@ -57,8 +57,9 @@ export function AccountTypeSwitcher({
 
       if (showNotification) {
         chrome.notifications.create({
-          iconUrl: "assets/icon.png",
-          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}模式，请重新加载扩展以应用更改`,
+          iconUrl:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
+          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}模式`,
           title: "账号类型已切换",
           type: "basic"
         })
@@ -67,7 +68,8 @@ export function AccountTypeSwitcher({
       console.error("Failed to switch account type:", error)
       if (showNotification) {
         chrome.notifications.create({
-          iconUrl: "assets/icon.png",
+          iconUrl:
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
           message: "账号类型切换失败，请重试",
           title: "切换失败",
           type: "basic"
@@ -112,16 +114,11 @@ export function AccountTypeSwitcher({
   }
 
   return (
-    <div
-      className={`border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4 ${className}`}>
+    <div className={`pt-6 space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           账号类型
         </h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {currentAccountType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}
-          模式
-        </span>
       </div>
 
       <div className="space-y-3">

@@ -4,12 +4,12 @@ import eruda from "eruda"
 import { useEffect, useState } from "react"
 
 import { getTokenExpiration } from "~/modules/auth"
+import { SubscriptionDisplay } from "~/modules/subscription"
 import { fetchAllDataAsync } from "~/modules/tasks"
 
 import { ActionButtons } from "./components/ActionButtons"
 import { CombinedBudget } from "./components/CombinedBudget"
 import { CombinedStatus } from "./components/CombinedStatus"
-import { PackageExpiry } from "./components/PackageExpiry"
 import { RefreshButton } from "./components/RefreshButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
@@ -30,7 +30,7 @@ function IndexPopup() {
   const { data: authData } = useAuth()
   const {
     data: userInfo,
-    error,
+    error: userInfoError,
     loading: userInfoLoading,
     refresh
   } = useUserInfo()
@@ -127,10 +127,10 @@ function IndexPopup() {
             (authData?.type === TokenType.API_KEY ||
               !tokenExpiration?.isExpired) && (
               <div className="space-y-4">
-                {error && (
+                {userInfoError && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
                     <p className="text-sm text-red-800 dark:text-red-200">
-                      加载失败: {error}
+                      加载失败: {userInfoError}
                     </p>
                   </div>
                 )}
@@ -171,17 +171,13 @@ function IndexPopup() {
                     monthlySpent={userInfo.budgets.monthly.spent}
                   />
                 )}
-
-                {/* 临时测试数据 - 套餐到期组件 */}
-                {userInfo && (
-                  <PackageExpiry
-                    endDate={new Date("2024-12-31")}
-                    packageType="企业版套餐"
-                    startDate={new Date("2024-01-01")}
-                  />
-                )}
               </div>
             )}
+
+          {/* 套餐信息组件 - 独立显示，只依赖认证状态 */}
+          {isTokenValid &&
+            (authData?.type === TokenType.API_KEY ||
+              !tokenExpiration?.isExpired) && <SubscriptionDisplay />}
 
           <ActionButtons />
 

@@ -36,8 +36,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       {/* 设置内容 */}
       <div className="space-y-6">
         {/* 账号版本设置 */}
-        <AccountTypeSwitcher />
-
+        <AccountTypeSwitcher showDescription={false} variant="dropdown" />
         {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
         {(isDevelopment || window.location.search.includes("dev=true")) && (
           <>

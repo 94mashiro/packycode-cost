@@ -48,6 +48,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     endpoints: {
       [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
       [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.SUBSCRIPTIONS]:
+        "/api/backend/subscriptions?page=1&per_page=50",
       [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
     },
     pages: {
@@ -63,6 +65,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     endpoints: {
       [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
       [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.SUBSCRIPTIONS]:
+        "/api/backend/subscriptions?page=1&per_page=50",
       [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
     },
     pages: {

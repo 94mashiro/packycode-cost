@@ -20,6 +20,8 @@ export enum ApiEndpointType {
   API_KEYS_PATTERN = "apiKeysPattern",
   /** 配置 API */
   CONFIG = "config",
+  /** 订阅信息 API */
+  SUBSCRIPTIONS = "subscriptions",
   /** 用户信息 API */
   USER_INFO = "userInfo"
 }

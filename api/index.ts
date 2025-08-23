@@ -8,8 +8,10 @@
 import { loggers } from "~/lib/logger"
 import { get } from "~/lib/request"
 import {
+  ApiEndpointType,
   type ApiResponse,
   type PackyConfig,
+  PageUrlType,
   TokenType,
   type UserApiResponse
 } from "~/types"
@@ -27,7 +29,7 @@ export const dynamicPackyApi = {
    * 自动使用当前账号类型的配置端点
    */
   async getConfig(): Promise<ApiResponse<PackyConfig>> {
-    const configUrl = await getCurrentApiUrl("config")
+    const configUrl = await getCurrentApiUrl(ApiEndpointType.CONFIG)
     return get<PackyConfig>(configUrl)
   }
 }
@@ -46,7 +48,7 @@ export const dynamicUserApi = {
     token: string,
     _tokenType: TokenType
   ): Promise<ApiResponse<UserApiResponse>> {
-    const userInfoUrl = await getCurrentApiUrl("userInfo")
+    const userInfoUrl = await getCurrentApiUrl(ApiEndpointType.USER_INFO)
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -67,35 +69,35 @@ export const dynamicApiUrls = {
    */
   async getApiKeysPattern(): Promise<string> {
     // 直接返回完整的API Keys Pattern URL
-    return getCurrentApiUrl("apiKeysPattern")
+    return getCurrentApiUrl(ApiEndpointType.API_KEYS_PATTERN)
   },
 
   /**
    * 获取配置API URL
    */
   async getConfigUrl(): Promise<string> {
-    return getCurrentApiUrl("config")
+    return getCurrentApiUrl(ApiEndpointType.CONFIG)
   },
 
   /**
    * 获取仪表板页面URL
    */
   async getDashboardUrl(): Promise<string> {
-    return getCurrentPageUrl("dashboard")
+    return getCurrentPageUrl(PageUrlType.DASHBOARD)
   },
 
   /**
    * 获取定价页面URL
    */
   async getPricingUrl(): Promise<string> {
-    return getCurrentPageUrl("pricing")
+    return getCurrentPageUrl(PageUrlType.PRICING)
   },
 
   /**
    * 获取用户信息API URL
    */
   async getUserInfoUrl(): Promise<string> {
-    return getCurrentApiUrl("userInfo")
+    return getCurrentApiUrl(ApiEndpointType.USER_INFO)
   }
 }
 

@@ -10,12 +10,38 @@ export enum AccountVersion {
   SHARED = "shared"
 }
 
+/**
+ * API 端点类型枚举
+ * Joshua Bloch: "枚举是类型安全常量的最佳实践"
+ * 用于标识不同的 API 端点，确保编译时类型检查
+ */
+export enum ApiEndpointType {
+  /** API Keys 监听模式 URL */
+  API_KEYS_PATTERN = "apiKeysPattern",
+  /** 配置 API */
+  CONFIG = "config",
+  /** 用户信息 API */
+  USER_INFO = "userInfo"
+}
+
 // HTTP请求方法
 export enum HttpMethod {
   DELETE = "DELETE",
   GET = "GET",
   POST = "POST",
   PUT = "PUT"
+}
+
+/**
+ * 页面 URL 类型枚举
+ * Martin Fowler: "按职责分离不同类型的常量"
+ * 用于标识不同的页面 URL，与 API 端点分离
+ */
+export enum PageUrlType {
+  /** 仪表板页面 */
+  DASHBOARD = "dashboard",
+  /** 定价页面 */
+  PRICING = "pricing"
 }
 
 // Token类型

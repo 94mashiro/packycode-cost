@@ -7,7 +7,12 @@
 
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { AccountVersion, type UserPreferenceStorage } from "~/types"
+import {
+  AccountVersion,
+  ApiEndpointType,
+  PageUrlType,
+  type UserPreferenceStorage
+} from "~/types"
 
 /**
  * API 环境配置定义
@@ -161,11 +166,9 @@ export class ApiConfigManagerController {
   private cachedConfigManager: ApiConfigManager | null = null
 
   /**
-   * 获取当前账号类型的API URL
+   * 获取当前账号类型的API URL (类型安全版本)
    */
-  async getCurrentApiUrl(
-    endpoint: keyof ApiEnvironmentConfig["endpoints"]
-  ): Promise<string> {
+  async getCurrentApiUrl(endpoint: ApiEndpointType): Promise<string> {
     const adapter = await this.getCurrentConfigManager()
     return adapter.getApiUrl(endpoint)
   }
@@ -209,11 +212,9 @@ export class ApiConfigManagerController {
   }
 
   /**
-   * 获取当前账号类型的页面URL
+   * 获取当前账号类型的页面URL (类型安全版本)
    */
-  async getCurrentPageUrl(
-    page: keyof ApiEnvironmentConfig["pages"]
-  ): Promise<string> {
+  async getCurrentPageUrl(page: PageUrlType): Promise<string> {
     const adapter = await this.getCurrentConfigManager()
     return adapter.getPageUrl(page)
   }
@@ -269,10 +270,11 @@ export async function getCurrentApiConfigManager(): Promise<ApiConfigManager> {
 }
 
 /**
- * 便捷函数：获取当前API URL
+ * 便捷函数：获取当前API URL (类型安全版本)
+ * Joshua Bloch: "简洁的接口胜过复杂的重载"
  */
 export async function getCurrentApiUrl(
-  endpoint: keyof ApiEnvironmentConfig["endpoints"]
+  endpoint: ApiEndpointType
 ): Promise<string> {
   return apiConfigManagerController.getCurrentApiUrl(endpoint)
 }
@@ -292,10 +294,9 @@ export async function getCurrentCookieDomain(): Promise<string> {
 }
 
 /**
- * 便捷函数：获取当前页面URL
+ * 便捷函数：获取当前页面URL (类型安全版本)
+ * Martin Fowler: "明确的类型约束让代码意图更清晰"
  */
-export async function getCurrentPageUrl(
-  page: keyof ApiEnvironmentConfig["pages"]
-): Promise<string> {
+export async function getCurrentPageUrl(page: PageUrlType): Promise<string> {
   return apiConfigManagerController.getCurrentPageUrl(page)
 }

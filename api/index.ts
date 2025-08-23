@@ -12,6 +12,7 @@ import {
   type ApiResponse,
   type PackyConfig,
   PageUrlType,
+  type SubscriptionApiResponse,
   TokenType,
   type UserApiResponse
 } from "~/types"
@@ -38,6 +39,28 @@ export const dynamicPackyApi = {
  * 动态用户API - 基于当前账号类型
  */
 export const dynamicUserApi = {
+  /**
+   * 获取用户订阅信息
+   * 自动使用当前账号类型的订阅端点
+   * @param token 认证令牌
+   * @param _tokenType 令牌类型（保留兼容性）
+   */
+  async getSubscriptions(
+    token: string,
+    _tokenType: TokenType
+  ): Promise<ApiResponse<SubscriptionApiResponse>> {
+    const subscriptionsUrl = await getCurrentApiUrl(
+      ApiEndpointType.SUBSCRIPTIONS
+    )
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
+
+    return get<SubscriptionApiResponse>(subscriptionsUrl, { headers })
+  },
+
   /**
    * 获取用户信息（预算、使用量等）
    * 自动使用当前账号类型的用户信息端点

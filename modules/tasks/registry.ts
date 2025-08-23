@@ -10,6 +10,7 @@
 
 import { loggers } from "~/lib/logger"
 import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/checker"
+import { fetchSubscriptionInfo } from "~/modules/subscription"
 import { fetchUserInfo } from "~/modules/user"
 
 const logger = loggers.ui
@@ -22,6 +23,7 @@ export enum BackgroundActionEnum {
 // 2. 数据获取任务类型枚举
 export enum DataTaskType {
   CHECK_PURCHASE_STATUS = "checkPurchaseStatus",
+  FETCH_SUBSCRIPTION_INFO = "fetchSubscriptionInfo",
   FETCH_USER_INFO = "fetchUserInfo"
 }
 
@@ -44,6 +46,12 @@ export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
     handler: checkAndNotifyPurchaseStatus,
     priority: 2,
     type: DataTaskType.CHECK_PURCHASE_STATUS
+  },
+  [DataTaskType.FETCH_SUBSCRIPTION_INFO]: {
+    description: "获取用户订阅状态和计划信息",
+    handler: fetchSubscriptionInfo,
+    priority: 3,
+    type: DataTaskType.FETCH_SUBSCRIPTION_INFO
   },
   [DataTaskType.FETCH_USER_INFO]: {
     description: "获取用户预算和使用量信息",

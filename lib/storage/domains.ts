@@ -2,6 +2,7 @@ import type {
   AuthStorage,
   NotificationStates,
   PackyConfig,
+  SubscriptionApiResponse,
   SystemPreferenceStorage,
   UserInfo,
   UserPreferenceStorage
@@ -19,6 +20,7 @@ export enum StorageDomain {
   AUTH = "auth",
   NOTIFICATION_STATES = "notification.states",
   PURCHASE_CONFIG = "purchase_config",
+  SUBSCRIPTION_INFO = "subscription.info",
   SYSTEM_PREFERENCE = "system.preference",
   USER_INFO = "user.info",
 
@@ -43,6 +45,7 @@ export interface StorageDomainMap {
   [StorageDomain.AUTH]: AuthStorage
   [StorageDomain.NOTIFICATION_STATES]: NotificationStates
   [StorageDomain.PURCHASE_CONFIG]: PackyConfig
+  [StorageDomain.SUBSCRIPTION_INFO]: SubscriptionApiResponse
   [StorageDomain.SYSTEM_PREFERENCE]: SystemPreferenceStorage
   [StorageDomain.USER_INFO]: UserInfo
   [StorageDomain.USER_PREFERENCE]: UserPreferenceStorage

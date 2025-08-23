@@ -139,6 +139,70 @@ export type ReactChangeEvent<T = HTMLElement> = React.ChangeEvent<T>
 
 export type ReactMouseEvent<T = HTMLElement> = React.MouseEvent<T>
 
+// ===== 认证相关 =====
+/**
+ * 单个订阅项（完全匹配 API 返回）
+ */
+export interface SubscriptionApiItem {
+  /** 是否在当前周期结束时取消 */
+  cancel_at_period_end: boolean
+  /** 取消时间（ISO 字符串或 null） */
+  canceled_at: null | string
+  /** 创建时间（ISO 字符串） */
+  created_at: string
+  /** 当前周期结束时间（ISO 字符串） */
+  current_period_end: string
+  /** 当前周期开始时间（ISO 字符串） */
+  current_period_start: string
+  /** 订阅 ID */
+  id: string
+  /** 计划 ID */
+  plan_id: string
+  /** 计划名称 */
+  plan_name: string
+  /** 计划价格（字符串格式） */
+  plan_price: string
+  /** 价格保护信息 */
+  price_protection: null | SubscriptionPriceProtection
+  /** 订阅状态 */
+  status: string
+  /** Stripe 订阅 ID */
+  stripe_subscription_id: string
+  /** 试用结束时间（ISO 字符串或 null） */
+  trial_end: null | string
+  /** 升级详情（当前为 null，类型待确定） */
+  upgrade_details: null | unknown
+  /** 用户 ID */
+  user_id: string
+  /** 用户名（当前为 null） */
+  user_name: null | string
+}
+
+/**
+ * 订阅 API 响应结构（基于真实 API）
+ */
+export interface SubscriptionApiResponse {
+  data: SubscriptionApiItem[]
+  page: number
+  per_page: number
+  total: number
+  total_pages: number
+}
+
+/**
+ * 价格保护信息
+ */
+export interface SubscriptionPriceProtection {
+  /** 市场价格 */
+  market_price: string
+  /** 每月节省金额 */
+  monthly_savings: string
+  /** 保护价格 */
+  protected_price: string
+  /** 价格保护过期时间 */
+  protection_expires_at: string
+}
+
 // 系统偏好
 export interface SystemPreferenceStorage {
   opus_enabled?: boolean
@@ -158,8 +222,6 @@ export interface TokenExpiration {
   isExpired: boolean
 }
 
-// ===== 认证相关 =====
-
 export interface UserApiResponse {
   daily_budget_usd: number | string
   daily_spent_usd: number | string
@@ -167,6 +229,8 @@ export interface UserApiResponse {
   monthly_spent_usd: number | string
   opus_enabled: boolean
 }
+
+// ===== 订阅系统类型定义 =====
 
 // 用户信息
 export interface UserInfo {

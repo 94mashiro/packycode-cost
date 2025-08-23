@@ -46,6 +46,15 @@ export const useSystemPreference = () =>
   useStorage(StorageDomain.SYSTEM_PREFERENCE)
 
 /**
+ * 订阅信息 Hook
+ *
+ * 管理当前版本的用户订阅信息
+ * 自动推导类型: SubscriptionApiResponse | null
+ */
+export const useSubscriptionInfo = () =>
+  useStorage(StorageDomain.SUBSCRIPTION_INFO)
+
+/**
  * 用户偏好 Hook
  *
  * 管理全局用户偏好设置 (版本选择、主题等)

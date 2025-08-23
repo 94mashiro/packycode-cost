@@ -99,6 +99,7 @@ export const loggers = {
   notification: new Logger("NOTIFICATION", { color: "#607D8B" }),
   purchase: new Logger("PURCHASE", { color: "#F44336" }),
   storage: new Logger("STORAGE", { color: "#FF9800" }),
+  subscription: new Logger("SUBSCRIPTION", { color: "#3F51B5" }),
   ui: new Logger("UI", { color: "#00BCD4" })
 }
 

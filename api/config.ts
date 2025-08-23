@@ -25,17 +25,10 @@ export interface ApiEnvironmentConfig {
   cookieDomain: string
   /** 描述信息 */
   description: string
-  /** API 端点配置 */
-  endpoints: {
-    apiKeysPattern: string
-    config: string
-    userInfo: string
-  }
-  /** 页面 URL 配置 */
-  pages: {
-    dashboard: string
-    pricing: string
-  }
+  /** API 端点配置 - 使用枚举值作为键确保类型安全 */
+  endpoints: Record<ApiEndpointType, string>
+  /** 页面 URL 配置 - 使用枚举值作为键确保类型安全 */
+  pages: Record<PageUrlType, string>
   /** API 环境类型 */
   type: AccountVersion
 }
@@ -53,13 +46,13 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     cookieDomain: "https://share.packycode.com",
     description: "滴滴车模式 - 私有 API 环境",
     endpoints: {
-      apiKeysPattern: "/api/backend/users/*/api-keys/*",
-      config: "/api/config",
-      userInfo: "/api/backend/users/info"
+      [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
+      [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
     },
     pages: {
-      dashboard: "https://share.packycode.com/dashboard",
-      pricing: "https://share.packycode.com/pricing"
+      [PageUrlType.DASHBOARD]: "https://share.packycode.com/dashboard",
+      [PageUrlType.PRICING]: "https://share.packycode.com/pricing"
     },
     type: AccountVersion.PRIVATE
   },
@@ -68,13 +61,13 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     cookieDomain: "https://www.packycode.com",
     description: "公交车模式 - 共享 API 环境",
     endpoints: {
-      apiKeysPattern: "/api/backend/users/*/api-keys/*",
-      config: "/api/config",
-      userInfo: "/api/backend/users/info"
+      [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
+      [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
     },
     pages: {
-      dashboard: "https://www.packycode.com/dashboard",
-      pricing: "https://www.packycode.com/pricing"
+      [PageUrlType.DASHBOARD]: "https://www.packycode.com/dashboard",
+      [PageUrlType.PRICING]: "https://www.packycode.com/pricing"
     },
     type: AccountVersion.SHARED
   }

@@ -14,7 +14,12 @@ import {
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { AccountVersion, type UserPreferenceStorage } from "~/types"
+import {
+  AccountVersion,
+  ApiEndpointType,
+  PageUrlType,
+  type UserPreferenceStorage
+} from "~/types"
 
 const logger = loggers.debug
 
@@ -76,8 +81,8 @@ export async function testAccountTypeSwitching() {
 
     // 3. 验证URL配置
     logger.info("\n3. 验证URL配置...")
-    const dashboardUrl = await privateAdapter.getPageUrl("dashboard")
-    const configApiUrl = await privateAdapter.getApiUrl("config")
+    const dashboardUrl = await privateAdapter.getPageUrl(PageUrlType.DASHBOARD)
+    const configApiUrl = await privateAdapter.getApiUrl(ApiEndpointType.CONFIG)
     logger.info(`仪表板URL: ${dashboardUrl}`)
     logger.info(`配置API URL: ${configApiUrl}`)
 

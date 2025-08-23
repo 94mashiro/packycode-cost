@@ -97,12 +97,11 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
 
     // 更新系统偏好
     await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-      ...systemPref,
       opus_enabled: currentOpusState
     })
 
     // 存储用户信息
-    await storageManager.set(StorageDomain.USER_INFO, userInfoStorage)
+    await storageManager.set(StorageDomain.USER_INFO, userInfoStorage, true)
 
     return userInfoStorage
   } catch (error) {

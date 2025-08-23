@@ -34,7 +34,7 @@ export function checkPurchaseNotification(
  */
 export async function clearNotificationStates(): Promise<void> {
   const storageManager = await getStorageManager()
-  await storageManager.set(StorageDomain.NOTIFICATION_STATES, {})
+  await storageManager.set(StorageDomain.NOTIFICATION_STATES, {}, true)
 }
 
 /**
@@ -70,9 +70,7 @@ export async function getPurchaseState(): Promise<boolean | undefined> {
  */
 export async function setOpusState(enabled: boolean): Promise<void> {
   const storageManager = await getStorageManager()
-  const states = await getNotificationStates()
   await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
-    ...states,
     opus_enabled: enabled
   })
 }
@@ -83,9 +81,7 @@ export async function setOpusState(enabled: boolean): Promise<void> {
  */
 export async function setPurchaseState(disabled: boolean): Promise<void> {
   const storageManager = await getStorageManager()
-  const states = await getNotificationStates()
   await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
-    ...states,
     purchase_disabled: disabled
   })
 }

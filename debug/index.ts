@@ -10,7 +10,7 @@ export {
   validateApiKeysPattern
 } from "./api/urlPatternTest"
 
-export { testApiKeyDetection, validateApiKeyFormat } from "./auth/apiKeyTest"
+export { testApiKeyDetection } from "./auth/apiKeyTest"
 
 // 认证相关调试工具
 export {
@@ -22,7 +22,6 @@ export {
 
 export {
   runAccountAdapterTests,
-  testAccountConfigRegistry,
-  testAccountSwitching,
+  testAccountTypeSwitching,
   validateAccountConfigs
 } from "./auth/test"

@@ -1,9 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { loggers } from "~/lib/logger"
-import { AccountVersion, type UserPreferenceStorage } from "~/types"
 
-import { StorageDomain } from "./domains"
 import { StorageManager } from "./storageManager"
 
 const logger = loggers.storage
@@ -36,16 +34,11 @@ export async function getStorageManager(): Promise<StorageManager> {
   logger.debug("Starting StorageManager initialization...")
   initializationPromise = (async () => {
     const storage = new Storage()
+    const manager = new StorageManager(storage)
 
-    // 从存储中读取当前版本，默认为 SHARED
-    const userPref = await storage.get<UserPreferenceStorage>(
-      StorageDomain.USER_PREFERENCE
-    )
-    const currentVersion = userPref?.account_version || AccountVersion.SHARED
+    // 等待异步初始化完成（从存储中读取版本并设置监听）
+    await manager.initialize()
 
-    logger.info(`Initializing storage manager with version: ${currentVersion}`)
-
-    const manager = new StorageManager(storage, currentVersion)
     globalStorageManager = manager
     initializationPromise = null // 清理初始化 Promise
 
@@ -67,7 +60,7 @@ export function isStorageManagerInitialized(): boolean {
  */
 export function resetStorageManager(): void {
   if (globalStorageManager) {
-    globalStorageManager.clearAllSubscribers()
+    // Plasmo Storage 会自动处理监听清理，无需手动清理
     globalStorageManager = null
     logger.debug("Global storage manager reset")
   }

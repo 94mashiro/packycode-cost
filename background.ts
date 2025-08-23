@@ -103,7 +103,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
             type: "jwt" as TokenType,
             ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
-          await storageManager.set(StorageDomain.AUTH, authData)
+          await storageManager.set(StorageDomain.AUTH, authData, true)
           logger.info("Token stored successfully")
         }
       }
@@ -163,13 +163,17 @@ async function setupStorageListening() {
   try {
     const storageManager = await getStorageManager()
 
-    // 监听用户信息变化，更新 badge
-    storageManager.onDomainChange(StorageDomain.USER_INFO, () => {
-      logger.debug("User info changed, updating badge")
-      updateBadge()
+    // 使用 StorageManager 的版本感知 watch
+    storageManager.watch({
+      [StorageDomain.USER_INFO]: () => {
+        logger.debug("User info changed, updating badge")
+        updateBadge()
+      }
     })
 
-    logger.info("✅ Storage listening setup completed using Plasmo Storage API")
+    logger.info(
+      "✅ Storage listening setup completed using StorageManager watch"
+    )
   } catch (error) {
     logger.error("❌ Failed to setup storage listening:", error)
   }
@@ -273,7 +277,7 @@ async function setupDynamicWebRequestListener() {
                 type: "api_key" as TokenType
                 // API Key 不需要过期时间
               }
-              await storageManager.set(StorageDomain.AUTH, newAuthData)
+              await storageManager.set(StorageDomain.AUTH, newAuthData, true)
 
               logger.info("✅ API key存储成功，来源:", details.url)
               // 触发重新获取用户信息以更新额度显示
@@ -310,16 +314,19 @@ async function setupUserPreferenceWatcher() {
   try {
     const storageManager = await getStorageManager()
 
-    // 监听用户偏好变化
-    storageManager.onDomainChange(StorageDomain.USER_PREFERENCE, async () => {
+    // 直接使用 Plasmo Storage watch 监听用户偏好变化
+    const watchKeys: Record<string, () => void> = {}
+
+    watchKeys[StorageDomain.USER_PREFERENCE] = async () => {
       logger.info("🔄 检测到用户偏好变化，重新设置webRequest监听器")
 
       // 延迟一点时间确保存储已完全更新
       setTimeout(() => {
         setupDynamicWebRequestListener()
       }, 500)
-    })
+    }
 
+    storageManager.watch(watchKeys)
     logger.info("✅ 用户偏好监听器设置完成")
   } catch (error) {
     logger.error("❌ 用户偏好监听器设置失败:", error)

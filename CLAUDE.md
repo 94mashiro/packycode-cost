@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PackyCode Cost Monitor is a Chrome browser extension built with Plasmo framework that monitors PackyCode API usage and budgets. It features dual token authentication (JWT/API Key), real-time purchase status monitoring, and budget tracking with notifications.
 
+**📚 Complete Documentation**: See [docs/README.md](docs/README.md) for comprehensive technical documentation including architecture design, usage guides, and developer resources organized by Linus & Dan's design philosophies.
+
 ## Data Task System
 
 **类型安全的数据获取任务管理系统**

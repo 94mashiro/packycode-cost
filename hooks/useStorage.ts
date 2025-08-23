@@ -12,7 +12,7 @@ const logger = loggers.ui
  *
  * 特性:
  * 1. 类型安全 - 根据存储域自动推导数据类型
- * 2. 响应式 - 版本切换时自动重新加载数据
+ * 2. 响应式 - 直接使用 Plasmo Storage watch，版本切换时自动重新加载数据
  * 3. 错误处理 - 统一的错误状态管理
  * 4. 性能优化 - 避免不必要的重新渲染
  *
@@ -60,7 +60,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
         setError(null)
 
         const storage = await getStorageManager()
-        await storage.set(domain, value)
+        await storage.set(domain, value, true) // 使用强制覆盖模式，确保完全替换
 
         setData(value)
         logger.debug(`useStorage update: ${domain}`)
@@ -75,11 +75,9 @@ export function useStorage<T extends keyof StorageDomainMap>(
     [domain]
   )
 
-  // 初始化和版本变化监听
+  // 初始化和监听设置
   useEffect(() => {
     let mounted = true
-    let unsubscribeVersionChange: (() => void) | null = null
-    let unsubscribeDomainChange: (() => void) | null = null
 
     const initialize = async () => {
       try {
@@ -89,48 +87,26 @@ export function useStorage<T extends keyof StorageDomainMap>(
         await refresh()
         logger.debug(`✅ useStorage initial refresh completed for: ${domain}`)
 
-        // 监听版本变化和域数据变化
         if (mounted) {
           const storage = await getStorageManager()
-          const currentVersion = storage.getCurrentVersion()
           logger.debug(
-            `📊 useStorage setting up listeners for domain: ${domain}, current version: ${currentVersion}`
+            `📊 useStorage setting up StorageManager watch for domain: ${domain}`
           )
 
-          // 版本变化监听（重新加载数据）
-          unsubscribeVersionChange = storage.onVersionChange((newVersion) => {
-            if (mounted) {
-              logger.info(
-                `🔄 [useStorage] Version change detected for domain: ${domain}`
-              )
-              // 不要在闭包中捕获 currentVersion，直接从 storage 获取最新值
-              logger.info(`📋 [useStorage] Version changed to: ${newVersion}`)
-              refresh()
-            } else {
-              logger.warn(
-                `⚠️ [useStorage] Version change detected but component unmounted: ${domain}`
-              )
+          // ✅ 使用 StorageManager 的版本感知 watch
+          storage.watch({
+            [domain]: () => {
+              if (mounted) {
+                logger.debug(
+                  `📝 [useStorage] Domain data changed, refreshing: ${domain}`
+                )
+                refresh()
+              }
             }
           })
-          logger.debug(
-            `🔗 useStorage version change listener registered for: ${domain}`
-          )
 
-          // 域数据变化监听（使用 Plasmo Storage API）
-          unsubscribeDomainChange = storage.onDomainChange(domain, () => {
-            if (mounted) {
-              logger.debug(
-                `📝 [useStorage] Domain data changed, refreshing: ${domain}`
-              )
-              refresh()
-            } else {
-              logger.warn(
-                `⚠️ [useStorage] Domain change detected but component unmounted: ${domain}`
-              )
-            }
-          })
           logger.debug(
-            `🔗 useStorage domain change listener registered for: ${domain}`
+            `🔗 useStorage StorageManager watch registered for: ${domain}`
           )
         }
       } catch (err) {
@@ -146,20 +122,9 @@ export function useStorage<T extends keyof StorageDomainMap>(
 
     // 清理函数
     return () => {
-      logger.debug(`🧹 useStorage cleanup starting for domain: ${domain}`)
+      logger.debug(`🧹 useStorage cleanup for domain: ${domain}`)
       mounted = false
-      if (unsubscribeVersionChange) {
-        unsubscribeVersionChange()
-        logger.debug(
-          `🗑️ useStorage version change listener cleaned up for: ${domain}`
-        )
-      }
-      if (unsubscribeDomainChange) {
-        unsubscribeDomainChange()
-        logger.debug(
-          `🗑️ useStorage domain change listener cleaned up for: ${domain}`
-        )
-      }
+      // Plasmo Storage 会自动清理 watch（当组件卸载时）
       logger.debug(`✅ useStorage cleanup completed for domain: ${domain}`)
     }
   }, [domain, refresh])

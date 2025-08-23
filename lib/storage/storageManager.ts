@@ -1,4 +1,5 @@
 import { Storage } from "@plasmohq/storage"
+import { merge } from "lodash"
 
 import { loggers } from "~/lib/logger"
 
@@ -7,40 +8,35 @@ import { StorageDomain } from "./domains"
 
 const logger = loggers.storage
 
+/**
+ * StorageManager - 版本感知的存储管理器
+ *
+ * 核心职责：抹平 AccountVersion 给 storage key 带来的差异
+ * 让业务方能够无感知地操作正确版本的数据
+ *
+ * 设计原则：
+ * 1. Version 是存储中的数据，通过 watch 监听变化
+ * 2. 版本变化时自动同步内部状态
+ * 3. 其他功能直接复用 Plasmo Storage 能力
+ */
 export class StorageManager {
-  private activeWatchers = new Map<string, () => void>()
-  private currentVersion: AccountVersion
-  private domainChangeCallbacks = new Map<string, Set<() => void>>()
-  private storage: Storage
+  private _storage: Storage
+  private currentVersion: AccountVersion = AccountVersion.SHARED
   private versionChangeCallbacks = new Set<(version: AccountVersion) => void>()
 
-  constructor(storage: Storage, initialVersion: AccountVersion) {
-    this.storage = storage
-    this.currentVersion = initialVersion
-    logger.info(`StorageManager initialized with version: ${initialVersion}`)
+  constructor(storage: Storage) {
+    this._storage = storage
+    logger.info("StorageManager created, version will be loaded asynchronously")
   }
 
-  clearAllSubscribers(): void {
-    this.versionChangeCallbacks.clear()
-    this.domainChangeCallbacks.clear()
-
-    // 清理所有 Plasmo Storage watchers
-    this.activeWatchers.forEach((cleanup) => {
-      try {
-        cleanup()
-      } catch (error) {
-        logger.error("Error cleaning up watcher:", error)
-      }
-    })
-    this.activeWatchers.clear()
-
-    logger.debug("Cleared all subscribers and watchers")
-  }
-
+  /**
+   * 受控的数据操作 API - 仅暴露必要的操作
+   * 防止业务方绕过版本抽象
+   */
   async get<T>(domain: string): Promise<null | T> {
-    const key = this.getStorageKey(domain)
+    const key = this.getVersionedKey(domain)
     try {
-      const result = await this.storage.get<T>(key)
+      const result = await this._storage.get<T>(key)
       logger.debug(`Storage get: ${key} ->`, result ? "found" : "null")
       return result
     } catch (error) {
@@ -49,226 +45,203 @@ export class StorageManager {
     }
   }
 
+  /**
+   * 获取当前版本（同步方法，供业务查询）
+   */
   getCurrentVersion(): AccountVersion {
     return this.currentVersion
   }
 
   /**
-   * 监听特定域的数据变化（版本感知）
-   *
-   * 使用 Plasmo Storage API 进行监听，避免直接操作 Chrome API
-   *
-   * @param domain 存储域
-   * @param callback 变化时的回调函数
-   * @returns 清理函数
+   * 异步初始化 - 从存储中读取当前版本并设置监听
    */
-  onDomainChange(domain: string, callback: () => void): () => void {
-    if (!this.domainChangeCallbacks.has(domain)) {
-      this.domainChangeCallbacks.set(domain, new Set())
-    }
-
-    const callbacks = this.domainChangeCallbacks.get(domain)
-    if (!callbacks) {
-      throw new Error(`Failed to get callbacks for domain: ${domain}`)
-    }
-    callbacks.add(callback)
-
-    logger.debug(`Added domain change subscriber for: ${domain}`)
-
-    // 懒加载：第一次监听该域时才设置 Plasmo Storage watch
-    if (callbacks.size === 1) {
-      this.setupDomainWatch(domain)
-    }
-
-    // 返回清理函数
-    return () => {
-      callbacks.delete(callback)
-      logger.debug(`Removed domain change subscriber for: ${domain}`)
-
-      // 如果该域没有监听者了，清理对应的 watcher
-      if (callbacks.size === 0) {
-        this.cleanupDomainWatch(domain)
-        this.domainChangeCallbacks.delete(domain)
-      }
-    }
-  }
-
-  onVersionChange(callback: (version: AccountVersion) => void): () => void {
-    this.versionChangeCallbacks.add(callback)
-    logger.debug(
-      `🔗 [StorageManager] Added version change subscriber (total: ${this.versionChangeCallbacks.size})`
+  async initialize(): Promise<void> {
+    await this.loadVersionFromStorage()
+    this.setupVersionWatch()
+    logger.info(
+      `StorageManager initialized with version: ${this.currentVersion}`
     )
+  }
 
-    return () => {
-      this.versionChangeCallbacks.delete(callback)
-      logger.debug(
-        `🗑️ [StorageManager] Removed version change subscriber (remaining: ${this.versionChangeCallbacks.size})`
-      )
+  async remove(domain: string): Promise<void> {
+    const key = this.getVersionedKey(domain)
+    try {
+      // Plasmo Storage 使用 set(key, undefined) 来删除
+      await this._storage.set(key, undefined)
+      logger.debug(`Storage remove: ${key}`)
+    } catch (error) {
+      logger.error(`Storage remove error for key ${key}:`, error)
+      throw error
     }
   }
 
-  async set<T>(domain: string, value: T): Promise<void> {
-    const key = this.getStorageKey(domain)
+  async set<T>(domain: string, value: T, override = false): Promise<void> {
+    const key = this.getVersionedKey(domain)
     try {
-      await this.storage.set(key, value)
-      logger.debug(`Storage set: ${key}`)
+      // 强制覆盖模式：直接设置值，不合并
+      if (override) {
+        await this._storage.set(key, value)
+        logger.debug(`Storage set (override): ${key}`)
+        return
+      }
+
+      // 如果 value 是 null 或 undefined，直接覆盖（清理数据场景）
+      // 如果 value 不是对象，直接覆盖（基础类型场景）
+      if (value === null || value === undefined || typeof value !== "object") {
+        await this._storage.set(key, value)
+        logger.debug(`Storage set (direct): ${key}`)
+        return
+      }
+
+      // 对于对象类型，获取现有数据并进行深度合并
+      const existingData = await this._storage.get<T>(key)
+      const finalValue =
+        existingData && typeof existingData === "object"
+          ? merge({}, existingData, value) // 使用 lodash merge 实现深度合并
+          : value
+
+      await this._storage.set(key, finalValue)
+      logger.debug(`Storage set (deep merged): ${key}`)
     } catch (error) {
       logger.error(`Storage set error for key ${key}:`, error)
       throw error
     }
   }
 
-  async setCurrentVersion(version: AccountVersion): Promise<void> {
-    const oldVersion = this.currentVersion
-    this.currentVersion = version
-
-    logger.info(
-      `🔄 [StorageManager] Version switching: ${oldVersion} -> ${version}`
-    )
-    logger.debug(
-      `📊 [StorageManager] Active version change callbacks: ${this.versionChangeCallbacks.size}`
-    )
-
-    try {
-      const currentPref =
-        (await this.storage.get<UserPreferenceStorage>(
-          StorageDomain.USER_PREFERENCE
-        )) || {}
-      await this.storage.set(StorageDomain.USER_PREFERENCE, {
-        ...currentPref,
-        account_version: version
-      })
-      logger.debug(
-        `💾 [StorageManager] Updated user preference with new version: ${version}`
-      )
-    } catch (error) {
-      logger.error(
-        "❌ [StorageManager] Failed to update user preference:",
-        error
-      )
-    }
-
-    if (oldVersion !== version) {
-      logger.info(
-        `🔔 [StorageManager] Notifying ${this.versionChangeCallbacks.size} version change callbacks`
-      )
-
-      let callbackIndex = 0
-      this.versionChangeCallbacks.forEach((callback) => {
-        callbackIndex++
-        try {
-          logger.debug(
-            `📨 [StorageManager] Calling version change callback ${callbackIndex}/${this.versionChangeCallbacks.size}`
-          )
-          callback(version)
-          logger.debug(
-            `✅ [StorageManager] Version change callback ${callbackIndex} completed`
-          )
-        } catch (error) {
-          logger.error(
-            `❌ [StorageManager] Version change callback ${callbackIndex} error:`,
-            error
-          )
-        }
-      })
-      logger.info(`🎉 [StorageManager] All version change callbacks completed`)
-    } else {
-      logger.debug(`⏭️ [StorageManager] Version unchanged, skipping callbacks`)
-    }
-  }
-
   /**
-   * 清理域监听
+   * 版本感知的数据监听 - 自动处理版本切换
+   * API 与 Plasmo Storage watch 保持一致，但内部处理版本变化
    */
-  private cleanupDomainWatch(domain: string): void {
-    const cleanup = this.activeWatchers.get(domain)
-    if (cleanup) {
-      cleanup()
-      this.activeWatchers.delete(domain)
-      logger.debug(`Cleaned up domain watch for: ${domain}`)
-    }
-  }
-
-  private getStorageKey(domain: string): string {
-    if (domain === StorageDomain.USER_PREFERENCE) {
-      return domain
-    }
-    return `${this.currentVersion}.${domain}`
-  }
-
-  /**
-   * 通知域变化回调
-   */
-  private notifyDomainCallbacks(domain: string): void {
-    const callbacks = this.domainChangeCallbacks.get(domain)
-    if (callbacks) {
-      callbacks.forEach((callback) => {
-        try {
-          callback()
-          logger.debug(`Notified domain change callback for: ${domain}`)
-        } catch (error) {
-          logger.error(`Domain change callback error for ${domain}:`, error)
-        }
-      })
-    }
-  }
-
-  /**
-   * 设置域监听（使用 Plasmo Storage watch API）
-   */
-  private setupDomainWatch(domain: string): void {
-    const watchKeys: Record<
+  watch(
+    watchConfig: Record<
       string,
-      (change: { newValue?: unknown; oldValue?: unknown }) => void
-    > = {}
-    const watcherKeys: string[] = []
+      (change?: { newValue?: unknown; oldValue?: unknown }) => void
+    >
+  ): void {
+    const activeWatchers = new Map<string, () => void>()
 
-    // 监听当前版本的域
-    const currentKey = this.getStorageKey(domain)
-    watchKeys[currentKey] = () => {
-      this.notifyDomainCallbacks(domain)
+    // 设置监听的函数
+    const setupWatchers = () => {
+      // 清理旧的监听器
+      activeWatchers.forEach((cleanup) => cleanup())
+      activeWatchers.clear()
+
+      // 为每个域设置新的版本化监听
+      const versionedWatchConfig: Record<
+        string,
+        (change?: { newValue?: unknown; oldValue?: unknown }) => void
+      > = {}
+
+      Object.entries(watchConfig).forEach(([domain, callback]) => {
+        const versionedKey = this.getVersionedKey(domain)
+        versionedWatchConfig[versionedKey] = callback
+        logger.debug(`Setup watch: ${domain} -> ${versionedKey}`)
+      })
+
+      this._storage.watch(versionedWatchConfig)
     }
-    watcherKeys.push(currentKey)
 
-    // 如果是版本化域，同时监听另一个版本（版本切换时需要）
-    if (domain !== StorageDomain.USER_PREFERENCE) {
-      const otherVersion =
-        this.currentVersion === AccountVersion.SHARED
-          ? AccountVersion.PRIVATE
-          : AccountVersion.SHARED
-      const otherKey = `${otherVersion}.${domain}`
+    // 初始设置
+    setupWatchers()
 
-      watchKeys[otherKey] = () => {
-        this.notifyDomainCallbacks(domain)
-      }
-      watcherKeys.push(otherKey)
+    // 监听版本变化，重新设置所有监听器
+    this.onVersionChange(() => {
+      logger.debug("Version changed, updating all watchers")
+      setupWatchers()
+
+      // 版本切换后，通知所有回调数据可能已变化
+      Object.values(watchConfig).forEach((callback) => {
+        callback({ newValue: undefined, oldValue: undefined })
+      })
+    })
+
+    // 存储清理函数（注意：这里无法返回清理函数，因为要保持与 Plasmo API 一致）
+    // 实际项目中可能需要提供单独的清理方法，或者在组件卸载时自动清理
+  }
+
+  /**
+   * 核心功能：生成版本感知的存储键
+   * 这是 StorageManager 存在的唯一理由
+   * @private 内部实现细节，遵循最小权限原则
+   */
+  private getVersionedKey(domain: string): string {
+    if (domain === StorageDomain.USER_PREFERENCE) {
+      return domain // 用户偏好全局共享，不添加版本前缀
     }
+    return `${this.currentVersion}.${domain}` // 其他域按版本隔离
+  }
 
-    // 使用 Plasmo Storage watch API
+  /**
+   * 从存储中加载版本信息
+   */
+  private async loadVersionFromStorage(): Promise<void> {
     try {
-      this.storage.watch(watchKeys)
-      logger.debug(
-        `Setup Plasmo Storage watch for domain: ${domain}, keys: ${watcherKeys.join(", ")}`
+      const pref = await this._storage.get<UserPreferenceStorage>(
+        StorageDomain.USER_PREFERENCE
       )
-
-      // 存储清理函数（Plasmo Storage 的 watch 返回清理函数的方式可能不同，这里做兼容处理）
-      const cleanup = () => {
-        // Plasmo Storage 的 watch API 可能需要特殊的清理方式
-        // 这里我们通过重新设置空的 watch 来清理
-        const emptyWatch: Record<
-          string,
-          (change: { newValue?: unknown; oldValue?: unknown }) => void
-        > = {}
-        watcherKeys.forEach((key) => {
-          emptyWatch[key] = () => {} // 空回调
-        })
-        this.storage.watch(emptyWatch)
-        logger.debug(`Cleaned up Plasmo Storage watch for domain: ${domain}`)
-      }
-
-      this.activeWatchers.set(domain, cleanup)
+      this.currentVersion = pref?.account_version || AccountVersion.SHARED
+      logger.debug(`Loaded version from storage: ${this.currentVersion}`)
     } catch (error) {
-      logger.error(`Failed to setup watch for domain ${domain}:`, error)
+      logger.error("Failed to load version from storage:", error)
+      this.currentVersion = AccountVersion.SHARED // 故障回退
+    }
+  }
+
+  /**
+   * 监听版本变化 - 解决版本切换后数据不更新的问题
+   * @private 内部使用，遵循最小权限原则
+   */
+  private onVersionChange(
+    callback: (version: AccountVersion) => void
+  ): () => void {
+    this.versionChangeCallbacks.add(callback)
+    logger.debug(
+      `Added version change subscriber (total: ${this.versionChangeCallbacks.size})`
+    )
+
+    return () => {
+      this.versionChangeCallbacks.delete(callback)
+      logger.debug(
+        `Removed version change subscriber (remaining: ${this.versionChangeCallbacks.size})`
+      )
+    }
+  }
+
+  /**
+   * 监听用户偏好变化，自动同步版本状态
+   * 这是响应式设计的核心：version 变更 -> 内部状态同步
+   */
+  private setupVersionWatch(): void {
+    const watchKeys: Record<string, () => void> = {}
+
+    watchKeys[StorageDomain.USER_PREFERENCE] = () => {
+      this.syncVersionFromStorage()
+    }
+
+    this._storage.watch(watchKeys)
+    logger.debug("✅ Version watch setup completed")
+  }
+
+  /**
+   * 同步版本状态（当检测到用户偏好变化时）
+   */
+  private async syncVersionFromStorage(): Promise<void> {
+    try {
+      const pref = await this._storage.get<UserPreferenceStorage>(
+        StorageDomain.USER_PREFERENCE
+      )
+      const newVersion = pref?.account_version || AccountVersion.SHARED
+
+      if (newVersion !== this.currentVersion) {
+        const oldVersion = this.currentVersion
+        this.currentVersion = newVersion
+        logger.info(`🔄 Version auto-sync: ${oldVersion} -> ${newVersion}`)
+
+        // 注意：版本变化后，业务层需要重新获取数据
+        // 这由 useStorage 等消费者通过同时监听版本变化来处理
+      }
+    } catch (error) {
+      logger.error("❌ Version sync error:", error)
     }
   }
 }

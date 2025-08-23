@@ -113,9 +113,24 @@ pnpm build
 - **API Key**: 从控制台复制后自动检测，长期有效
 - **自动切换**: 检测到 API Key 时自动切换至 API Key 模式
 
+## 📚 技术文档
+
+### 快速导航
+- **[📖 完整文档中心](docs/README.md)** - 技术文档导航中心
+- **[👨‍💻 开发者指南](docs/developers/)** - 贡献和编码规范
+- **[📚 功能指南](docs/guides/)** - 版本化存储和私家车模式
+- **[🏗️ 架构设计](docs/architecture/)** - 核心系统设计文档
+
+### 常用文档
+| 文档 | 用途 | 读者 |
+|-----|-----|-----|
+| [贡献指南](docs/developers/contributing.md) | 参与项目开发 | 新贡献者 |
+| [版本化存储指南](docs/guides/versioned-storage-guide.md) | 理解双账号数据隔离 | 开发者 |
+| [存储架构设计](docs/architecture/storage-architecture.md) | 深度技术设计 | 架构师 |
+
 ## 🤝 贡献指南
 
-我们欢迎所有形式的贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
+我们欢迎所有形式的贡献！请查看 [贡献指南](docs/developers/contributing.md) 了解详细信息。
 
 ### 开发流程
 

@@ -1,4 +1,8 @@
-# 版本隔离存储架构 - 实现总结
+# 版本化存储系统 - 双账号数据隔离
+
+> 本文档介绍 PackyCode Cost Monitor 的版本化存储架构实现，支持公交车和私家车两种账号模式的数据隔离。
+> 
+> **相关文档**: [存储架构设计](../architecture/storage-architecture.md) | [私家车模式指南](private-car-mode.md)
 
 ## 🎯 项目背景
 
@@ -231,3 +235,19 @@ const SettingsPage = () => {
 6. **简洁易用** - 一行代码完成复杂的存储操作
 
 这个架构完美地平衡了 **Linus 的工程实用性** 和 **Dan 的前端响应式需求**，为 PackyCode Cost Monitor 的双版本功能提供了强大而简洁的存储基础。
+
+---
+
+## 🔗 相关文档
+
+### 深度技术文档
+- [存储架构设计](../architecture/storage-architecture.md) - StorageManager 重构历程和技术细节
+- [日志通信机制](../architecture/log-bridge-design.md) - 调试系统架构设计
+
+### 功能使用指南  
+- [私家车模式指南](private-car-mode.md) - 私有账号模式配置和使用
+- [贡献指南](../developers/contributing.md) - 参与项目开发流程
+
+### 导航
+- [返回功能指南目录](README.md)
+- [返回文档中心](../README.md)

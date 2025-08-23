@@ -2,8 +2,9 @@ import { useCallback, useState } from "react"
 
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
 
-import { AccountVersion } from "../types"
+import { AccountVersion, type UserPreferenceStorage } from "../types"
 
 const logger = loggers.ui
 
@@ -55,15 +56,22 @@ export function useVersionSwitcher() {
 
         // 执行版本切换
         // 这会自动:
-        // 1. 更新存储管理器的当前版本
-        // 2. 保存全局用户偏好
-        // 3. 触发版本变化回调，通知所有订阅者
+        // 直接修改用户偏好，让 StorageManager 自动同步版本
         logger.info(
-          `🔄 [useVersionSwitcher] Calling setCurrentVersion: ${currentVersion} -> ${newVersion}`
+          `🔄 [useVersionSwitcher] Switching version: ${currentVersion} -> ${newVersion}`
         )
-        await storage.setCurrentVersion(newVersion)
+
+        const currentPref =
+          (await storage.get<UserPreferenceStorage>(
+            StorageDomain.USER_PREFERENCE
+          )) || ({} as UserPreferenceStorage)
+        await storage.set(StorageDomain.USER_PREFERENCE, {
+          ...currentPref,
+          account_version: newVersion
+        })
+
         logger.info(
-          `✅ [useVersionSwitcher] setCurrentVersion completed successfully`
+          `✅ [useVersionSwitcher] Version switch completed successfully`
         )
 
         logger.info(

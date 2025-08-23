@@ -78,10 +78,9 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 
     // 4. 更新存储状态
     await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-      ...systemPref,
       purchase_disabled: currentConfig.purchaseDisabled
     })
-    await storageManager.set(StorageDomain.PURCHASE_CONFIG, currentConfig)
+    await storageManager.set(StorageDomain.PURCHASE_CONFIG, currentConfig, true)
 
     logger.debug("[STORAGE] Purchase status updated in storage")
 

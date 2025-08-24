@@ -31,12 +31,6 @@ import {
 export function PeerSpendingChart() {
   const { error, loading, rankings, summary } = useCombinedSpendingRanking()
 
-  // 缓存当前用户的消费数据，避免重复查找
-  const currentUserSpending = useMemo(
-    () => rankings.find((r) => r.isCurrentUser)?.spentToday,
-    [rankings]
-  )
-
   // 显示的排行榜数量
   const displayRankings = useMemo(
     () => rankings.slice(0, DEFAULT_VALUES.MAX_DISPLAY_COUNT),
@@ -132,7 +126,7 @@ export function PeerSpendingChart() {
               总消费
             </span>
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              ${formatAmount(currentUserSpending, DEFAULT_VALUES.ZERO_AMOUNT)}
+              ${summary.totalSpent.toFixed(2)}
             </div>
           </div>
           <div className="space-y-1">

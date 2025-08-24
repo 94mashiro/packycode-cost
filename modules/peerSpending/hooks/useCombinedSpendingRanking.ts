@@ -48,6 +48,8 @@ export interface RankingSummary {
   currentUserRank: number
   /** 总参与人数（包含当前用户） */
   totalParticipants: number
+  /** 总消费金额（包含当前用户） */
+  totalSpent: number
 }
 
 /**
@@ -84,7 +86,8 @@ export function useCombinedSpendingRanking(): CombinedSpendingRankingData {
         summary: {
           averageSpent: 0,
           currentUserRank: 0,
-          totalParticipants: 0
+          totalParticipants: 0,
+          totalSpent: 0
         }
       }
     }
@@ -98,7 +101,8 @@ export function useCombinedSpendingRanking(): CombinedSpendingRankingData {
         summary: {
           averageSpent: 0,
           currentUserRank: 0,
-          totalParticipants: 0
+          totalParticipants: 0,
+          totalSpent: 0
         }
       }
     }
@@ -153,7 +157,8 @@ export function useCombinedSpendingRanking(): CombinedSpendingRankingData {
       summary: {
         averageSpent: Math.round(averageSpent * 100) / 100,
         currentUserRank,
-        totalParticipants: sortedParticipants.length
+        totalParticipants: sortedParticipants.length,
+        totalSpent: Math.round(totalSpent * 100) / 100
       }
     }
   }, [peerData, peerError, peerLoading, budgetData, budgetError, budgetLoading])

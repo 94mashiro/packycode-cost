@@ -2,7 +2,12 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { type SystemPreferenceStorage, type UserInfo } from "~/types"
+import {
+  AccountVersion,
+  type SystemPreferenceStorage,
+  type UserInfo,
+  type UserPreferenceStorage
+} from "~/types"
 const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
@@ -28,36 +33,50 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
           remaining: Math.max(0, monthlyLimit - monthlySpent),
           spent: monthlySpent
         }
-      },
-      id: "current-user" // 暂时硬编码，后续可从token中解析
+      }
+      // 删除无用的 id 硬编码 - 该字段无实际用途
     }
 
     const storageManager = await getStorageManager()
 
-    // 检查 opus_enabled 状态变化
-    const systemPref = await storageManager.get<SystemPreferenceStorage>(
-      StorageDomain.SYSTEM_PREFERENCE
+    // 获取当前账号模式，检查是否为公交车模式
+    const userPreference = await storageManager.get<UserPreferenceStorage>(
+      StorageDomain.USER_PREFERENCE
     )
-    const previousOpusState = systemPref?.opus_enabled
-    const currentOpusState = Boolean(rawData.opus_enabled)
+    const currentVersion =
+      userPreference?.account_version ?? AccountVersion.SHARED
 
-    // 判断是否需要通知
-    const shouldNotify = checkOpusNotification(
-      previousOpusState,
-      currentOpusState
-    )
-
-    if (shouldNotify) {
-      logger.info(
-        `Opus status changed: ${previousOpusState} → ${currentOpusState}`
+    // 只在公交车模式下处理 opus_enabled 状态变化
+    if (currentVersion === AccountVersion.SHARED) {
+      // 检查 opus_enabled 状态变化
+      const systemPref = await storageManager.get<SystemPreferenceStorage>(
+        StorageDomain.SYSTEM_PREFERENCE
       )
-      await triggerOpusStatusNotification(currentOpusState)
-    }
+      const previousOpusState = systemPref?.opus_enabled
+      const currentOpusState = Boolean(rawData.opus_enabled)
 
-    // 更新系统偏好
-    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-      opus_enabled: currentOpusState
-    })
+      // 判断是否需要通知
+      const shouldNotify = checkOpusNotification(
+        previousOpusState,
+        currentOpusState
+      )
+
+      if (shouldNotify) {
+        logger.info(
+          `Opus status changed (公交车模式): ${previousOpusState} → ${currentOpusState}`
+        )
+        await triggerOpusStatusNotification(currentOpusState)
+      }
+
+      // 更新系统偏好
+      await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
+        opus_enabled: currentOpusState
+      })
+    } else {
+      logger.debug(
+        `⏭️ 跳过 Opus 状态更新：当前为${currentVersion === AccountVersion.PRIVATE ? "滴滴车" : "未知"}模式，由 SharedSpace API 负责管理`
+      )
+    }
 
     // 存储用户信息
     await storageManager.set(StorageDomain.USER_INFO, userInfoStorage, true)

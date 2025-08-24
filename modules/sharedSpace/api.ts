@@ -63,7 +63,7 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     )
     const previousOpusState = systemPref?.opus_enabled
 
-    // 只在状态变化时更新
+    // 只在状态变化时更新存储，但不触发通知（滴滴车模式 Opus 状态相对固定）
     if (previousOpusState !== opusEnabled) {
       logger.info(
         `📝 Opus 状态变化 (滴滴车模式): ${previousOpusState} → ${opusEnabled}`
@@ -74,10 +74,10 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
         opus_enabled: opusEnabled
       })
 
-      // 触发通知（如果从 false 变为 true）
-      if (!previousOpusState && opusEnabled) {
-        await triggerOpusStatusNotification(opusEnabled)
-      }
+      // 滴滴车模式下不触发通知 - Opus 状态相对固定，无需动态通知
+      logger.debug(
+        `⏭️ 滴滴车模式下跳过 Opus 开启通知 - 状态相对固定，无需动态提醒`
+      )
     } else {
       logger.debug(`✅ Opus 状态未变化: ${opusEnabled}`)
     }
@@ -95,40 +95,5 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
   }
 }
 
-/**
- * 触发 Opus 模型状态变化通知
- * 复用 user/api.ts 中的逻辑
- */
-async function triggerOpusStatusNotification(enabled: boolean): Promise<void> {
-  const notificationId = `opus-status-${Date.now()}`
-
-  try {
-    chrome.notifications.create(
-      notificationId,
-      {
-        iconUrl:
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-        message: enabled
-          ? "Claude Opus 模型已开启！"
-          : "Claude Opus 模型已关闭",
-        title: "PackyCode Opus 状态",
-        type: "basic"
-      },
-      (createdNotificationId) => {
-        if (chrome.runtime.lastError) {
-          logger.error(
-            "Opus status notification creation failed:",
-            chrome.runtime.lastError
-          )
-        } else {
-          logger.debug(
-            "Opus status notification created:",
-            createdNotificationId
-          )
-        }
-      }
-    )
-  } catch (error) {
-    logger.error("Error creating opus status notification:", error)
-  }
-}
+// 删除 triggerOpusStatusNotification 函数
+// 滴滴车模式下不需要 Opus 状态通知 - 状态相对固定，无需动态提醒

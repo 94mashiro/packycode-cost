@@ -337,7 +337,7 @@ export interface UserInfo {
   budgets: Budget
   createdAt?: string
   email?: string
-  id: string
+  id?: string
   name?: string
   updatedAt?: string
 }

@@ -46,6 +46,7 @@ export function BudgetDisplay() {
         dailySpent={budgetData.dailySpent}
         monthlyBudget={budgetData.monthlyBudget}
         monthlySpent={budgetData.monthlySpent}
+        rateLimitResetAt={budgetData.rateLimitResetAt}
       />
     )
   }

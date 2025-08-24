@@ -1,4 +1,5 @@
 import { useUserInfo } from "~/hooks"
+import { useSystemPreference } from "~/hooks/infrastructure/useStorageHooks"
 
 /**
  * 预算显示 Hook
@@ -17,6 +18,7 @@ export interface UseBudgetDisplayReturn {
     dailySpent: number
     monthlyBudget: number
     monthlySpent: number
+    rateLimitResetAt?: null | string
   }
   /** 错误信息 */
   error: null | string
@@ -35,14 +37,16 @@ export interface UseBudgetDisplayReturn {
  */
 export function useBudgetDisplay(): UseBudgetDisplayReturn {
   const { data: userInfo, error, loading } = useUserInfo()
+  const { data: systemPref } = useSystemPreference()
 
-  // 数据转换：从UserInfo提取预算相关字段
+  // 数据转换：从UserInfo提取预算相关字段，并添加 rate_limit_reset_at
   const budgetData = userInfo
     ? {
         dailyBudget: userInfo.budgets.daily.limit,
         dailySpent: userInfo.budgets.daily.spent,
         monthlyBudget: userInfo.budgets.monthly.limit,
-        monthlySpent: userInfo.budgets.monthly.spent
+        monthlySpent: userInfo.budgets.monthly.spent,
+        rateLimitResetAt: systemPref?.rate_limit_reset_at
       }
     : null
 

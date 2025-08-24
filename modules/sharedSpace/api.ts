@@ -72,22 +72,37 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     }
 
     const opusEnabled = firstAssignment.opus_enabled
+    const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
     // 获取当前存储的状态
     const systemPref = await storageManager.get<SystemPreferenceStorage>(
       StorageDomain.SYSTEM_PREFERENCE
     )
     const previousOpusState = systemPref?.opus_enabled
+    const previousRateLimitResetAt = systemPref?.rate_limit_reset_at
 
-    // 只在状态变化时更新存储，但不触发通知（滴滴车模式 Opus 状态相对固定）
-    if (previousOpusState !== opusEnabled) {
-      logger.info(
-        `📝 Opus 状态变化 (滴滴车模式): ${previousOpusState} → ${opusEnabled}`
-      )
+    // 检查是否有任何变化
+    const hasOpusChange = previousOpusState !== opusEnabled
+    const hasRateLimitChange = previousRateLimitResetAt !== rateLimitResetAt
 
-      // 更新系统偏好，与 fetchUserInfo 的处理保持一致
+    // 只在状态变化时更新存储
+    if (hasOpusChange || hasRateLimitChange) {
+      if (hasOpusChange) {
+        logger.info(
+          `📝 Opus 状态变化 (滴滴车模式): ${previousOpusState} → ${opusEnabled}`
+        )
+      }
+
+      if (hasRateLimitChange) {
+        logger.info(
+          `⏰ Rate limit reset 时间变化: ${previousRateLimitResetAt} → ${rateLimitResetAt}`
+        )
+      }
+
+      // 更新系统偏好，包含 opus_enabled 和 rate_limit_reset_at
       await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-        opus_enabled: opusEnabled
+        opus_enabled: opusEnabled,
+        rate_limit_reset_at: rateLimitResetAt
       })
 
       // 滴滴车模式下不触发通知 - Opus 状态相对固定，无需动态通知
@@ -95,7 +110,7 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
         `⏭️ 滴滴车模式下跳过 Opus 开启通知 - 状态相对固定，无需动态提醒`
       )
     } else {
-      logger.debug(`✅ Opus 状态未变化: ${opusEnabled}`)
+      logger.debug(`✅ Opus 状态和 Rate limit 时间均未变化`)
     }
   } catch (error) {
     // 静默处理错误，不影响其他功能

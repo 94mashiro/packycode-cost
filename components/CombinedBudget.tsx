@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react"
+import {
+  formatCountdownTime,
+  useResetCountdown
+} from "~/hooks/useResetCountdown"
 
 import { cn } from "../lib/utils"
 
@@ -7,19 +10,20 @@ interface CombinedBudgetProps {
   dailySpent: number
   monthlyBudget: number
   monthlySpent: number
+  rateLimitResetAt?: null | string
 }
 
 export function CombinedBudget({
   dailyBudget,
   dailySpent,
   monthlyBudget,
-  monthlySpent
+  monthlySpent,
+  rateLimitResetAt
 }: CombinedBudgetProps) {
-  const [timeLeft, setTimeLeft] = useState<{
-    hours: number
-    minutes: number
-    seconds: number
-  }>({ hours: 0, minutes: 0, seconds: 0 })
+  // 使用自定义 Hook 处理倒计时逻辑
+  const { shouldShow, timeLeft } = useResetCountdown({
+    rateLimitResetAt
+  })
 
   // 计算日预算数据
   const safeDailySpent =
@@ -45,34 +49,6 @@ export function CombinedBudget({
       : 0
   const isMonthlyOverBudget = safeMonthlySpent > safeMonthlyBudget
 
-  // 倒计时逻辑
-  useEffect(() => {
-    const updateCountdown = () => {
-      const now = new Date()
-      const tomorrow = new Date(now)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(0, 0, 0, 0)
-
-      const diff = tomorrow.getTime() - now.getTime()
-
-      if (diff <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 })
-        return
-      }
-
-      const hours = Math.floor(diff / (1000 * 60 * 60))
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-      setTimeLeft({ hours, minutes, seconds })
-    }
-
-    updateCountdown()
-    const interval = setInterval(updateCountdown, 1000)
-
-    return () => clearInterval(interval)
-  }, [])
-
   const getProgressColor = (percentage: number, isOverBudget: boolean) => {
     if (isOverBudget) return "bg-red-500"
     if (percentage > 80) return "bg-yellow-500"
@@ -85,10 +61,6 @@ export function CombinedBudget({
     return "text-blue-600"
   }
 
-  const formatTime = (value: number): string => {
-    return value.toString().padStart(2, "0")
-  }
-
   return (
     <div className="space-y-2">
       {/* 标题行 */}
@@ -96,12 +68,15 @@ export function CombinedBudget({
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           预算使用情况
         </h3>
-        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-          <span>
-            重置: {formatTime(timeLeft.hours)}:{formatTime(timeLeft.minutes)}:
-            {formatTime(timeLeft.seconds)}
-          </span>
-        </div>
+        {shouldShow && (
+          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <span>
+              重置: {formatCountdownTime(timeLeft.hours)}:
+              {formatCountdownTime(timeLeft.minutes)}:
+              {formatCountdownTime(timeLeft.seconds)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 预算网格 */}

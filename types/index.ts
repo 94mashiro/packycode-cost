@@ -309,6 +309,7 @@ export interface SubscriptionPriceProtection {
 export interface SystemPreferenceStorage {
   opus_enabled?: boolean
   purchase_disabled?: boolean
+  rate_limit_reset_at?: null | string
 }
 
 export interface TokenData {

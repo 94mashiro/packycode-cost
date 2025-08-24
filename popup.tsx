@@ -73,7 +73,7 @@ function IndexPopup() {
         <div className="flex flex-col space-y-6 p-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold tracking-tight">额度查询</h2>
+              <h2 className="text-xl font-semibold tracking-tight">主面板</h2>
               <div className="flex items-center space-x-2">
                 <button
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
@@ -106,9 +106,6 @@ function IndexPopup() {
                 />
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              查询您的API使用额度和预算情况
-            </p>
           </div>
 
           <CombinedStatus

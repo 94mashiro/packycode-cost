@@ -16,7 +16,7 @@
 
 <div align="center">
   <picture>
-    <img width="600" alt="PackyCode Cost Monitor 界面预览" src="https://github.com/user-attachments/assets/935a74f6-b731-484e-a86e-44c8d1c65a56" />
+    <img width="459" height="598" alt="Snipaste_2025-08-24_14-56-44" src="https://github.com/user-attachments/assets/43ad84af-55ad-4d58-a352-f7d4daf03b47" />
   </picture>
   
   <p><em>实时监控您的 PackyCode 使用情况和预算</em></p>

@@ -64,6 +64,16 @@ export const useSubscriptionInfo = () =>
 export const useUserPreference = () => useStorage(StorageDomain.USER_PREFERENCE)
 
 /**
+ * 同行消费数据 Hook
+ *
+ * 管理滴滴车模式下的同行消费数据
+ * 注意: 仅在滴滴车模式下有数据
+ * 自动推导类型: PeerSpendingStorage | null
+ */
+export const usePeerSpendingStorage = () =>
+  useStorage(StorageDomain.PEER_SPENDING)
+
+/**
  * 导出通用的 Hook 以备灵活使用
  *
  * 如果业务 hooks 不够用，可以直接使用通用版本:

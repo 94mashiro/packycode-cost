@@ -20,6 +20,8 @@ export enum ApiEndpointType {
   API_KEYS_PATTERN = "apiKeysPattern",
   /** 配置 API */
   CONFIG = "config",
+  /** 同行消费数据 API (仅滴滴车模式) */
+  PEER_SPENDING_TODAY = "peerSpendingToday",
   /** 共享空间 API */
   SHARED_SPACE = "sharedSpace",
   /** 订阅信息 API */
@@ -136,6 +138,56 @@ export interface PackyConfig {
 }
 
 /**
+ * Peer Spending API 响应结构
+ * 仅在滴滴车模式下可用
+ */
+export interface PeerSpendingApiResponse {
+  /** 账号ID */
+  account_id: string
+  /** 日期 (YYYY-MM-DD) */
+  date: string
+  /** 同行消费列表 */
+  peers: PeerSpendingRecord[]
+  /** 时区 */
+  timezone: string
+}
+
+// ===== Peer Spending 相关 =====
+/**
+ * 单个同行消费记录
+ */
+export interface PeerSpendingRecord {
+  /** 显示名称（已脱敏） */
+  display_name: string
+  /** 今日消费金额（美元） */
+  spent_usd_today: string
+  /** 用户ID */
+  user_id: string
+}
+
+/**
+ * Peer Spending 存储结构
+ * 经过计算和转换的数据
+ */
+export interface PeerSpendingStorage {
+  /** 同行今日平均消费（美元） */
+  averageSpentToday: number
+  /** 数据日期 */
+  date: string
+  /** 最后更新时间 */
+  lastUpdated: string
+  /** 同行数量 */
+  peerCount: number
+  /** 同行消费排行榜（前5名） */
+  topPeers: Array<{
+    displayName: string
+    spentToday: number
+  }>
+  /** 同行今日总消费（美元） */
+  totalSpentToday: number
+}
+
+/**
  * 账号订阅计划类型
  */
 export type PlanType = "basic" | "premium" | "pro"
@@ -226,6 +278,8 @@ export interface SubscriptionApiItem {
   user_name: null | string
 }
 
+// ===== 订阅系统类型定义 =====
+
 /**
  * 订阅 API 响应结构（基于真实 API）
  */
@@ -256,8 +310,6 @@ export interface SystemPreferenceStorage {
   opus_enabled?: boolean
   purchase_disabled?: boolean
 }
-
-// ===== 订阅系统类型定义 =====
 
 export interface TokenData {
   expiry: null | number

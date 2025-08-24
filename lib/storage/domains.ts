@@ -2,6 +2,7 @@ import type {
   AuthStorage,
   NotificationStates,
   PackyConfig,
+  PeerSpendingStorage,
   SubscriptionApiResponse,
   SystemPreferenceStorage,
   UserInfo,
@@ -18,6 +19,7 @@ import type {
 export enum StorageDomain {
   AUTH = "auth",
   NOTIFICATION_STATES = "notification.states",
+  PEER_SPENDING = "peer.spending",
   PURCHASE_CONFIG = "purchase_config",
   // === 版本化域 ===
   SUBSCRIPTION_INFO = "subscription.info",
@@ -44,6 +46,7 @@ export type StorageDataType<T extends keyof StorageDomainMap> =
 export interface StorageDomainMap {
   [StorageDomain.AUTH]: AuthStorage
   [StorageDomain.NOTIFICATION_STATES]: NotificationStates
+  [StorageDomain.PEER_SPENDING]: PeerSpendingStorage
   [StorageDomain.PURCHASE_CONFIG]: PackyConfig
   [StorageDomain.SUBSCRIPTION_INFO]: SubscriptionApiResponse
   [StorageDomain.SYSTEM_PREFERENCE]: SystemPreferenceStorage

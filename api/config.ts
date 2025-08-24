@@ -48,6 +48,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     endpoints: {
       [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
       [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.PEER_SPENDING_TODAY]:
+        "/api/backend/accounts/peer-spending/today",
       [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
       [ApiEndpointType.SUBSCRIPTIONS]:
         "/api/backend/subscriptions?page=1&per_page=50",
@@ -66,6 +68,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<
     endpoints: {
       [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
       [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.PEER_SPENDING_TODAY]:
+        "/api/backend/accounts/peer-spending/today", // 不会使用，但需要定义
       [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
       [ApiEndpointType.SUBSCRIPTIONS]:
         "/api/backend/subscriptions?page=1&per_page=50",

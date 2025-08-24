@@ -9,6 +9,7 @@
  */
 
 import { loggers } from "~/lib/logger"
+import { fetchPeerSpendingToday } from "~/modules/peerSpending"
 import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/checker"
 import { fetchPrivateOpusStatus } from "~/modules/sharedSpace"
 import { fetchSubscriptionInfo } from "~/modules/subscription"
@@ -24,6 +25,7 @@ export enum BackgroundActionEnum {
 // 2. 数据获取任务类型枚举
 export enum DataTaskType {
   CHECK_PURCHASE_STATUS = "checkPurchaseStatus",
+  FETCH_PEER_SPENDING = "fetchPeerSpending",
   FETCH_PRIVATE_OPUS_STATUS = "fetchPrivateOpusStatus",
   FETCH_SUBSCRIPTION_INFO = "fetchSubscriptionInfo",
   FETCH_USER_INFO = "fetchUserInfo"
@@ -48,6 +50,12 @@ export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
     handler: checkAndNotifyPurchaseStatus,
     priority: 2,
     type: DataTaskType.CHECK_PURCHASE_STATUS
+  },
+  [DataTaskType.FETCH_PEER_SPENDING]: {
+    description: "获取同行消费数据（仅滴滴车模式）",
+    handler: fetchPeerSpendingToday,
+    priority: 5, // 最低优先级，在其他任务之后执行
+    type: DataTaskType.FETCH_PEER_SPENDING
   },
   [DataTaskType.FETCH_PRIVATE_OPUS_STATUS]: {
     description: "获取滴滴车模式 Opus 状态",

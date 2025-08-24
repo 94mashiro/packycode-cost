@@ -3,9 +3,10 @@ import { DeveloperPanel } from "./DeveloperPanel"
 
 interface SettingsPageProps {
   onBack: () => void
+  onRefresh?: () => void
 }
 
-export function SettingsPage({ onBack }: SettingsPageProps) {
+export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
   // 检查是否为开发环境
   const isDevelopment = process.env.NODE_ENV === "development"
 
@@ -36,7 +37,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       {/* 设置内容 */}
       <div className="space-y-6">
         {/* 账号版本设置 */}
-        <AccountTypeSwitcher showDescription={false} variant="dropdown" />
+        <AccountTypeSwitcher
+          onAccountChanged={onRefresh}
+          showDescription={false}
+          showNotification={false}
+          variant="dropdown"
+        />
         {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
         {(isDevelopment || window.location.search.includes("dev=true")) && (
           <>

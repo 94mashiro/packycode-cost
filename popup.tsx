@@ -53,7 +53,10 @@ function IndexPopup() {
   if (currentView === ViewType.SETTINGS) {
     return (
       <div className="w-[460px] bg-white dark:bg-gray-900">
-        <SettingsPage onBack={() => setCurrentView(ViewType.MAIN)} />
+        <SettingsPage
+          onBack={() => setCurrentView(ViewType.MAIN)}
+          onRefresh={handleRefresh}
+        />
       </div>
     )
   }

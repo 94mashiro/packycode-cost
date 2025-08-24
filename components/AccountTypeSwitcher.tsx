@@ -6,6 +6,7 @@ import { AccountVersion, type UserPreferenceStorage } from "../types"
 
 interface AccountTypeSwitcherProps {
   className?: string
+  onAccountChanged?: () => void
   showDescription?: boolean
   showNotification?: boolean
   variant?: "dropdown" | "segmented"
@@ -13,6 +14,7 @@ interface AccountTypeSwitcherProps {
 
 export function AccountTypeSwitcher({
   className = "",
+  onAccountChanged,
   showDescription = true,
   showNotification = true,
   variant = "segmented"
@@ -63,6 +65,11 @@ export function AccountTypeSwitcher({
           title: "账号类型已切换",
           type: "basic"
         })
+      }
+
+      // 账户切换成功后立即刷新数据
+      if (onAccountChanged) {
+        onAccountChanged()
       }
     } catch (error) {
       console.error("Failed to switch account type:", error)

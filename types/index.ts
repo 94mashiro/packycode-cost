@@ -178,7 +178,7 @@ export interface PeerSpendingStorage {
   lastUpdated: string
   /** 同行数量 */
   peerCount: number
-  /** 同行消费排行榜（前5名） */
+  /** 乘客消费排行榜（前5名） */
   topPeers: Array<{
     displayName: string
     spentToday: number

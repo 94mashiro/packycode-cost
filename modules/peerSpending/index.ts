@@ -6,3 +6,9 @@
  */
 
 export { fetchPeerSpendingToday, isPrivateMode } from "./api"
+export { useCombinedSpendingRanking } from "./hooks/useCombinedSpendingRanking"
+export type {
+  CombinedSpendingRankingData,
+  RankingParticipant,
+  RankingSummary
+} from "./hooks/useCombinedSpendingRanking"

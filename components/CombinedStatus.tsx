@@ -55,31 +55,34 @@ export function CombinedStatus({
         )}
       </div>
 
-      {/* 状态网格 - 3列布局 */}
-      <div className="bg-gray-50/40 dark:bg-gray-800/30 border border-gray-200/60 dark:border-gray-700/50 rounded-lg p-3">
+      {/* 状态网格 - shadcn/ui 风格，与乘客消费排行榜保持一致 */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 shadow-sm">
         <div className="grid grid-cols-3 gap-4">
           {/* 认证状态 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              认证状态
+            </span>
+            <div className="flex items-center gap-1.5">
               <div
                 className={`w-2 h-2 rounded-full ${
                   isAuthenticated ? "bg-green-500" : "bg-orange-500"
                 }`}></div>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {isAuthenticated ? (isApiKey ? "API Key" : "JWT") : "未认证"}
               </span>
             </div>
-            <div className="min-h-[24px] flex items-center">
+            <div className="min-h-[20px] flex items-center">
               {!isAuthenticated ? (
                 <button
-                  className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   onClick={() =>
                     dashboardUrl && chrome.tabs.create({ url: dashboardUrl })
                   }>
-                  点击登录
+                  点击登录 →
                 </button>
               ) : (
-                <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {isApiKey ? "长期有效" : `${tokenExpiration.formatted}失效`}
                 </span>
               )}
@@ -87,8 +90,11 @@ export function CombinedStatus({
           </div>
 
           {/* 购买状态 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              购买状态
+            </span>
+            <div className="flex items-center gap-1.5">
               <div
                 className={`w-2 h-2 rounded-full ${
                   purchaseLoading
@@ -97,7 +103,7 @@ export function CombinedStatus({
                       ? "bg-blue-500"
                       : "bg-gray-400"
                 }`}></div>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {purchaseLoading
                   ? "检查中"
                   : purchaseAvailable
@@ -105,17 +111,17 @@ export function CombinedStatus({
                     : "购买暂停"}
               </span>
             </div>
-            <div className="min-h-[24px] flex items-center">
+            <div className="min-h-[20px] flex items-center">
               {purchaseAvailable ? (
                 <button
-                  className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline decoration-blue-700 dark:decoration-blue-400 underline-offset-2"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                   onClick={() =>
                     pricingUrl && chrome.tabs.create({ url: pricingUrl })
                   }>
-                  立即购买
+                  立即购买 →
                 </button>
               ) : (
-                <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   {purchaseLoading ? "获取状态中..." : "等待下次开放"}
                 </span>
               )}
@@ -123,8 +129,11 @@ export function CombinedStatus({
           </div>
 
           {/* Opus 状态 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Opus 状态
+            </span>
+            <div className="flex items-center gap-1.5">
               <div
                 className={`w-2 h-2 rounded-full ${
                   opusLoading
@@ -133,7 +142,7 @@ export function CombinedStatus({
                       ? "bg-purple-500"
                       : "bg-gray-400"
                 }`}></div>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {opusLoading
                   ? "检查中"
                   : opusEnabled
@@ -141,8 +150,8 @@ export function CombinedStatus({
                     : "Opus 关闭"}
               </span>
             </div>
-            <div className="min-h-[24px] flex items-center">
-              <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div className="min-h-[20px] flex items-center">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 {opusLoading
                   ? "获取状态中..."
                   : opusEnabled

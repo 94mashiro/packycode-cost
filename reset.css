@@ -41,8 +41,10 @@ ol[role="list"] {
 
 /* Set core body defaults */
 body {
-  min-height: 100vh;
   line-height: 1.5;
+  /* Chrome 扩展弹窗专用设置：移除 min-height: 100vh，避免双滚动条 */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Set shorter line heights on headings and interactive elements */

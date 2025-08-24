@@ -85,10 +85,21 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
         })
 
         if (tokenCookie && tokenCookie.value) {
+          // 额外的防御性检查，确保 value 不是 null 或 undefined
+          const tokenValue = tokenCookie.value
+          if (
+            !tokenValue ||
+            typeof tokenValue !== "string" ||
+            tokenValue.trim() === ""
+          ) {
+            logger.warn("Cookie value is invalid, skipping storage")
+            return
+          }
+
           // 解析JWT获取过期时间
-          const payload = parseJWT(tokenCookie.value)
+          const payload = parseJWT(tokenValue)
           const authData: AuthStorage = {
-            token: tokenCookie.value,
+            token: tokenValue,
             type: "jwt" as TokenType,
             ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
@@ -242,10 +253,19 @@ async function setupDynamicWebRequestListener() {
           const data = await httpClient.get<ApiKeyResponse>(details.url)
 
           if (data.api_key) {
+            // 防御性检查：确保 API key 不是空值
+            const apiKey = data.api_key
+            if (!apiKey || typeof apiKey !== "string" || apiKey.trim() === "") {
+              logger.warn(
+                "API key response contains invalid value, skipping storage"
+              )
+              return
+            }
+
             // 存储API Key，覆盖现有token
             const storageManager = await getStorageManager()
             const newAuthData: AuthStorage = {
-              token: data.api_key,
+              token: apiKey,
               type: "api_key" as TokenType
               // API Key不需要过期时间
             }

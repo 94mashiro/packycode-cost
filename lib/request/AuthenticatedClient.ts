@@ -11,7 +11,6 @@
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { clearPluginTokenOnly } from "~/modules/auth"
 import { type ApiResponse, type AuthStorage, TokenType } from "~/types"
 
 import { get as baseGet, post as basePost } from "./index"
@@ -131,15 +130,18 @@ export class AuthenticatedClient {
         return null
       }
 
-      // JWT过期检查
+      // JWT过期检查 - 只记录但不清理
+      // KISS 原则：让服务器决定 token 是否真的过期
       if (
         authData.type === TokenType.JWT &&
         authData.expiry &&
         authData.expiry < Date.now()
       ) {
-        logger.debug("JWT token expired, clearing token")
-        await clearPluginTokenOnly()
-        return null
+        logger.warn(
+          "JWT token appears expired, but keeping it (server will decide)"
+        )
+        // 不删除，不标记，什么都不做
+        // 客户端时间可能不准，让服务器做最终判断
       }
 
       logger.debug(`Valid ${authData.type} token found`)
@@ -152,7 +154,9 @@ export class AuthenticatedClient {
 
   /**
    * 处理认证相关错误
-   * 自动清理无效token
+   * 仅记录错误，不自动清理 token
+   *
+   * KISS 原则：不删除、不标记、不做任何额外操作
    */
   private async handleAuthError(error?: string): Promise<void> {
     if (!error) return
@@ -162,8 +166,9 @@ export class AuthenticatedClient {
       error.includes("400") || error.includes("401") || error.includes("403")
 
     if (isAuthError) {
-      logger.warn("Authentication error detected, clearing token:", error)
-      await clearPluginTokenOnly()
+      logger.warn("Authentication error detected (token NOT cleared):", error)
+      // 就这样 - 什么都不做，只抛出错误
+      // 让上层决定是重试、提示用户还是其他操作
       throw new AuthenticationError(`Authentication failed: ${error}`)
     }
   }

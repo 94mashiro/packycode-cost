@@ -81,12 +81,13 @@ export interface ApiResponse<T> {
   success: boolean
 }
 
+// ===== 新的存储结构定义 =====
+
 /**
  * 账号分配类型
  */
 export type AssignmentType = "auto_assigned" | "user_selected"
 
-// ===== 新的存储结构定义 =====
 // 认证信息
 export interface AuthStorage {
   expiry?: number

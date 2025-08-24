@@ -138,25 +138,31 @@ export function CombinedStatus({
                 className={`w-2 h-2 rounded-full ${
                   opusLoading
                     ? "bg-gray-400 animate-pulse"
-                    : opusEnabled
-                      ? "bg-purple-500"
-                      : "bg-gray-400"
+                    : opusEnabled === null
+                      ? "bg-yellow-500"
+                      : opusEnabled
+                        ? "bg-purple-500"
+                        : "bg-gray-400"
                 }`}></div>
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {opusLoading
                   ? "检查中"
-                  : opusEnabled
-                    ? "Opus 开启"
-                    : "Opus 关闭"}
+                  : opusEnabled === null
+                    ? "状态未知"
+                    : opusEnabled
+                      ? "Opus 开启"
+                      : "Opus 关闭"}
               </span>
             </div>
             <div className="min-h-[20px] flex items-center">
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {opusLoading
                   ? "获取状态中..."
-                  : opusEnabled
-                    ? "高级模型可用"
-                    : "当前基础模型"}
+                  : opusEnabled === null
+                    ? "等待数据同步"
+                    : opusEnabled
+                      ? "高级模型可用"
+                      : "当前基础模型"}
               </span>
             </div>
           </div>

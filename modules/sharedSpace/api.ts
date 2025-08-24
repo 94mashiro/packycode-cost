@@ -54,8 +54,24 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
       ApiEndpointType.SHARED_SPACE
     )
 
+    // 检查是否有有效的数据返回
+    if (!rawData.assignments || rawData.assignments.length === 0) {
+      logger.warn(
+        "⚠️ SharedSpace API 返回了空的 assignments 数据，跳过 Opus 状态更新"
+      )
+      // 不写入存储，保持现有状态
+      return
+    }
+
     // 提取第一个账号的 opus_enabled 状态
-    const opusEnabled = rawData.assignments?.[0]?.opus_enabled ?? false
+    // 注意：只有在确实有数据时才读取，不使用默认值
+    const [firstAssignment] = rawData.assignments
+    if (typeof firstAssignment.opus_enabled !== "boolean") {
+      logger.warn("⚠️ SharedSpace API 返回的 opus_enabled 不是布尔值，跳过更新")
+      return
+    }
+
+    const opusEnabled = firstAssignment.opus_enabled
 
     // 获取当前存储的状态
     const systemPref = await storageManager.get<SystemPreferenceStorage>(

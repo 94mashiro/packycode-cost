@@ -65,8 +65,7 @@ export class StorageManager {
   async remove(domain: string): Promise<void> {
     const key = this.getVersionedKey(domain)
     try {
-      // Plasmo Storage 使用 set(key, undefined) 来删除
-      await this._storage.set(key, undefined)
+      await this._storage.remove(key)
       logger.debug(`Storage remove: ${key}`)
     } catch (error) {
       logger.error(`Storage remove error for key ${key}:`, error)

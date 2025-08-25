@@ -27,6 +27,11 @@ declare module "@plasmohq/storage" {
     get<T>(key: string): Promise<null | T>
 
     /**
+     * @deprecated 请使用 storageManager.remove(StorageDomain.XXX)
+     */
+    remove(key: string): Promise<void>
+
+    /**
      * @deprecated 请使用 storageManager.set(StorageDomain.XXX, value)
      */
     set<T>(key: string, value: T): Promise<void>

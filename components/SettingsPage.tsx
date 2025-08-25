@@ -1,5 +1,6 @@
 import { AccountTypeSwitcher } from "./AccountTypeSwitcher"
 import { DeveloperPanel } from "./DeveloperPanel"
+import { LogoutSection } from "./LogoutSection"
 
 interface SettingsPageProps {
   onBack: () => void
@@ -43,6 +44,12 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
           showNotification={false}
           variant="dropdown"
         />
+
+        {/* 登出功能 */}
+        <div className="border-t pt-6 dark:border-gray-700">
+          <LogoutSection onLogout={onRefresh} />
+        </div>
+
         {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
         {(isDevelopment || window.location.search.includes("dev=true")) && (
           <>

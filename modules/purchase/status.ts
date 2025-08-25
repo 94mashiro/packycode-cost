@@ -164,5 +164,3 @@ async function triggerPurchaseAvailableNotification(): Promise<void> {
     logger.error("Error creating purchase notification:", error)
   }
 }
-
-export { checkPurchaseStatus } from "./checker"

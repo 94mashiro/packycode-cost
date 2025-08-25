@@ -10,7 +10,7 @@
 
 import { loggers } from "~/lib/logger"
 import { fetchPeerSpendingToday } from "~/modules/peerSpending"
-import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/checker"
+import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/status"
 import { fetchPrivateOpusStatus } from "~/modules/sharedSpace"
 import { fetchSubscriptionInfo } from "~/modules/subscription"
 import { fetchUserInfo } from "~/modules/user"

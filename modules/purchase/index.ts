@@ -5,9 +5,9 @@
  * Dan: "状态变化应该是可预测的"
  */
 
-// 统一的购买状态检查
-export { checkAndNotifyPurchaseStatus } from "./checker"
 // 🆕 导出购买相关hooks
 export * from "./hooks"
+// 统一的购买状态检查
+export { checkAndNotifyPurchaseStatus } from "./status"
 
 export { getCurrentPurchaseConfig } from "./status"

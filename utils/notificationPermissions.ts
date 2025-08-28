@@ -42,7 +42,7 @@ export async function checkOpusNotificationPermission(): Promise<boolean> {
     )
 
     // 默认关闭 Opus 通知
-    const enabled = userPreference?.opus_notification ?? false
+    const enabled = userPreference?.opus_notification ?? true
 
     logger.debug(`Opus notification permission check: ${enabled}`)
     return enabled
@@ -65,7 +65,7 @@ export async function checkPurchaseNotificationPermission(): Promise<boolean> {
     )
 
     // 默认开启购买通知
-    const enabled = userPreference?.purchase_notification ?? false
+    const enabled = userPreference?.purchase_notification ?? true
 
     logger.debug(`Purchase notification permission check: ${enabled}`)
     return enabled

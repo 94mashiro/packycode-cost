@@ -25,7 +25,7 @@ export function NotificationSettings({
     },
     {
       description: "当 Opus 模型状态发生变化时推送提醒",
-      enabled: userPreference?.opus_notification ?? false, // 默认关闭
+      enabled: userPreference?.opus_notification ?? true, // 默认开启
       icon: "🤖",
       id: "opus_notification" as NotificationKey,
       label: "Opus 模型状态通知"

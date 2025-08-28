@@ -43,7 +43,10 @@ export function NotificationSettings({
       // 切换对应的通知设置
       const updatedPreference: UserPreferenceStorage = {
         ...currentPreference,
-        [settingId]: !currentPreference[settingId]
+        [settingId]:
+          currentPreference[settingId] === undefined
+            ? false
+            : !currentPreference[settingId]
       }
       await storageManager.set(StorageDomain.USER_PREFERENCE, updatedPreference)
     } catch (error) {

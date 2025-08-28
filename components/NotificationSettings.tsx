@@ -35,19 +35,18 @@ export function NotificationSettings({
   const toggleSetting = async (settingId: NotificationKey) => {
     try {
       const storageManager = await getStorageManager()
-      const currentPreference =
-        (await storageManager.get<UserPreferenceStorage>(
-          StorageDomain.USER_PREFERENCE
-        )) || { account_version: AccountVersion.SHARED }
+      const currentPreference = await storageManager.get<UserPreferenceStorage>(
+        StorageDomain.USER_PREFERENCE
+      )
 
-      // 切换对应的通知设置
+      const currentValue = currentPreference?.[settingId]
+      const newValue = currentValue === undefined ? false : !currentValue
+
       const updatedPreference: UserPreferenceStorage = {
         ...currentPreference,
-        [settingId]:
-          currentPreference[settingId] === undefined
-            ? false
-            : !currentPreference[settingId]
+        [settingId]: newValue
       }
+
       await storageManager.set(StorageDomain.USER_PREFERENCE, updatedPreference)
     } catch (error) {
       console.error("Failed to toggle notification setting:", error)

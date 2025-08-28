@@ -1,7 +1,7 @@
 import { useUserPreference } from "~/hooks/infrastructure/useStorageHooks"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { AccountVersion, type UserPreferenceStorage } from "~/types"
+import { type UserPreferenceStorage } from "~/types"
 
 type NotificationKey = "opus_notification" | "purchase_notification"
 

@@ -4,6 +4,7 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
+import { checkPurchaseNotificationPermission } from "~/utils/notificationPermissions"
 
 const logger = loggers.purchase
 
@@ -61,12 +62,23 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
       `[STATUS] Previous: ${previousPurchaseState}, Current: ${currentConfig.purchaseDisabled}, Should notify: ${shouldNotify}`
     )
 
-    // 3. 触发通知（只在从禁用变为可用时）
+    // 3. 触发通知（只在从禁用变为可用时，且用户开启了通知）
     let notificationTriggered = false
     if (shouldNotify) {
-      logger.debug("[NOTIFICATION] Purchase status changed: disabled → enabled")
-      await triggerPurchaseAvailableNotification()
-      notificationTriggered = true
+      // 检查用户是否开启了购买通知
+      const notificationEnabled = await checkPurchaseNotificationPermission()
+
+      if (notificationEnabled) {
+        logger.debug(
+          "[NOTIFICATION] Purchase status changed: disabled → enabled"
+        )
+        await triggerPurchaseAvailableNotification()
+        notificationTriggered = true
+      } else {
+        logger.debug(
+          "[NOTIFICATION] Purchase notification disabled by user settings, skipping"
+        )
+      }
     }
 
     // 4. 更新存储状态

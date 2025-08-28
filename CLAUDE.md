@@ -104,6 +104,29 @@ pnpm format:check       # Check code formatting
 pnpm type-check         # TypeScript type checking
 ```
 
+## Code Quality Requirements
+
+### 🔍 Mandatory Code Diagnostics
+
+**CRITICAL**: After ANY code modification, you MUST run diagnostics using `mcp__ide__getDiagnostics` to ensure:
+
+1. **Zero TypeScript Errors**: All type errors must be resolved before considering the task complete
+2. **Zero TypeScript Warnings**: Address all warnings to maintain code quality
+3. **Clean Compilation**: The code must compile without any issues
+4. **Type Safety**: Ensure all new code maintains the project's type safety standards
+
+**Workflow**: 
+```
+Code Modification → Run Diagnostics → Fix Issues → Run Diagnostics Again → Confirm Clean
+```
+
+If diagnostics reveal any issues:
+- Fix them immediately
+- Re-run diagnostics to confirm resolution
+- Never leave code with unresolved diagnostics
+
+This is a **non-negotiable requirement** for maintaining the project's high code quality standards.
+
 ## Architecture Overview
 
 ### Core Components

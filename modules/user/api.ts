@@ -8,6 +8,7 @@ import {
   type UserInfo,
   type UserPreferenceStorage
 } from "~/types"
+import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
 const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
@@ -62,10 +63,17 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       )
 
       if (shouldNotify) {
-        logger.info(
-          `Opus status changed (公交车模式): ${previousOpusState} → ${currentOpusState}`
-        )
-        await triggerOpusStatusNotification(currentOpusState)
+        // 检查用户是否开启了 Opus 通知
+        const notificationEnabled = await checkOpusNotificationPermission()
+
+        if (notificationEnabled) {
+          logger.info(
+            `Opus status changed (公交车模式): ${previousOpusState} → ${currentOpusState}`
+          )
+          await triggerOpusStatusNotification(currentOpusState)
+        } else {
+          logger.debug("Opus notification disabled by user settings, skipping")
+        }
       }
 
       // 更新系统偏好

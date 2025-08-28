@@ -354,4 +354,8 @@ export interface UserInfoData {
 // 用户偏好
 export interface UserPreferenceStorage {
   account_version: AccountVersion
+  /** Opus 模型状态通知设置 */
+  opus_notification?: boolean
+  /** 购买开放通知设置 */
+  purchase_notification?: boolean
 }

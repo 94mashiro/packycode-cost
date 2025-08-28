@@ -1,6 +1,7 @@
 import { AccountTypeSwitcher } from "./AccountTypeSwitcher"
 import { DeveloperPanel } from "./DeveloperPanel"
 import { LogoutSection } from "./LogoutSection"
+import { NotificationSettings } from "./NotificationSettings"
 
 interface SettingsPageProps {
   onBack: () => void
@@ -44,6 +45,11 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
           showNotification={false}
           variant="dropdown"
         />
+
+        {/* 推送通知设置 */}
+        <div className="border-t pt-6 dark:border-gray-700">
+          <NotificationSettings />
+        </div>
 
         {/* 登出功能 */}
         <div className="border-t pt-6 dark:border-gray-700">

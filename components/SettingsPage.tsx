@@ -41,9 +41,7 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
         {/* 账号版本设置 */}
         <AccountTypeSwitcher
           onAccountChanged={onRefresh}
-          showDescription={false}
           showNotification={false}
-          variant="dropdown"
         />
 
         {/* 推送通知设置 */}

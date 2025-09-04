@@ -7,17 +7,13 @@ import { AccountVersion, type UserPreferenceStorage } from "../types"
 interface AccountTypeSwitcherProps {
   className?: string
   onAccountChanged?: () => void
-  showDescription?: boolean
   showNotification?: boolean
-  variant?: "dropdown" | "segmented"
 }
 
 export function AccountTypeSwitcher({
   className = "",
   onAccountChanged,
-  showDescription = true,
-  showNotification = true,
-  variant = "segmented"
+  showNotification = true
 }: AccountTypeSwitcherProps) {
   const [currentAccountType, setCurrentAccountType] = useState<AccountVersion>(
     AccountVersion.SHARED
@@ -61,7 +57,7 @@ export function AccountTypeSwitcher({
         chrome.notifications.create({
           iconUrl:
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : "公交车"}模式`,
+          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : newType === AccountVersion.CODEX_SHARED ? "CodeX公交车" : "公交车"}模式`,
           title: "账号类型已切换",
           type: "basic"
         })
@@ -92,87 +88,23 @@ export function AccountTypeSwitcher({
     handleAccountTypeChange(newType)
   }
 
-  if (variant === "dropdown") {
-    return (
-      <div className={`space-y-2 ${className}`}>
-        <label
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-          htmlFor="account-version">
-          账号版本
-        </label>
-        <select
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-          disabled={isLoading}
-          id="account-version"
-          onChange={handleDropdownChange}
-          value={currentAccountType}>
-          <option value={AccountVersion.SHARED}>🚌 公交车</option>
-          <option value={AccountVersion.PRIVATE}>🚗 滴滴车</option>
-        </select>
-        {showDescription && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {currentAccountType === AccountVersion.SHARED
-              ? "公交车版本：共享资源，价格实惠"
-              : "滴滴车版本：独享资源，性能更优"}
-          </p>
-        )}
-      </div>
-    )
-  }
-
   return (
-    <div className={`pt-6 space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          账号类型
-        </h3>
-      </div>
-
-      <div className="space-y-3">
-        <div className="relative bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-          <div className="grid grid-cols-2 relative">
-            <div
-              className={`absolute top-1 bottom-1 rounded-md bg-white dark:bg-gray-700 shadow-sm transition-transform duration-200 ease-out ${
-                currentAccountType === AccountVersion.SHARED
-                  ? "left-1 right-1/2"
-                  : "left-1/2 right-1"
-              }`}
-            />
-            <button
-              className={`relative px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md z-10 ${
-                currentAccountType === AccountVersion.SHARED
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-              disabled={isLoading}
-              onClick={() => handleAccountTypeChange(AccountVersion.SHARED)}>
-              🚌 公交车
-            </button>
-            <button
-              className={`relative px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 rounded-md z-10 ${
-                currentAccountType === AccountVersion.PRIVATE
-                  ? "text-purple-600 dark:text-purple-400"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-              disabled={isLoading}
-              onClick={() => handleAccountTypeChange(AccountVersion.PRIVATE)}>
-              🚗 滴滴车
-            </button>
-          </div>
-        </div>
-
-        {showDescription && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-            <p>
-              • <strong>公交车模式：</strong>使用 www.packycode.com（共享账号）
-            </p>
-            <p>
-              • <strong>滴滴车模式：</strong>使用{" "}
-              share.packycode.com（私有账号）
-            </p>
-          </div>
-        )}
-      </div>
+    <div className={`space-y-2 ${className}`}>
+      <label
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        htmlFor="account-version">
+        账号版本
+      </label>
+      <select
+        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+        disabled={isLoading}
+        id="account-version"
+        onChange={handleDropdownChange}
+        value={currentAccountType}>
+        <option value={AccountVersion.SHARED}>Claude Code 公交车</option>
+        <option value={AccountVersion.PRIVATE}>Claude Code 滴滴车</option>
+        <option value={AccountVersion.CODEX_SHARED}>Codex</option>
+      </select>
     </div>
   )
 }

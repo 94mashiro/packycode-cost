@@ -6,6 +6,7 @@
 // ===== 枚举定义 =====
 // 账号版本
 export enum AccountVersion {
+  CODEX_SHARED = "codex_shared",
   PRIVATE = "private",
   SHARED = "shared"
 }

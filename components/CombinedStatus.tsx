@@ -2,7 +2,15 @@ import { useEffect, useState } from "react"
 
 import { dynamicApiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
-import { type TokenData, type TokenExpiration, TokenType } from "../types"
+import { getStorageManager } from "../lib/storage"
+import { StorageDomain } from "../lib/storage/domains"
+import {
+  AccountVersion,
+  type TokenData,
+  type TokenExpiration,
+  TokenType,
+  type UserPreferenceStorage
+} from "../types"
 
 interface CombinedStatusProps {
   tokenData: TokenData
@@ -20,6 +28,27 @@ export function CombinedStatus({
   // 动态获取URL状态
   const [dashboardUrl, setDashboardUrl] = useState<string>("")
   const [pricingUrl, setPricingUrl] = useState<string>("")
+  const [currentAccountType, setCurrentAccountType] =
+    useState<AccountVersion | null>(null)
+
+  // 获取当前账户类型
+  useEffect(() => {
+    const loadAccountType = async () => {
+      try {
+        const storageManager = await getStorageManager()
+        const userPreference = await storageManager.get<UserPreferenceStorage>(
+          StorageDomain.USER_PREFERENCE
+        )
+        setCurrentAccountType(
+          userPreference?.account_version ?? AccountVersion.SHARED
+        )
+      } catch (error) {
+        console.error("Failed to load account type:", error)
+        setCurrentAccountType(AccountVersion.SHARED)
+      }
+    }
+    loadAccountType()
+  }, [])
 
   useEffect(() => {
     // 获取动态URL
@@ -57,7 +86,8 @@ export function CombinedStatus({
 
       {/* 状态网格 - shadcn/ui 风格，与乘客消费排行榜保持一致 */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 shadow-sm">
-        <div className="grid grid-cols-3 gap-4">
+        <div
+          className={`grid ${currentAccountType === AccountVersion.CODEX_SHARED ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
           {/* 认证状态 */}
           <div className="space-y-1">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -128,44 +158,46 @@ export function CombinedStatus({
             </div>
           </div>
 
-          {/* Opus 状态 */}
-          <div className="space-y-1">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Opus 状态
-            </span>
-            <div className="flex items-center gap-1.5">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  opusLoading
-                    ? "bg-gray-400 animate-pulse"
+          {/* Opus 状态 - 仅在非 CODEX_SHARED 账户类型时显示 */}
+          {currentAccountType !== AccountVersion.CODEX_SHARED && (
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Opus 状态
+              </span>
+              <div className="flex items-center gap-1.5">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    opusLoading
+                      ? "bg-gray-400 animate-pulse"
+                      : opusEnabled === null
+                        ? "bg-yellow-500"
+                        : opusEnabled
+                          ? "bg-purple-500"
+                          : "bg-gray-400"
+                  }`}></div>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {opusLoading
+                    ? "检查中"
                     : opusEnabled === null
-                      ? "bg-yellow-500"
+                      ? "状态未知"
                       : opusEnabled
-                        ? "bg-purple-500"
-                        : "bg-gray-400"
-                }`}></div>
-              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {opusLoading
-                  ? "检查中"
-                  : opusEnabled === null
-                    ? "状态未知"
-                    : opusEnabled
-                      ? "Opus 开启"
-                      : "Opus 关闭"}
-              </span>
+                        ? "Opus 开启"
+                        : "Opus 关闭"}
+                </span>
+              </div>
+              <div className="min-h-[20px] flex items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {opusLoading
+                    ? "获取状态中..."
+                    : opusEnabled === null
+                      ? "等待数据同步"
+                      : opusEnabled
+                        ? "高级模型可用"
+                        : "当前基础模型"}
+                </span>
+              </div>
             </div>
-            <div className="min-h-[20px] flex items-center">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {opusLoading
-                  ? "获取状态中..."
-                  : opusEnabled === null
-                    ? "等待数据同步"
-                    : opusEnabled
-                      ? "高级模型可用"
-                      : "当前基础模型"}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

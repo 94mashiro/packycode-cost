@@ -57,7 +57,7 @@ export function AccountTypeSwitcher({
         chrome.notifications.create({
           iconUrl:
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : newType === AccountVersion.CODEX_SHARED ? "CodeX公交车" : "公交车"}模式`,
+          message: `已切换到${newType === AccountVersion.PRIVATE ? "滴滴车" : newType === AccountVersion.CODEX_SHARED ? "Codex公交车" : "公交车"}模式`,
           title: "账号类型已切换",
           type: "basic"
         })

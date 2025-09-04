@@ -41,6 +41,26 @@ export const API_ENVIRONMENT_REGISTRY: Record<
   AccountVersion,
   ApiEnvironmentConfig
 > = {
+  [AccountVersion.CODEX_SHARED]: {
+    baseUrl: "https://codex.packycode.com",
+    cookieDomain: "https://codex.packycode.com",
+    description: "Codex公交车模式 - Codex服务的公交车版本",
+    endpoints: {
+      [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
+      [ApiEndpointType.CONFIG]: "/api/config",
+      [ApiEndpointType.PEER_SPENDING_TODAY]:
+        "/api/backend/accounts/peer-spending/today",
+      [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
+      [ApiEndpointType.SUBSCRIPTIONS]:
+        "/api/backend/subscriptions?page=1&per_page=50",
+      [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
+    },
+    pages: {
+      [PageUrlType.DASHBOARD]: "https://codex.packycode.com/dashboard",
+      [PageUrlType.PRICING]: "https://codex.packycode.com/pricing"
+    },
+    type: AccountVersion.CODEX_SHARED
+  },
   [AccountVersion.PRIVATE]: {
     baseUrl: "https://share.packycode.com",
     cookieDomain: "https://share.packycode.com",

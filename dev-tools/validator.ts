@@ -98,7 +98,7 @@ export class DevToolsValidator {
       const issues: ValidationIssue[] = []
 
       // 验证当前配置有效性
-      const validAccountTypes = ["shared", "private"]
+      const validAccountTypes = ["shared", "private", "codex_shared"]
       if (!validAccountTypes.includes(currentAccountType)) {
         issues.push(
           this.createIssue(
@@ -112,8 +112,9 @@ export class DevToolsValidator {
       // 验证URL环境感知
       const isPrivateDomain = currentBaseUrl.includes("share.packycode.com")
       const isSharedDomain = currentBaseUrl.includes("www.packycode.com")
+      const isCodexDomain = currentBaseUrl.includes("codex.packycode.com")
 
-      if (!isPrivateDomain && !isSharedDomain) {
+      if (!isPrivateDomain && !isSharedDomain && !isCodexDomain) {
         issues.push(
           this.createIssue(
             ValidationLevel.WARNING,
@@ -140,6 +141,16 @@ export class DevToolsValidator {
             ValidationLevel.WARNING,
             "账号类型与域名不匹配",
             "共享模式应该使用 www.packycode.com 域名"
+          )
+        )
+      }
+
+      if (currentAccountType === "codex_shared" && !isCodexDomain) {
+        issues.push(
+          this.createIssue(
+            ValidationLevel.WARNING,
+            "账号类型与域名不匹配",
+            "Codex公交车模式应该使用 codex.packycode.com 域名"
           )
         )
       }
@@ -195,7 +206,7 @@ export class DevToolsValidator {
       }
 
       // 验证账号类型
-      const validAccountTypes = ["shared", "private"]
+      const validAccountTypes = ["shared", "private", "codex_shared"]
       if (!validAccountTypes.includes(accountType)) {
         issues.push(
           this.createIssue(

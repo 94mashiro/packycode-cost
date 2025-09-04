@@ -42,7 +42,13 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     // 只在滴滴车模式下执行
     if (currentVersion !== AccountVersion.PRIVATE) {
       logger.debug(
-        `⏭️ 跳过私有 Opus 状态获取：当前为${currentVersion === AccountVersion.SHARED ? "公交车" : "未知"}模式`
+        `⏭️ 跳过私有 Opus 状态获取：当前为${
+          currentVersion === AccountVersion.SHARED
+            ? "公交车"
+            : currentVersion === AccountVersion.CODEX_SHARED
+              ? "Codex公交车"
+              : "未知"
+        }模式${currentVersion === AccountVersion.CODEX_SHARED ? "，没有 Opus 模型" : ""}`
       )
       return
     }

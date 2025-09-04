@@ -47,7 +47,7 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     const currentVersion =
       userPreference?.account_version ?? AccountVersion.SHARED
 
-    // 只在公交车模式下处理 opus_enabled 状态变化
+    // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX_SHARED，因为没有 Opus 模型）
     if (currentVersion === AccountVersion.SHARED) {
       // 检查 opus_enabled 状态变化
       const systemPref = await storageManager.get<SystemPreferenceStorage>(
@@ -82,7 +82,19 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       })
     } else {
       logger.debug(
-        `⏭️ 跳过 Opus 状态更新：当前为${currentVersion === AccountVersion.PRIVATE ? "滴滴车" : "未知"}模式，由 SharedSpace API 负责管理`
+        `⏭️ 跳过 Opus 状态更新：当前为${
+          currentVersion === AccountVersion.PRIVATE
+            ? "滴滴车"
+            : currentVersion === AccountVersion.CODEX_SHARED
+              ? "Codex公交车"
+              : "未知"
+        }模式${
+          currentVersion === AccountVersion.PRIVATE
+            ? "，由 SharedSpace API 负责管理"
+            : currentVersion === AccountVersion.CODEX_SHARED
+              ? "，没有 Opus 模型"
+              : ""
+        }`
       )
     }
 

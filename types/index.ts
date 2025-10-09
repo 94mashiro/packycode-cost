@@ -380,6 +380,8 @@ export interface UserApiResponse {
 
 // 用户信息
 export interface UserInfo {
+  /** 账户余额（美元，字符串格式保留精度，仅 Shared 公交车模式） */
+  balance_usd?: string
   budgets: Budget
   createdAt?: string
   email?: string

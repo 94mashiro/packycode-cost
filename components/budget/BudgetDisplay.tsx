@@ -1,5 +1,7 @@
-import { CombinedBudget } from "~/components/CombinedBudget"
+import { AccountVersion } from "~/types"
 
+import { CombinedBudget } from "../CombinedBudget"
+import { AccountBalance } from "./components/AccountBalance"
 import { BudgetError } from "./components/BudgetError"
 import { BudgetSkeleton } from "./components/BudgetSkeleton"
 import { useBudgetDisplay } from "./hooks/useBudgetDisplay"
@@ -24,9 +26,11 @@ import { useBudgetDisplay } from "./hooks/useBudgetDisplay"
  * - 🎨 与现有设计系统完全一致
  * - 📱 响应式设计，支持暗黑模式
  * - 🧪 易于测试，状态逻辑完全封装
+ * - 🔀 多模式支持：Shared 模式展示余额，其他模式展示预算
  */
 export function BudgetDisplay() {
-  const { budgetData, error, loading } = useBudgetDisplay()
+  const { accountVersion, balanceData, budgetData, error, loading } =
+    useBudgetDisplay()
 
   // 加载状态
   if (loading) {
@@ -38,7 +42,12 @@ export function BudgetDisplay() {
     return <BudgetError error={error} />
   }
 
-  // 有效数据状态 - 显示预算信息
+  // Shared 模式 - 显示账户余额
+  if (accountVersion === AccountVersion.SHARED && balanceData) {
+    return <AccountBalance balance={balanceData.balance} />
+  }
+
+  // 其他模式 (PRIVATE, CODEX_SHARED) - 显示预算信息
   if (budgetData) {
     return (
       <CombinedBudget

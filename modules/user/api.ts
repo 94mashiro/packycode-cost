@@ -23,6 +23,7 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     const monthlySpent = Number(rawData.monthly_spent_usd) || 0
 
     const userInfoStorage: UserInfo = {
+      balance_usd: rawData.balance_usd, // Shared 公交车模式下的账户余额
       budgets: {
         daily: {
           limit: dailyLimit,

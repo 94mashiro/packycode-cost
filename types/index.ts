@@ -327,12 +327,55 @@ export interface TokenExpiration {
   isExpired: boolean
 }
 
+/**
+ * 用户信息 API 响应
+ *
+ * 设计原则 (Joshua Bloch):
+ * "API 设计要支持演进，使用可选字段实现向后兼容"
+ *
+ * 字段分类：
+ * 1. 核心预算字段 - 所有账号类型都有
+ * 2. 公交车模式扩展字段 - 仅 Shared 模式下返回
+ *
+ * 注意：字段按字母顺序排列（项目 lint 规则要求）
+ */
 export interface UserApiResponse {
-  daily_budget_usd: number | string
+  /** API Key（公交车模式下返回） */
+  api_key?: string
+  /** 账户余额（美元，字符串格式保留精度，公交车模式） */
+  balance_usd?: string
+  /** 账户创建时间（ISO 8601 格式，公交车模式） */
+  created_at?: string
+  /** 每日预算限额（美元），可能为 null */
+  daily_budget_usd: null | number | string
+  /** 每日已消费（美元） */
   daily_spent_usd: number | string
-  monthly_budget_usd: number | string
+  /** 用户邮箱（公交车模式） */
+  email?: string
+  /** 每月预算限额（美元），可能为 null */
+  monthly_budget_usd: null | number | string
+  /** 每月已消费（美元） */
   monthly_spent_usd: number | string
+  /** 是否启用 Opus 模型 */
   opus_enabled: boolean
+  /** 订阅计划到期时间（ISO 8601 格式或 null，公交车模式） */
+  plan_expires_at?: null | string
+  /** 订阅计划类型（如 "payg" - 按量付费，公交车模式） */
+  plan_type?: string
+  /** 剩余配额（token 数量，可能为负数表示超额，公交车模式） */
+  remaining_quota?: number
+  /** 总配额（token 数量，公交车模式） */
+  total_quota?: number
+  /** 累计总消费（美元，字符串格式保留精度，公交车模式） */
+  total_spent_usd?: string
+  /** 已使用配额（token 数量，公交车模式） */
+  used_quota?: number
+  /** 用户 ID（UUID 格式，公交车模式） */
+  user_id?: string
+  /** 用户类型（如 "user", "admin"，公交车模式） */
+  user_type?: string
+  /** 用户名（公交车模式） */
+  username?: string
 }
 
 // 用户信息

@@ -12,12 +12,13 @@ import { BudgetDisplay } from "./components/budget"
 import { CombinedStatus } from "./components/CombinedStatus"
 import { PeerSpendingChart } from "./components/PeerSpendingChart"
 import { RefreshButton } from "./components/RefreshButton"
+import { SettingsButton } from "./components/SettingsButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
-import { useAuth } from "./hooks"
+import { useAuth, useUserPreference } from "./hooks"
 import { useTaskExecution } from "./hooks/useTaskExecution"
 import { enablePopupLogging } from "./lib/logger"
-import { TokenType, ViewType } from "./types"
+import { AccountVersion, TokenType, ViewType } from "./types"
 
 // 启用 Popup 日志接收
 enablePopupLogging()
@@ -30,6 +31,7 @@ if (process.env.NODE_ENV === "development") {
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
   const { data: authData } = useAuth()
+  const { data: userPreference } = useUserPreference()
   const { executeAll, loading: taskLoading } = useTaskExecution()
 
   const tokenExpiration = authData?.token
@@ -37,8 +39,20 @@ function IndexPopup() {
     : null
   const isTokenValid = !!(authData?.token && authData?.type)
 
+  // Token 时效性检查：API Key 永久有效，JWT 需要检查过期时间
+  const isTokenEffective =
+    authData?.type === TokenType.API_KEY
+      ? true // API Key 永久有效
+      : !tokenExpiration?.isExpired // JWT 需检查过期
+
+  // 完整的认证有效性：Token 存在且未过期
+  const isAuthenticated = isTokenValid && isTokenEffective
+
+  const currentAccountType =
+    userPreference?.account_version ?? AccountVersion.SHARED
+
   const handleRefresh = () => {
-    if (isTokenValid) {
+    if (isAuthenticated) {
       // 使用新的任务执行 Hook
       executeAll()
     }
@@ -69,32 +83,11 @@ function IndexPopup() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold tracking-tight">主面板</h2>
             <div className="flex items-center space-x-2">
-              <button
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
+              <SettingsButton
                 onClick={() => setCurrentView(ViewType.SETTINGS)}
-                title="设置">
-                <svg
-                  className="w-4 h-4 text-gray-600 dark:text-gray-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                  <path
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                </svg>
-              </button>
+              />
               <RefreshButton
-                isVisible={isTokenValid}
+                isVisible={isAuthenticated}
                 loading={taskLoading}
                 onRefresh={handleRefresh}
               />
@@ -105,7 +98,7 @@ function IndexPopup() {
         <CombinedStatus
           tokenData={{
             expiry: null,
-            isValid: isTokenValid || false,
+            isValid: isAuthenticated || false,
             token: authData?.token || null,
             tokenType: authData?.type || null
           }}
@@ -114,20 +107,23 @@ function IndexPopup() {
           }
         />
 
-        {/* 预算信息组件 - 独立显示，只依赖认证状态 */}
-        {isTokenValid &&
-          (authData?.type === TokenType.API_KEY ||
-            !tokenExpiration?.isExpired) && <BudgetDisplay />}
+        {/* 认证门禁：所有需要 API 访问凭证的组件都在此条件内 */}
+        {isAuthenticated && (
+          <>
+            {/* 预算信息 */}
+            <BudgetDisplay />
 
-        {/* 套餐信息组件 - 独立显示，只依赖认证状态 */}
-        {isTokenValid &&
-          (authData?.type === TokenType.API_KEY ||
-            !tokenExpiration?.isExpired) && <SubscriptionDisplay />}
+            {/* 套餐信息 - 仅 CODEX_SHARED 和 PRIVATE 模式展示 */}
+            {currentAccountType !== AccountVersion.SHARED && (
+              <SubscriptionDisplay />
+            )}
 
-        {/* 乘客消费排行榜 - 滴滴车模式专属 */}
-        {isTokenValid &&
-          (authData?.type === TokenType.API_KEY ||
-            !tokenExpiration?.isExpired) && <PeerSpendingChart />}
+            {/* 乘客消费排行榜 - 仅 PRIVATE（滴滴车）模式展示 */}
+            {currentAccountType === AccountVersion.PRIVATE && (
+              <PeerSpendingChart />
+            )}
+          </>
+        )}
 
         <ActionButtons />
 

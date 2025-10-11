@@ -265,9 +265,9 @@ export class ApiConfigManagerController {
   private async getCurrentSite(): Promise<PackySite> {
     try {
       const { AccountManager } = await import("~/lib/account")
-      const { getMultiAccountStorageManager } = await import("~/lib/storage")
+      const { getStorageManager } = await import("~/lib/storage")
 
-      const storageManager = getMultiAccountStorageManager()
+      const storageManager = getStorageManager()
       const accountManager = new AccountManager(storageManager)
       const currentAccount = await accountManager.getCurrentAccount()
 

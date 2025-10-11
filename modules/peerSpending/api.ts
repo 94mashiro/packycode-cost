@@ -11,7 +11,7 @@
 import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
+import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
   ApiEndpointType,
@@ -29,8 +29,8 @@ const logger = loggers.api
 export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStorage> {
   try {
     // 1. 检查当前账号站点
-    const multiAccountStorageManager = getMultiAccountStorageManager()
-    const accountManager = new AccountManager(multiAccountStorageManager)
+    const storageManager = getStorageManager()
+    const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
     const currentSite = currentAccount?.site
 
@@ -50,8 +50,7 @@ export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStora
     // 4. 数据转换和计算
     const peerSpendingData = transformPeerSpendingData(rawData)
 
-    // 5. 存储数据
-    const storageManager = await getStorageManager()
+    // 5. 存储数据（复用第 32 行的 storageManager）
     await storageManager.set(
       StorageDomain.PEER_SPENDING,
       peerSpendingData,
@@ -84,8 +83,8 @@ export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStora
  */
 export async function isPrivateMode(): Promise<boolean> {
   try {
-    const multiAccountStorageManager = getMultiAccountStorageManager()
-    const accountManager = new AccountManager(multiAccountStorageManager)
+    const storageManager = getStorageManager()
+    const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
 
     return currentAccount?.site === PackySite.SHARED

@@ -9,7 +9,7 @@
 import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
+import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
   ApiEndpointType,
@@ -32,8 +32,8 @@ const logger = loggers.auth
 export async function fetchPrivateOpusStatus(): Promise<void> {
   try {
     // 获取当前账号站点
-    const multiAccountStorageManager = getMultiAccountStorageManager()
-    const accountManager = new AccountManager(multiAccountStorageManager)
+    const storageManager = getStorageManager()
+    const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
     const currentSite = currentAccount?.site
 
@@ -41,15 +41,17 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     if (currentSite !== PackySite.SHARED) {
       // 站点名称映射
       const siteNames: Record<PackySite, string> = {
-        [PackySite.WWW]: "公交车",
+        [PackySite.CODEX]: "Codex",
         [PackySite.SHARED]: "滴滴车",
-        [PackySite.CODEX]: "Codex"
+        [PackySite.WWW]: "公交车"
       }
 
       const siteName = siteNames[currentSite ?? PackySite.WWW]
       const siteNote = currentSite === PackySite.CODEX ? "，没有 Opus 模型" : ""
 
-      logger.debug(`⏭️ 跳过私有 Opus 状态获取：当前为${siteName}模式${siteNote}`)
+      logger.debug(
+        `⏭️ 跳过私有 Opus 状态获取：当前为${siteName}模式${siteNote}`
+      )
       return
     }
 
@@ -80,8 +82,7 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     const opusEnabled = firstAssignment.opus_enabled
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
-    // 获取当前存储的状态
-    const storageManager = await getStorageManager()
+    // 获取当前存储的状态（复用第 35 行的 storageManager）
     const systemPref = await storageManager.get<SystemPreferenceStorage>(
       StorageDomain.SYSTEM_PREFERENCE
     )

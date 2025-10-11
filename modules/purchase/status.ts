@@ -1,3 +1,5 @@
+import browser from "webextension-polyfill"
+
 import type { PackyConfig, SystemPreferenceStorage } from "~/types"
 
 import { api } from "~/lib/api/PackyCodeApiClient"
@@ -48,7 +50,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     }
 
     // 2. 检查购买状态变化并决定是否通知
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     const systemPref = await storageManager.get<SystemPreferenceStorage>(
       StorageDomain.SYSTEM_PREFERENCE
     )
@@ -109,7 +111,7 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     return await storageManager.get<PackyConfig>(StorageDomain.PURCHASE_CONFIG)
   } catch (error) {
     logger.error("Failed to get current purchase config:", error)
@@ -152,26 +154,14 @@ async function triggerPurchaseAvailableNotification(): Promise<void> {
   const notificationId = `purchase-available-${Date.now()}`
 
   try {
-    chrome.notifications.create(
-      notificationId,
-      {
-        iconUrl:
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-        message: "购买功能现已开放，快冲！",
-        title: "PackyCode 购买开放",
-        type: "basic"
-      },
-      (createdNotificationId) => {
-        if (chrome.runtime.lastError) {
-          logger.error(
-            "Purchase notification creation failed:",
-            chrome.runtime.lastError
-          )
-        } else {
-          logger.debug("Purchase notification created:", createdNotificationId)
-        }
-      }
-    )
+    await browser.notifications.create(notificationId, {
+      iconUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
+      message: "购买功能现已开放，快冲！",
+      title: "PackyCode 购买开放",
+      type: "basic"
+    })
+    logger.debug("Purchase notification created:", notificationId)
   } catch (error) {
     logger.error("Error creating purchase notification:", error)
   }

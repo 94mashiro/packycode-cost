@@ -7,6 +7,7 @@
       "~*": ["./*"],
       "@/*": ["./*"]
     },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": ["@types/webextension-polyfill", "@types/chrome", "@types/node"]
   }
 }

@@ -36,7 +36,7 @@ export async function checkNotificationPermission(
  */
 export async function checkOpusNotificationPermission(): Promise<boolean> {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     const userPreference = await storageManager.get<UserPreferenceStorage>(
       StorageDomain.USER_PREFERENCE
     )
@@ -59,7 +59,7 @@ export async function checkOpusNotificationPermission(): Promise<boolean> {
  */
 export async function checkPurchaseNotificationPermission(): Promise<boolean> {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     const userPreference = await storageManager.get<UserPreferenceStorage>(
       StorageDomain.USER_PREFERENCE
     )

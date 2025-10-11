@@ -12,7 +12,7 @@ export async function fetchSubscriptionInfo(): Promise<null | SubscriptionApiRes
     const subscriptionData = await api.getSubscriptions()
 
     // 存储API响应数据
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     await storageManager.set(
       StorageDomain.SUBSCRIPTION_INFO,
       subscriptionData,

@@ -42,7 +42,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
       setLoading(true)
       setError(null)
 
-      const storage = await getStorageManager()
+      const storage = getStorageManager()
       const result = await storage.get<StorageDomainMap[T]>(domain)
 
       setData(result)
@@ -62,7 +62,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
       try {
         setError(null)
 
-        const storage = await getStorageManager()
+        const storage = getStorageManager()
         await storage.set(domain, value, true) // 使用强制覆盖模式，确保完全替换
 
         setData(value)
@@ -91,7 +91,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
         logger.debug(`✅ useStorage initial refresh completed for: ${domain}`)
 
         if (mounted) {
-          const storage = await getStorageManager()
+          const storage = getStorageManager()
           logger.debug(
             `📊 useStorage setting up StorageManager watch for domain: ${domain}`
           )

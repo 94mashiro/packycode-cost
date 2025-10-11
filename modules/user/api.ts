@@ -1,7 +1,9 @@
+import browser from "webextension-polyfill"
+
 import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
+import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { type SystemPreferenceStorage, type UserInfo } from "~/types"
 import { PackySite } from "~/types/account"
@@ -37,11 +39,10 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       // 删除无用的 id 硬编码 - 该字段无实际用途
     }
 
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
 
     // 获取当前账号站点，检查是否为公交车模式
-    const multiAccountStorageManager = getMultiAccountStorageManager()
-    const accountManager = new AccountManager(multiAccountStorageManager)
+    const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
     const currentSite = currentAccount?.site ?? PackySite.WWW
 
@@ -81,9 +82,9 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     } else {
       // 站点名称映射
       const siteNames: Record<PackySite, string> = {
-        [PackySite.WWW]: "公交车",
+        [PackySite.CODEX]: "Codex",
         [PackySite.SHARED]: "滴滴车",
-        [PackySite.CODEX]: "Codex"
+        [PackySite.WWW]: "公交车"
       }
 
       const siteName = siteNames[currentSite]
@@ -135,30 +136,16 @@ async function triggerOpusStatusNotification(enabled: boolean): Promise<void> {
   const notificationId = `opus-status-${Date.now()}`
 
   try {
-    chrome.notifications.create(
-      notificationId,
-      {
-        iconUrl:
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-        message: enabled
-          ? "Claude Opus 模型已开启！"
-          : "Claude Opus 模型已关闭",
-        title: "PackyCode Opus 状态",
-        type: "basic"
-      },
-      (createdNotificationId) => {
-        if (chrome.runtime.lastError) {
-          logger.error(
-            "Opus status notification creation failed:",
-            chrome.runtime.lastError
-          )
-        } else {
-          logger.debug(
-            "Opus status notification created successfully:",
-            createdNotificationId
-          )
-        }
-      }
+    await browser.notifications.create(notificationId, {
+      iconUrl:
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
+      message: enabled ? "Claude Opus 模型已开启！" : "Claude Opus 模型已关闭",
+      title: "PackyCode Opus 状态",
+      type: "basic"
+    })
+    logger.debug(
+      "Opus status notification created successfully:",
+      notificationId
     )
   } catch (error) {
     logger.error("Error creating opus status notification:", error)

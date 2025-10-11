@@ -33,8 +33,8 @@ if (process.env.NODE_ENV === "development") {
 
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
-  const { data: authData } = useAuth()
-  const { currentAccount } = useAccountManager() // v3.4.0+: 从当前账号读取
+  const { data: authData, refresh: refreshAuth } = useAuth()
+  const { currentAccount, refreshAccounts } = useAccountManager() // v3.4.0+: 从当前账号读取
   const { executeAll, loading: taskLoading } = useTaskExecution()
 
   const tokenExpiration = authData?.token
@@ -54,11 +54,15 @@ function IndexPopup() {
   // v3.5.0+: 从当前激活账号读取站点
   const currentAccountSite = currentAccount?.site ?? PackySite.WWW
 
-  const handleRefresh = () => {
-    if (isAuthenticated) {
-      // 使用新的任务执行 Hook
-      executeAll()
-    }
+  const handleRefresh = async () => {
+    console.log("handleRefresh, isAuthenticated: ", isAuthenticated)
+
+    // 账号切换时先刷新认证状态和账号信息
+    await Promise.all([refreshAuth(), refreshAccounts()])
+
+    // 刷新后总是尝试执行数据获取任务
+    // API 客户端会自动处理认证错误
+    executeAll()
   }
 
   useEffect(() => {

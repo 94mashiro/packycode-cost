@@ -21,7 +21,7 @@ import { useCallback, useEffect, useState } from "react"
 import { AccountManager, DataMigrationManager } from "../lib/account"
 import {
   createDefaultStorageAdapter,
-  getMultiAccountStorageManager
+  getStorageManager
 } from "../lib/storage"
 
 interface MigrationState {
@@ -67,7 +67,7 @@ export function useDataMigration() {
   // 创建 DataMigrationManager 实例
   const getMigrationManager = useCallback(() => {
     const storageAdapter = createDefaultStorageAdapter()
-    const storageManager = getMultiAccountStorageManager()
+    const storageManager = getStorageManager()
     const accountManager = new AccountManager(storageManager)
     return new DataMigrationManager(accountManager, storageAdapter)
   }, [])

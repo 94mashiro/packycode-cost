@@ -100,9 +100,8 @@ ol[role="list"] {
 /* Set core body defaults */
 body {
   line-height: 1.5;
-  /* Chrome 扩展弹窗专用设置：移除 min-height: 100vh，避免双滚动条 */
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* Chrome Extension popup: 移除 overflow 设置，避免限制绝对定位元素（如 Select 下拉框） */
+  /* overflow-y: auto 会创建新的包含块，导致下拉框被裁剪 */
 }
 
 /* Set shorter line heights on headings and interactive elements */

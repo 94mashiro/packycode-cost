@@ -24,10 +24,11 @@ import type {
   AddAccountConfig,
   UpdateAccountConfig
 } from "~/types"
+
 import { PackySite } from "~/types/account"
 
 import { AccountManager } from "../lib/account"
-import { getMultiAccountStorageManager } from "../lib/storage"
+import { getStorageManager } from "../lib/storage"
 
 /**
  * 账号管理 Hook
@@ -54,7 +55,7 @@ export function useAccountManager(site?: PackySite) {
 
   // 创建 AccountManager 实例
   const getManager = useCallback(() => {
-    const storageManager = getMultiAccountStorageManager()
+    const storageManager = getStorageManager()
     return new AccountManager(storageManager)
   }, [])
 
@@ -67,7 +68,7 @@ export function useAccountManager(site?: PackySite) {
       setError(null)
 
       const manager = getManager()
-      const storageManager = getMultiAccountStorageManager()
+      const storageManager = getStorageManager()
       const storage = storageManager.getUnderlyingStorage()
 
       // 获取所有账号
@@ -95,9 +96,7 @@ export function useAccountManager(site?: PackySite) {
       // 获取当前激活账号（v3.4.0+ 重构）
       if (site) {
         // 特定站点的当前账号：找到该站点中激活的账号
-        const siteAccounts = filteredAccounts.filter(
-          (acc) => acc.site === site
-        )
+        const siteAccounts = filteredAccounts.filter((acc) => acc.site === site)
         const current = siteAccounts.find((acc) => acc.isActive) || null
         setCurrentAccount(current)
       } else {

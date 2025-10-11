@@ -1,3 +1,5 @@
+import browser from "webextension-polyfill"
+
 import { loggers } from "~/lib/logger"
 import { httpClient } from "~/lib/request/AuthenticatedClient"
 import { getStorageManager } from "~/lib/storage"
@@ -60,7 +62,7 @@ async function backgroundExecuteAllTasks() {
 
 async function updateBadge() {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     const userInfo = await storageManager.get<UserInfo>(StorageDomain.USER_INFO)
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
@@ -68,23 +70,23 @@ async function updateBadge() {
         (userInfo.budgets.daily.spent / userInfo.budgets.daily.limit) * 100
       )
 
-      chrome.action.setBadgeText({
+      await browser.action.setBadgeText({
         text: `${Math.min(percentage, 100)}%`
       })
     } else {
-      chrome.action.setBadgeText({ text: "" })
+      await browser.action.setBadgeText({ text: "" })
     }
   } catch {
-    chrome.action.setBadgeText({ text: "" })
+    await browser.action.setBadgeText({ text: "" })
   }
 }
 
-chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
+browser.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url?.includes("packycode.com")) {
     logger.debug("Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const storageManager = await getStorageManager()
+      const storageManager = getStorageManager()
       const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
 
       logger.debug("Current state:", {
@@ -96,7 +98,7 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
       if (!authData?.token || authData?.type !== "api_key") {
         const cookieDomain = await getCurrentCookieDomain()
-        const tokenCookie = await chrome.cookies.get({
+        const tokenCookie = await browser.cookies.get({
           name: "token",
           url: cookieDomain
         })
@@ -135,21 +137,26 @@ chrome.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
   }
 })
 
-chrome.runtime.onMessage.addListener(
-  (request: { action: string }, _, sendResponse) => {
+browser.runtime.onMessage.addListener(
+  (
+    request: { action: string },
+    _: browser.Runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
     // 类型安全的 action 验证
     if (!isBackgroundAction(request.action)) {
       sendResponse({
         error: `Invalid action: ${request.action}`,
         success: false
       })
-      return false
+      return
     }
 
     const action = request.action as BackgroundAction
 
     if (action === BackgroundActionEnum.GET_STORED_TOKEN) {
-      getStorageManager().then(async (storageManager) => {
+      ;(async () => {
+        const storageManager = getStorageManager()
         const authData = await storageManager.get<AuthStorage>(
           StorageDomain.AUTH
         )
@@ -159,7 +166,7 @@ chrome.runtime.onMessage.addListener(
           token: authData?.token || null,
           tokenType: authData?.type || null
         })
-      })
+      })()
       return true // 表示异步响应
     }
 
@@ -175,15 +182,13 @@ chrome.runtime.onMessage.addListener(
         })
       return true // 表示异步响应
     }
-
-    return false
   }
 )
 
 // 设置基于 Plasmo Storage 的存储监听
 async function setupStorageListening() {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
 
     // 使用 StorageManager 的版本感知 watch
     storageManager.watch({
@@ -207,18 +212,13 @@ setupStorageListening()
 // 使用统一配置启动所有任务执行轮询
 function startAllPeriodicTasks() {
   logger.info("🚀 启动所有周期性数据获取任务")
-  chrome.alarms.create("executeAllTasks", {
+  browser.alarms.create("executeAllTasks", {
     delayInMinutes: 0.5, // 30秒后首次执行
     periodInMinutes: 0.5 // 每30秒重复执行
   })
 }
 
-function stopAllPeriodicTasks() {
-  logger.warn("⏹ 停止所有周期性任务")
-  chrome.alarms.clear("executeAllTasks")
-}
-
-chrome.alarms.onAlarm.addListener((alarm) => {
+browser.alarms.onAlarm.addListener((alarm) => {
   logger.debug("⏰ 定时器触发:", alarm.name, "时间:", new Date().toISOString())
   if (alarm.name === "executeAllTasks") {
     // 使用统一的任务执行机制，确保与手动触发行为一致
@@ -226,29 +226,43 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 })
 
-chrome.runtime.onSuspend.addListener(() => {
-  stopAllPeriodicTasks()
-})
+// Firefox 不支持 onSuspend 事件
+// Service Worker 会自动在空闲时暂停，无需手动处理
 
-chrome.runtime.onStartup.addListener(() => {
+browser.runtime.onStartup.addListener(() => {
   startAllPeriodicTasks()
 })
 
-chrome.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(() => {
   startAllPeriodicTasks()
 })
 
 // 全局监听器变量，用于管理webRequest监听器
 let currentWebRequestListener:
-  | ((details: chrome.webRequest.WebResponseDetails) => void)
+  | ((details: browser.WebRequest.OnCompletedDetailsType) => void)
   | null = null
 
 // 设置动态webRequest监听器 - 根据当前账号类型监听对应的API
 async function setupDynamicWebRequestListener() {
   try {
+    // 检测浏览器环境
+    const isFirefox =
+      typeof navigator !== "undefined" &&
+      navigator.userAgent.toLowerCase().includes("firefox")
+
+    if (isFirefox) {
+      logger.warn(
+        "⚠️ Firefox MV3 对 webRequest API 支持有限，API Key 自动检测功能将被禁用"
+      )
+      logger.info(
+        "💡 提示：您可以从 PackyCode 网站复制 API Key 后手动粘贴到扩展中"
+      )
+      return // Firefox 环境下跳过 webRequest 监听器设置
+    }
+
     // 清除现有监听器（如果有）
     if (currentWebRequestListener) {
-      chrome.webRequest.onCompleted.removeListener(currentWebRequestListener)
+      browser.webRequest.onCompleted.removeListener(currentWebRequestListener)
       currentWebRequestListener = null
       logger.info("🧹 清除旧的webRequest监听器")
     }
@@ -285,7 +299,7 @@ async function setupDynamicWebRequestListener() {
             }
 
             // 存储API Key，覆盖现有token
-            const storageManager = await getStorageManager()
+            const storageManager = getStorageManager()
             const newAuthData: AuthStorage = {
               token: apiKey,
               type: "api_key" as TokenType
@@ -306,7 +320,7 @@ async function setupDynamicWebRequestListener() {
     }
 
     // 注册新的监听器
-    chrome.webRequest.onCompleted.addListener(currentWebRequestListener, {
+    browser.webRequest.onCompleted.addListener(currentWebRequestListener, {
       urls: [apiKeysPattern]
     })
 
@@ -319,7 +333,7 @@ async function setupDynamicWebRequestListener() {
 // 监听用户偏好变化，动态更新webRequest监听器
 async function setupUserPreferenceWatcher() {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
 
     // 直接使用 Plasmo Storage watch 监听用户偏好变化
     const watchKeys: Record<string, () => void> = {}
@@ -341,13 +355,13 @@ async function setupUserPreferenceWatcher() {
 }
 
 // 监听通知点击事件
-chrome.notifications.onClicked.addListener(async (notificationId) => {
+browser.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith("purchase-available-")) {
     // 打开购买页面
     const pricingUrl = await dynamicApiUrls.getPricingUrl()
-    chrome.tabs.create({ url: pricingUrl })
+    await browser.tabs.create({ url: pricingUrl })
     // 清除通知
-    chrome.notifications.clear(notificationId)
+    await browser.notifications.clear(notificationId)
   }
 })
 

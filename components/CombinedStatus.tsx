@@ -3,12 +3,8 @@ import { useEffect, useState } from "react"
 import { dynamicApiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
 import { AccountManager } from "../lib/account"
-import { getMultiAccountStorageManager } from "../lib/storage"
-import {
-  type TokenData,
-  type TokenExpiration,
-  TokenType
-} from "../types"
+import { getStorageManager } from "../lib/storage"
+import { type TokenData, type TokenExpiration, TokenType } from "../types"
 import { PackySite } from "../types/account"
 
 interface CombinedStatusProps {
@@ -33,7 +29,7 @@ export function CombinedStatus({
   useEffect(() => {
     const loadCurrentSite = async () => {
       try {
-        const storageManager = getMultiAccountStorageManager()
+        const storageManager = getStorageManager()
         const accountManager = new AccountManager(storageManager)
         const currentAccount = await accountManager.getCurrentAccount()
         setCurrentSite(currentAccount?.site ?? PackySite.WWW)

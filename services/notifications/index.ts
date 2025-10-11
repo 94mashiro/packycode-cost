@@ -33,7 +33,7 @@ export function checkPurchaseNotification(
  * 清理通知状态（用于登出时）
  */
 export async function clearNotificationStates(): Promise<void> {
-  const storageManager = await getStorageManager()
+  const storageManager = getStorageManager()
   await storageManager.set(StorageDomain.NOTIFICATION_STATES, {}, true)
 }
 
@@ -41,7 +41,7 @@ export async function clearNotificationStates(): Promise<void> {
  * 获取通知状态
  */
 export async function getNotificationStates(): Promise<NotificationStates> {
-  const storageManager = await getStorageManager()
+  const storageManager = getStorageManager()
   const states = await storageManager.get<NotificationStates>(
     StorageDomain.NOTIFICATION_STATES
   )
@@ -69,7 +69,7 @@ export async function getPurchaseState(): Promise<boolean | undefined> {
  * 单一职责：只负责更新存储
  */
 export async function setOpusState(enabled: boolean): Promise<void> {
-  const storageManager = await getStorageManager()
+  const storageManager = getStorageManager()
   await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
     opus_enabled: enabled
   })
@@ -80,7 +80,7 @@ export async function setOpusState(enabled: boolean): Promise<void> {
  * 单一职责：只负责更新存储
  */
 export async function setPurchaseState(disabled: boolean): Promise<void> {
-  const storageManager = await getStorageManager()
+  const storageManager = getStorageManager()
   await storageManager.set(StorageDomain.NOTIFICATION_STATES, {
     purchase_disabled: disabled
   })

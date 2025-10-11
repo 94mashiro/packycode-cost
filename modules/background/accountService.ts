@@ -20,9 +20,8 @@ import { AccountManager, DataMigrationManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
 import {
   createDefaultStorageAdapter,
-  getMultiAccountStorageManager,
-  type IStorageAdapter,
-  StorageDomain
+  getStorageManager,
+  type IStorageAdapter
 } from "~/lib/storage"
 import {
   AccountVersion,
@@ -46,7 +45,7 @@ export class BackgroundAccountService {
   private storage: IStorageAdapter
 
   constructor() {
-    const storageManager = getMultiAccountStorageManager()
+    const storageManager = getStorageManager()
     const storageAdapter = createDefaultStorageAdapter()
 
     this.accountManager = new AccountManager(storageManager)
@@ -250,7 +249,7 @@ export class BackgroundAccountService {
           const accounts = await this.accountManager.getAllAccounts()
 
           if (accounts.length > 0) {
-            const firstAccount = accounts[0]
+            const [firstAccount] = accounts
             await this.accountManager.switchAccount(firstAccount.id)
             logger.info(
               `✅ Activated first available account: ${firstAccount.id} (${firstAccount.site})`

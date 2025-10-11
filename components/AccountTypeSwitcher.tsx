@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
 
-import { AccountManager } from "../lib/account"
-import { getMultiAccountStorageManager } from "../lib/storage"
-import { executeAllTasks } from "../modules/tasks"
 import type { Account } from "../types"
+
+import { AccountManager } from "../lib/account"
+import { getStorageManager } from "../lib/storage"
+import { executeAllTasks } from "../modules/tasks"
 import { PackySite } from "../types/account"
 
 interface AccountTypeSwitcherProps {
@@ -25,7 +26,7 @@ export function AccountTypeSwitcher({
   useEffect(() => {
     const loadAccountData = async () => {
       try {
-        const storageManager = getMultiAccountStorageManager()
+        const storageManager = getStorageManager()
         const accountManager = new AccountManager(storageManager)
 
         const [currentAccount, allAccounts] = await Promise.all([
@@ -53,9 +54,9 @@ export function AccountTypeSwitcher({
   // 获取站点名称
   const getSiteName = (site: PackySite): string => {
     const siteNames: Record<PackySite, string> = {
-      [PackySite.WWW]: "公交车",
+      [PackySite.CODEX]: "Codex",
       [PackySite.SHARED]: "滴滴车",
-      [PackySite.CODEX]: "Codex"
+      [PackySite.WWW]: "公交车"
     }
     return siteNames[site]
   }
@@ -83,7 +84,7 @@ export function AccountTypeSwitcher({
       }
 
       // 2. 切换账号
-      const storageManager = getMultiAccountStorageManager()
+      const storageManager = getStorageManager()
       const accountManager = new AccountManager(storageManager)
       await accountManager.switchAccount(targetAccount.id)
 
@@ -148,7 +149,8 @@ export function AccountTypeSwitcher({
         <option
           disabled={!hasAccountForSite(PackySite.SHARED)}
           value={PackySite.SHARED}>
-          Claude Code 滴滴车 {!hasAccountForSite(PackySite.SHARED) && "(无账号)"}
+          Claude Code 滴滴车{" "}
+          {!hasAccountForSite(PackySite.SHARED) && "(无账号)"}
         </option>
         <option
           disabled={!hasAccountForSite(PackySite.CODEX)}

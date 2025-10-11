@@ -15,7 +15,7 @@ import { type DevToolsDependencies, DevToolsValidator } from "./validator"
  */
 async function createDevToolsValidator(): Promise<DevToolsValidator> {
   const apiConfigManager = await getCurrentApiConfigManager()
-  const storage = await getStorageManager()
+  const storage = getStorageManager()
 
   const dependencies: DevToolsDependencies = {
     apiConfigManager,

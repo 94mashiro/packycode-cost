@@ -37,10 +37,14 @@ export class MultiAccountStorageManager {
   private _storage: Storage
   private accountDataCache: Map<string, AccountData> = new Map() // v3.1.0+ 缓存层
   private currentAccountId: null | string = null
+  private initPromise: Promise<void> // 初始化 Promise，确保账号恢复完成
 
   constructor(storage: Storage) {
     this._storage = storage
     logger.info("MultiAccountStorageManager created")
+
+    // 自动恢复上次激活的账号
+    this.initPromise = this.restoreCurrentAccount()
   }
 
   /**
@@ -93,6 +97,9 @@ export class MultiAccountStorageManager {
    * ```
    */
   async get<T>(domain: string): Promise<null | T> {
+    // 等待初始化完成
+    await this.initPromise
+
     if (!this.currentAccountId) {
       throw new Error("No active account set. Call setCurrentAccount() first.")
     }
@@ -225,6 +232,9 @@ export class MultiAccountStorageManager {
    * @throws 如果未设置当前账号
    */
   async remove(domain: string): Promise<void> {
+    // 等待初始化完成
+    await this.initPromise
+
     if (!this.currentAccountId) {
       throw new Error("No active account set. Call setCurrentAccount() first.")
     }
@@ -255,13 +265,17 @@ export class MultiAccountStorageManager {
    * 设置当前账号的数据
    *
    * v3.1.0+ 优化：RMW 模式更新聚合对象
+   * v3.5.1+ 修复：统一参数顺序为 (domain, value, override)
    *
    * @param domain 存储域
    * @param value 数据值
    * @param override 是否覆盖（默认深度合并）
    * @throws 如果未设置当前账号
    */
-  async set<T>(domain: string, override = false, value: T): Promise<void> {
+  async set<T>(domain: string, value: T, override = false): Promise<void> {
+    // 等待初始化完成
+    await this.initPromise
+
     if (!this.currentAccountId) {
       throw new Error("No active account set. Call setCurrentAccount() first.")
     }
@@ -351,6 +365,41 @@ export class MultiAccountStorageManager {
   }
 
   /**
+   * 从存储中恢复上次激活的账号
+   *
+   * 在构造时自动调用，确保 currentAccountId 始终有效。
+   * 这避免了 popup 和 background 初始化竞态条件的问题。
+   *
+   * 恢复策略：
+   * 1. 优先使用 ACCOUNT_REGISTRY.activeAccountId
+   * 2. 如果没有 activeAccountId，激活第一个账号
+   * 3. 如果没有任何账号，保持 currentAccountId 为 null
+   *
+   * @private
+   */
+  private async restoreCurrentAccount(): Promise<void> {
+    try {
+      const registry = await this._storage.get<{
+        activeAccountId?: string
+        accounts: Array<{ id: string; isActive?: boolean }>
+      }>(StorageDomain.ACCOUNT_REGISTRY)
+
+      if (registry?.activeAccountId) {
+        this.currentAccountId = registry.activeAccountId
+        logger.info(`✅ Auto-restored current account: ${this.currentAccountId}`)
+      } else if (registry?.accounts && registry.accounts.length > 0) {
+        // 如果没有 activeAccountId，但有账号列表，激活第一个
+        this.currentAccountId = registry.accounts[0].id
+        logger.info(`✅ Auto-activated first account: ${this.currentAccountId}`)
+      } else {
+        logger.warn("⚠️ No accounts found in registry")
+      }
+    } catch (error) {
+      logger.error("❌ Failed to restore current account:", error)
+    }
+  }
+
+  /**
    * 设置指定账号的数据（跨账号访问）
    *
    * v3.1.0+ 优化：RMW 模式更新聚合对象
@@ -418,8 +467,11 @@ export class MultiAccountStorageManager {
     // 存储原始的监听配置
     const originalConfig = { ...watchConfig }
 
-    // 设置监听器的函数
-    const setupWatchers = () => {
+    // 设置监听器的函数（异步）
+    const setupWatchers = async () => {
+      // 等待初始化完成
+      await this.initPromise
+
       if (!this.currentAccountId) {
         logger.warn("Cannot setup watchers: no active account")
         return
@@ -448,11 +500,11 @@ export class MultiAccountStorageManager {
       this._storage.watch(accountWatchConfig)
     }
 
-    // 初始设置
+    // 启动异步设置
     setupWatchers()
 
     logger.debug(
-      `Registered ${Object.keys(watchConfig).length} watch listeners for account: ${this.currentAccountId}`
+      `Registered ${Object.keys(watchConfig).length} watch listeners (pending init)`
     )
   }
 

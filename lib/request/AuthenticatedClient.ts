@@ -122,7 +122,7 @@ export class AuthenticatedClient {
    */
   private async getValidAuthData(): Promise<AuthStorage | null> {
     try {
-      const storageManager = await getStorageManager()
+      const storageManager = getStorageManager()
       const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
 
       if (!authData?.token) {

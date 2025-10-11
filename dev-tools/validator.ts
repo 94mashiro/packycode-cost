@@ -6,7 +6,7 @@
 
 import type { ApiConfigManager } from "~/api/config"
 import type { loggers } from "~/lib/logger"
-import type { StorageManager } from "~/lib/storage/storageManager"
+import type { MultiAccountStorageManager } from "~/lib/storage/MultiAccountStorageManager"
 
 import {
   type ValidationIssue,
@@ -22,7 +22,7 @@ import {
 export interface DevToolsDependencies {
   apiConfigManager: ApiConfigManager
   logger: typeof loggers.debug
-  storage: StorageManager
+  storage: MultiAccountStorageManager
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * AccountSwitcher - 多账号切换组件（使用 shadcn/ui）
+ * AccountSwitcher - 多账号切换组件（原生 select 元素）
  *
  * 功能：
  * 1. 显示所有账号（跨类型）
@@ -15,18 +15,12 @@
  *
  * @since v3.1.0 - 原生 select 实现
  * @since v3.2.0 - 升级为 shadcn/ui Select 组件
+ * @since v3.5.1 - 回退到原生 select 元素（Chrome Extension popup 兼容性）
  */
 
 import { useCallback, useEffect, useState } from "react"
 
 import { Label } from "@/components/shadcn/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/shadcn/select"
 import { useAccountManager } from "@/hooks/useAccountManager"
 import { PackySite } from "~/types/account"
 
@@ -52,8 +46,8 @@ export function AccountSwitcher({
 
   const [isSwitching, setIsSwitching] = useState(false)
 
-  // 当前选中的账号 ID
-  const currentAccountId = currentAccount?.id || ""
+  // 当前选中的账号 ID（修复：始终提供有效值以保持 controlled 状态）
+  const currentAccountId = currentAccount?.id ?? ""
 
   const handleAccountChange = useCallback(
     async (newAccountId: string) => {
@@ -107,6 +101,17 @@ export function AccountSwitcher({
     ]
   )
 
+  // 自动切换逻辑：如果有账号但没有激活账号，自动切换到第一个
+  useEffect(() => {
+    if (!loading && !currentAccount && accounts.length > 0 && !isSwitching) {
+      console.log(
+        "No active account found, auto-switching to first account:",
+        accounts[0].id
+      )
+      handleAccountChange(accounts[0].id)
+    }
+  }, [loading, currentAccount, accounts, isSwitching, handleAccountChange])
+
   // 错误提示
   useEffect(() => {
     if (error) {
@@ -126,36 +131,45 @@ export function AccountSwitcher({
     )
   }
 
-  const isDisabled = loading || isSwitching || accounts.length === 0
+  // Loading 状态或正在切换时显示占位
+  if (loading || (accounts.length > 0 && !currentAccountId)) {
+    return (
+      <div className={`space-y-2 ${className}`}>
+        <Label>当前账号</Label>
+        <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+          加载中...
+        </div>
+      </div>
+    )
+  }
+
+  const isDisabled = isSwitching
 
   return (
     <div className={`space-y-2 ${className}`}>
       <Label htmlFor="current-account">当前账号</Label>
-      <Select
+      <select
+        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={isDisabled}
-        onValueChange={handleAccountChange}
+        id="current-account"
+        onChange={(e) => handleAccountChange(e.target.value)}
         value={currentAccountId}>
-        <SelectTrigger className="w-full" id="current-account">
-          <SelectValue placeholder="选择账号" />
-        </SelectTrigger>
-        <SelectContent>
-          {accounts.length === 0 ? (
-            <SelectItem disabled value="empty">
-              暂无账号
-            </SelectItem>
-          ) : (
-            accounts.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                {formatAccountDisplay(
-                  account.displayName,
-                  account.site,
-                  accountDataMap[account.id]?.snapshot
-                )}
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
+        {accounts.length === 0 ? (
+          <option disabled value="">
+            暂无账号
+          </option>
+        ) : (
+          accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {formatAccountDisplay(
+                account.displayName,
+                account.site,
+                accountDataMap[account.id]?.snapshot
+              )}
+            </option>
+          ))
+        )}
+      </select>
     </div>
   )
 }

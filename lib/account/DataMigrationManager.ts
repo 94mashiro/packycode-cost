@@ -38,7 +38,7 @@ import {
 import { PackySite } from "~/types/account"
 
 import {
-  getMultiAccountStorageManager,
+  getStorageManager,
   type IStorageAdapter,
   StorageDomain
 } from "../storage"
@@ -108,7 +108,7 @@ export class DataMigrationManager {
     }> = []
 
     if (registry) {
-      const storageManager = getMultiAccountStorageManager()
+      const storageManager = getStorageManager()
 
       for (const account of registry.accounts) {
         // v3.1.0+: 使用聚合存储键
@@ -267,7 +267,7 @@ export class DataMigrationManager {
 
     try {
       // 1. 获取所有账号ID
-      const storageManager = getMultiAccountStorageManager()
+      const storageManager = getStorageManager()
       const accountIds = await storageManager.getAllAccountIds()
 
       // 2. 删除每个账号的所有数据

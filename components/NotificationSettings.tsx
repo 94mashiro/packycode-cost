@@ -34,7 +34,7 @@ export function NotificationSettings({
 
   const toggleSetting = async (settingId: NotificationKey) => {
     try {
-      const storageManager = await getStorageManager()
+      const storageManager = getStorageManager()
       const currentPreference = await storageManager.get<UserPreferenceStorage>(
         StorageDomain.USER_PREFERENCE
       )

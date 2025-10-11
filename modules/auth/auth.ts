@@ -8,7 +8,7 @@ import { StorageDomain } from "~/lib/storage/domains"
  */
 export async function getStoredToken(): Promise<null | string> {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
     const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
     return authData?.token || null
   } catch {
@@ -25,7 +25,7 @@ export async function getStoredToken(): Promise<null | string> {
  */
 export async function userLogout(): Promise<boolean> {
   try {
-    const storageManager = await getStorageManager()
+    const storageManager = getStorageManager()
 
     // 清理认证信息
     await storageManager.set(StorageDomain.AUTH, null)

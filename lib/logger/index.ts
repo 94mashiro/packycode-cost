@@ -5,6 +5,8 @@
  * Dan: "清晰的 API，隐藏实现细节"
  */
 
+import browser from "webextension-polyfill"
+
 export interface LoggerConfig {
   color?: string
   enabled?: boolean
@@ -68,7 +70,7 @@ class Logger {
     // 只在 Service Worker 环境发送
     if (typeof globalThis.ServiceWorkerGlobalScope === "undefined") return
 
-    chrome.runtime
+    browser.runtime
       .sendMessage({
         args,
         level,
@@ -114,9 +116,9 @@ export function createLogger(namespace: string, config?: LoggerConfig): Logger {
 export function enablePopupLogging(): void {
   // 只在 Popup 环境启用
   if (process.env.NODE_ENV === "production") return
-  if (typeof chrome === "undefined" || !chrome.runtime) return
+  if (typeof browser === "undefined" || !browser.runtime) return
 
-  chrome.runtime.onMessage.addListener((message) => {
+  browser.runtime.onMessage.addListener((message) => {
     if (message.type !== "CONSOLE_LOG") return
 
     const { args, level, namespace } = message

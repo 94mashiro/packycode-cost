@@ -18,7 +18,7 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
     try {
       logger.info("用户发起登出操作")
 
-      const storageManager = await getStorageManager()
+      const storageManager = getStorageManager()
 
       // 并发清空所有存储数据
       await Promise.all([

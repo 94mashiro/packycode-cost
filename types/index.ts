@@ -405,3 +405,15 @@ export interface UserPreferenceStorage {
   /** 购买开放通知设置 */
   purchase_notification?: boolean
 }
+
+// ===== 多账号管理系统类型 (v3.0.0+) =====
+export type {
+  Account,
+  AccountCollection,
+  AccountData,
+  AccountDetectionResult,
+  AccountRegistry,
+  AccountSnapshot,
+  AddAccountConfig,
+  MigrationStatus
+} from "./account"

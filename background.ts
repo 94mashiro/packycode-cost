@@ -3,6 +3,7 @@ import { httpClient } from "~/lib/request/AuthenticatedClient"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { parseJWT } from "~/modules/auth"
+import { getBackgroundAccountService } from "~/modules/background"
 import {
   type BackgroundAction,
   BackgroundActionEnum,
@@ -18,6 +19,27 @@ import { dynamicApiUrls } from "./api"
 import { getCurrentCookieDomain } from "./api/config"
 
 const logger = loggers.background
+
+/**
+ * 初始化多账号系统（v3.0.0+）
+ *
+ * 执行数据迁移和账号恢复
+ * ⚠️ 此函数应在扩展启动时尽早调用
+ */
+async function initializeMultiAccountSystem() {
+  try {
+    logger.info("🚀 初始化多账号管理系统...")
+    const accountService = getBackgroundAccountService()
+    await accountService.initialize()
+    logger.info("✅ 多账号管理系统初始化完成")
+  } catch (error) {
+    logger.error("❌ 多账号管理系统初始化失败:", error)
+    // 不抛出错误，允许扩展继续运行（降级到旧系统）
+  }
+}
+
+// 在所有其他初始化之前执行多账号系统初始化
+initializeMultiAccountSystem()
 
 // 使用统一的任务执行机制替代原来的独立函数
 async function backgroundExecuteAllTasks() {

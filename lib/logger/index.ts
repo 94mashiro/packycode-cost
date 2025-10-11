@@ -91,11 +91,13 @@ class Logger {
 
 // ============= 预定义实例 =============
 export const loggers = {
+  account: new Logger("ACCOUNT", { color: "#009688" }),
   alarm: new Logger("ALARM", { color: "#795548" }),
   api: new Logger("API", { color: "#2196F3" }),
   auth: new Logger("AUTH", { color: "#4CAF50" }),
   background: new Logger("BACKGROUND", { color: "#9C27B0" }),
   debug: new Logger("DEBUG", { color: "#E91E63", level: "debug" }),
+  migration: new Logger("MIGRATION", { color: "#673AB7" }),
   notification: new Logger("NOTIFICATION", { color: "#607D8B" }),
   purchase: new Logger("PURCHASE", { color: "#F44336" }),
   storage: new Logger("STORAGE", { color: "#FF9800" }),

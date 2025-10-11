@@ -7,6 +7,7 @@ import { getTokenExpiration } from "~/modules/auth"
 import { SubscriptionDisplay } from "~/modules/subscription"
 import { fetchAllDataAsync } from "~/modules/tasks"
 
+import { AccountSwitcher } from "./components/AccountSwitcher"
 import { ActionButtons } from "./components/ActionButtons"
 import { BudgetDisplay } from "./components/budget"
 import { CombinedStatus } from "./components/CombinedStatus"
@@ -93,6 +94,9 @@ function IndexPopup() {
               />
             </div>
           </div>
+
+          {/* 账号切换器 */}
+          <AccountSwitcher onAccountChanged={handleRefresh} />
         </div>
 
         <CombinedStatus

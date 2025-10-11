@@ -1,5 +1,5 @@
 /**
- * DataMigrationManager - v2.x → v3.0.0 数据迁移管理
+ * DataMigrationManager - v2.x → v3.1.0 数据迁移管理
  *
  * 核心职责：
  * 1. 检测是否需要迁移
@@ -14,27 +14,30 @@
  * 🏛️ Fowler: "Repository 模式管理数据访问"
  *
  * @since v3.0.0
+ * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
 
-import { Storage } from "@plasmohq/storage"
-
 import { loggers } from "~/lib/logger"
-import type {
-  AccountData,
-  AccountRegistry,
-  AuthStorage,
-  MigrationStatus,
-  NotificationStates,
-  PackyConfig,
-  PeerSpendingStorage,
-  SubscriptionApiResponse,
-  SystemPreferenceStorage,
-  UserInfo
+import {
+  type AccountData,
+  type AccountRegistry,
+  AccountVersion,
+  type AuthStorage,
+  type MigrationStatus,
+  type NotificationStates,
+  type PackyConfig,
+  type PeerSpendingStorage,
+  type SubscriptionApiResponse,
+  type SystemPreferenceStorage,
+  TokenType,
+  type UserInfo
 } from "~/types"
-import { AccountVersion, TokenType } from "~/types"
 
-import { getMultiAccountStorageManager } from "../storage"
-import { StorageDomain } from "../storage/domains"
+import {
+  getMultiAccountStorageManager,
+  type IStorageAdapter,
+  StorageDomain
+} from "../storage"
 import { AccountManager } from "./AccountManager"
 
 const logger = loggers.migration
@@ -42,13 +45,13 @@ const logger = loggers.migration
 /**
  * 数据迁移管理器
  *
- * 负责 v2.x 到 v3.0.0 的数据结构迁移
+ * 负责 v2.x 到 v3.1.0 的数据结构迁移
  */
 export class DataMigrationManager {
   private accountManager: AccountManager
-  private storage: Storage
+  private storage: IStorageAdapter
 
-  constructor(accountManager: AccountManager, storage: Storage) {
+  constructor(accountManager: AccountManager, storage: IStorageAdapter) {
     this.accountManager = accountManager
     this.storage = storage
     logger.info("DataMigrationManager initialized")

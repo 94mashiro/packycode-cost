@@ -13,13 +13,16 @@
  * 🏛️ Fowler: "单一职责，只负责迁移逻辑"
  *
  * @since v3.0.0
+ * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
 
-import { Storage } from "@plasmohq/storage"
 import { useCallback, useEffect, useState } from "react"
 
 import { AccountManager, DataMigrationManager } from "../lib/account"
-import { getMultiAccountStorageManager } from "../lib/storage"
+import {
+  createDefaultStorageAdapter,
+  getMultiAccountStorageManager
+} from "../lib/storage"
 
 interface MigrationState {
   error: null | string
@@ -63,10 +66,10 @@ export function useDataMigration() {
 
   // 创建 DataMigrationManager 实例
   const getMigrationManager = useCallback(() => {
-    const storage = new Storage()
+    const storageAdapter = createDefaultStorageAdapter()
     const storageManager = getMultiAccountStorageManager()
     const accountManager = new AccountManager(storageManager)
-    return new DataMigrationManager(accountManager, storage)
+    return new DataMigrationManager(accountManager, storageAdapter)
   }, [])
 
   /**

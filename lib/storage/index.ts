@@ -99,6 +99,24 @@ export function resetStorageManager(): void {
 let globalMultiAccountStorageManager: MultiAccountStorageManager | null = null
 
 /**
+ * 创建默认的存储适配器实例（v3.1.0+）
+ *
+ * 用途：避免其他模块直接导入 @plasmohq/storage
+ *
+ * @returns 预配置的存储适配器实例
+ *
+ * @example
+ * ```typescript
+ * const storage = createDefaultStorageAdapter()
+ * const migrationManager = new DataMigrationManager(accountManager, storage)
+ * ```
+ */
+export function createDefaultStorageAdapter(): IStorageAdapter {
+  const storage = new Storage()
+  return createStorageAdapter(storage)
+}
+
+/**
  * 获取多账号存储管理器实例（v3.0.0+）
  *
  * 特性:
@@ -130,6 +148,18 @@ export function isMultiAccountStorageManagerInitialized(): boolean {
   return globalMultiAccountStorageManager !== null
 }
 
+// ===== 导出所有存储相关模块 =====
+
+export { AccountStorageKeyGenerator } from "./AccountStorageKeyGenerator"
+export { StorageDomain, type StorageDomainMap } from "./domains"
+export { MultiAccountStorageManager } from "./MultiAccountStorageManager"
+export {
+  createStorageAdapter,
+  type IStorageAdapter,
+  PlasmoStorageAdapter
+} from "./StorageAdapter"
+export { StorageManager } from "./storageManager"
+
 /**
  * 重置多账号存储管理器 (仅用于测试)
  */
@@ -139,10 +169,3 @@ export function resetMultiAccountStorageManager(): void {
     logger.debug("Global multi-account storage manager reset")
   }
 }
-
-// ===== 导出所有存储相关模块 =====
-
-export { AccountStorageKeyGenerator } from "./AccountStorageKeyGenerator"
-export { StorageDomain, type StorageDomainMap } from "./domains"
-export { MultiAccountStorageManager } from "./MultiAccountStorageManager"
-export { StorageManager } from "./storageManager"

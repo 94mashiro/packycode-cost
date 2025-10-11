@@ -240,7 +240,7 @@ export class MultiAccountStorageManager {
 
       // 设置字段为 null
       const field = this.domainToField(domain)
-      accountData[field] = null as any
+      this.setAccountDataField(accountData, field, null)
 
       // 写回
       await this.setAccountData(accountData)
@@ -280,7 +280,11 @@ export class MultiAccountStorageManager {
       // 2. 修改指定字段（Modify）
       if (override) {
         // 强制覆盖模式
-        accountData[field] = value as any
+        this.setAccountDataField(
+          accountData,
+          field,
+          value as AccountData[typeof field]
+        )
         logger.debug(`Storage set (override): ${domain}`)
       } else if (
         value === null ||
@@ -288,16 +292,29 @@ export class MultiAccountStorageManager {
         typeof value !== "object"
       ) {
         // 基础类型或 null/undefined：直接覆盖
-        accountData[field] = value as any
+        this.setAccountDataField(
+          accountData,
+          field,
+          value as AccountData[typeof field]
+        )
         logger.debug(`Storage set (direct): ${domain}`)
       } else {
         // 对象类型：深度合并
         const existingValue = accountData[field]
         if (existingValue && typeof existingValue === "object") {
-          accountData[field] = merge({}, existingValue, value) as any
+          const mergedValue = merge(
+            {},
+            existingValue,
+            value
+          ) as AccountData[typeof field]
+          this.setAccountDataField(accountData, field, mergedValue)
           logger.debug(`Storage set (deep merged): ${domain}`)
         } else {
-          accountData[field] = value as any
+          this.setAccountDataField(
+            accountData,
+            field,
+            value as AccountData[typeof field]
+          )
           logger.debug(`Storage set (initial): ${domain}`)
         }
       }
@@ -358,7 +375,11 @@ export class MultiAccountStorageManager {
 
       // 更新字段
       const field = this.domainToField(domain)
-      accountData[field] = value as any
+      this.setAccountDataField(
+        accountData,
+        field,
+        value as AccountData[typeof field]
+      )
 
       // 写回
       await this.setAccountData(accountData, accountId)
@@ -518,5 +539,24 @@ export class MultiAccountStorageManager {
     // 更新缓存
     this.accountDataCache.set(id, accountData)
     logger.debug(`Saved account data: ${key}`)
+  }
+
+  /**
+   * 类型安全的字段设置器（v3.1.0+ 私有方法）
+   *
+   * 使用泛型约束确保类型安全，避免 as any
+   *
+   * @param accountData 账号数据对象
+   * @param field 字段名
+   * @param value 字段值
+   */
+  private setAccountDataField<K extends keyof AccountData>(
+    accountData: AccountData,
+    field: K,
+    value: AccountData[K]
+  ): void {
+    // 使用 Object.assign 避免 TypeScript 动态索引类型问题
+    // 这是类型安全的，因为泛型约束确保了 value 的类型匹配
+    Object.assign(accountData, { [field]: value })
   }
 }

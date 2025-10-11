@@ -13,16 +13,24 @@
  * 🏛️ Fowler: "服务层封装业务逻辑"
  *
  * @since v3.0.0
+ * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
-
-import { Storage } from "@plasmohq/storage"
-
-import type { AddAccountConfig, AuthStorage } from "~/types"
 
 import { AccountManager, DataMigrationManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
-import { getMultiAccountStorageManager } from "~/lib/storage"
-import { AccountVersion, TokenType } from "~/types"
+import {
+  createDefaultStorageAdapter,
+  getMultiAccountStorageManager,
+  type IStorageAdapter,
+  StorageDomain
+} from "~/lib/storage"
+import {
+  AccountVersion,
+  type AddAccountConfig,
+  type AuthStorage,
+  TokenType,
+  type UserPreferenceStorage
+} from "~/types"
 
 const logger = loggers.background
 
@@ -35,16 +43,18 @@ export class BackgroundAccountService {
   private accountManager: AccountManager
   private hasInitialized = false
   private migrationManager: DataMigrationManager
+  private storage: IStorageAdapter
 
   constructor() {
     const storageManager = getMultiAccountStorageManager()
-    const storage = new Storage()
+    const storageAdapter = createDefaultStorageAdapter()
 
     this.accountManager = new AccountManager(storageManager)
     this.migrationManager = new DataMigrationManager(
       this.accountManager,
-      storage
+      storageAdapter
     )
+    this.storage = storageAdapter
 
     logger.info("BackgroundAccountService initialized")
   }
@@ -221,7 +231,47 @@ export class BackgroundAccountService {
       }
 
       // 2. 恢复最后使用的账号（如果有）
-      // TODO: 从 USER_PREFERENCE 读取上次的账号类型，然后恢复对应的激活账号
+      try {
+        const userPreference = await this.storage.get<UserPreferenceStorage>(
+          StorageDomain.USER_PREFERENCE
+        )
+
+        if (userPreference?.account_version) {
+          const accountType = userPreference.account_version
+          logger.info(`📌 Restoring last active account type: ${accountType}`)
+
+          // 检查是否已有激活账号
+          const currentAccount =
+            await this.accountManager.getCurrentAccount(accountType)
+
+          if (currentAccount) {
+            // 已经有激活账号，无需恢复
+            logger.info(
+              `✅ Account already active: ${currentAccount.id} (${accountType})`
+            )
+          } else {
+            // 没有激活账号，查找该类型的任意账号并激活
+            const accounts = await this.accountManager.getAllAccounts()
+            const firstAccountOfType = accounts.find(
+              (acc) => acc.type === accountType
+            )
+
+            if (firstAccountOfType) {
+              await this.accountManager.switchAccount(firstAccountOfType.id)
+              logger.info(
+                `✅ Restored account: ${firstAccountOfType.id} (${accountType})`
+              )
+            } else {
+              logger.info(`ℹ️ No account found for type: ${accountType}`)
+            }
+          }
+        } else {
+          logger.debug("No previous account type preference found")
+        }
+      } catch (error) {
+        // 恢复账号失败不应阻止初始化
+        logger.warn("Failed to restore last active account:", error)
+      }
 
       this.hasInitialized = true
       logger.info("✅ BackgroundAccountService initialized")

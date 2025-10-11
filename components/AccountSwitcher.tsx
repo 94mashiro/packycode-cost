@@ -1,302 +1,183 @@
 /**
- * AccountSwitcher - 账号切换器组件
+ * AccountSwitcher - 多账号切换组件
  *
  * 功能：
- * 1. 显示当前账号类型的所有账号
- * 2. 切换激活账号
- * 3. 添加新账号
- * 4. 删除账号
+ * 1. 显示所有账号（跨类型）
+ * 2. 支持快速切换账号
+ * 3. 显示账号关键信息（名称、类型、消费）
+ * 4. 切换成功通知
  *
  * 设计原则 (四师协作):
- * 🐧 Linus: "简单直观的用户界面"
- * ⚛️ Dan: "React 组件最佳实践，状态驱动 UI"
- * ☕ Bloch: "清晰的组件 API 设计"
- * 🏛️ Fowler: "展示层与业务逻辑分离"
+ * 🐧 Linus: "简单直接的用户交互，不要复杂化"
+ * ⚛️ Dan: "清晰的状态反馈和加载提示"
+ * ☕ Bloch: "类型安全的组件设计"
+ * 🏛️ Fowler: "关注点分离，UI 与业务逻辑解耦"
  *
- * @since v3.0.0
+ * @since v3.1.0
  */
 
-import { useState } from "react"
-
-import type { Account, AccountVersion } from "~/types"
+import { useCallback, useEffect, useState } from "react"
 
 import { useAccountManager } from "../hooks/useAccountManager"
+import { AccountVersion } from "../types"
 
 interface AccountSwitcherProps {
-  accountType: AccountVersion
-  onAccountChanged?: (account: Account | null) => void
+  className?: string
+  onAccountChanged?: () => void
+  showNotification?: boolean
 }
 
 /**
- * 账号切换器
- *
- * @example
- * ```tsx
- * <AccountSwitcher
- *   accountType={AccountVersion.SHARED}
- *   onAccountChanged={(account) => console.log("Switched to:", account)}
- * />
- * ```
+ * 获取账号类型的友好显示名称
  */
+function getAccountTypeName(type: AccountVersion): string {
+  const typeNames: Record<AccountVersion, string> = {
+    [AccountVersion.CODEX_SHARED]: "Codex",
+    [AccountVersion.PRIVATE]: "滴滴车",
+    [AccountVersion.SHARED]: "公交车"
+  }
+  return typeNames[type]
+}
+
+/**
+ * 格式化账号显示文本
+ */
+function formatAccountDisplay(
+  displayName: string,
+  type: AccountVersion,
+  snapshot?: {
+    dailyLimit: number
+    dailySpent: number
+  }
+): string {
+  const typeName = getAccountTypeName(type)
+  const baseText = `${displayName} (${typeName})`
+
+  if (snapshot) {
+    const spent = snapshot.dailySpent.toFixed(2)
+    const limit = snapshot.dailyLimit.toFixed(2)
+    return `${baseText} - $${spent}/$${limit}`
+  }
+
+  return baseText
+}
+
 export function AccountSwitcher({
-  accountType,
-  onAccountChanged
+  className = "",
+  onAccountChanged,
+  showNotification = true
 }: AccountSwitcherProps) {
   const {
     accounts,
     currentAccount,
-    error,
     loading,
-    removeAccount,
+    error,
     switchAccount
-  } = useAccountManager(accountType)
+  } = useAccountManager() // 不传参数，获取所有账号
 
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isSwitching, setIsSwitching] = useState(false)
 
-  // 处理账号切换
-  const handleSwitch = async (accountId: string) => {
-    try {
-      await switchAccount(accountId)
-      setIsExpanded(false)
+  // 当前选中的账号 ID
+  const currentAccountId = currentAccount?.id || ""
 
-      // 通知父组件
-      const newAccount = accounts.find((acc) => acc.id === accountId)
-      onAccountChanged?.(newAccount || null)
-    } catch (err) {
-      console.error("Failed to switch account:", err)
+  const handleAccountChange = useCallback(
+    async (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newAccountId = e.target.value
+
+      if (newAccountId === currentAccountId || !newAccountId) return
+
+      setIsSwitching(true)
+      try {
+        await switchAccount(newAccountId)
+
+        const newAccount = accounts.find((acc) => acc.id === newAccountId)
+        if (showNotification && newAccount) {
+          chrome.notifications.create({
+            iconUrl:
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
+            message: `已切换到账号：${formatAccountDisplay(
+              newAccount.displayName,
+              newAccount.type,
+              newAccount.snapshot
+            )}`,
+            title: "账号已切换",
+            type: "basic"
+          })
+        }
+
+        // 触发数据刷新
+        if (onAccountChanged) {
+          onAccountChanged()
+        }
+      } catch (err) {
+        console.error("Failed to switch account:", err)
+        if (showNotification) {
+          chrome.notifications.create({
+            iconUrl:
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
+            message: "账号切换失败，请重试",
+            title: "切换失败",
+            type: "basic"
+          })
+        }
+      } finally {
+        setIsSwitching(false)
+      }
+    },
+    [
+      accounts,
+      currentAccountId,
+      onAccountChanged,
+      showNotification,
+      switchAccount
+    ]
+  )
+
+  // 错误提示
+  useEffect(() => {
+    if (error) {
+      console.error("AccountSwitcher error:", error)
     }
-  }
+  }, [error])
 
-  // 处理账号删除
-  const handleRemove = async (accountId: string, e: React.MouseEvent) => {
-    e.stopPropagation() // 防止触发切换
-
-    if (!confirm("确认删除此账号？所有数据将被清除。")) {
-      return
-    }
-
-    try {
-      await removeAccount(accountId)
-
-      // 通知父组件
-      onAccountChanged?.(null)
-    } catch (err) {
-      console.error("Failed to remove account:", err)
-    }
-  }
-
-  if (loading) {
+  // 如果没有账号
+  if (!loading && accounts.length === 0) {
     return (
-      <div className="account-switcher loading">
-        <div className="spinner">加载中...</div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="account-switcher error">
-        <p className="error-message">加载失败: {error}</p>
-      </div>
-    )
-  }
-
-  if (accounts.length === 0) {
-    return (
-      <div className="account-switcher empty">
-        <p className="empty-message">暂无账号</p>
+      <div className={`space-y-2 ${className}`}>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          当前账号
+        </label>
+        <div className="text-sm text-gray-500 dark:text-gray-400 py-2 px-3 border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-600">
+          暂无账号，请前往设置添加
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="account-switcher">
-      {/* 当前账号显示 */}
-      <button
-        className="current-account"
-        onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="account-info">
-          <span className="account-name">
-            {currentAccount?.displayName || "选择账号"}
-          </span>
-          {currentAccount?.isValid === false && (
-            <span className="invalid-badge">无效</span>
-          )}
-        </div>
-        <span className={`expand-icon ${isExpanded ? "expanded" : ""}`}>▼</span>
-      </button>
-
-      {/* 账号列表 */}
-      {isExpanded && (
-        <div className="account-list">
-          {accounts.map((account) => (
-            <div
-              className={`account-item ${
-                account.id === currentAccount?.id ? "active" : ""
-              }`}
-              key={account.id}
-              onClick={() => handleSwitch(account.id)}>
-              <div className="account-content">
-                <span className="account-name">{account.displayName}</span>
-                {account.isValid === false && (
-                  <span className="invalid-badge">无效</span>
-                )}
-                {account.snapshot && (
-                  <div className="account-snapshot">
-                    <span className="daily-spent">
-                      今日: ${account.snapshot.dailySpent.toFixed(2)} /{" "}
-                      {account.snapshot.dailyLimit}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <button
-                className="remove-button"
-                onClick={(e) => handleRemove(account.id, e)}
-                title="删除账号">
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 样式 */}
-      <style jsx>{`
-        .account-switcher {
-          position: relative;
-          width: 100%;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            sans-serif;
-        }
-
-        .loading,
-        .error,
-        .empty {
-          padding: 12px;
-          text-align: center;
-          color: #666;
-        }
-
-        .error-message {
-          color: #e53e3e;
-          font-size: 14px;
-        }
-
-        .current-account {
-          width: 100%;
-          padding: 12px 16px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .current-account:hover {
-          border-color: #cbd5e0;
-          background: #f7fafc;
-        }
-
-        .account-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .account-name {
-          font-size: 14px;
-          font-weight: 500;
-          color: #2d3748;
-        }
-
-        .invalid-badge {
-          padding: 2px 6px;
-          font-size: 11px;
-          background: #fed7d7;
-          color: #c53030;
-          border-radius: 4px;
-        }
-
-        .expand-icon {
-          font-size: 12px;
-          color: #a0aec0;
-          transition: transform 0.2s;
-        }
-
-        .expand-icon.expanded {
-          transform: rotate(180deg);
-        }
-
-        .account-list {
-          position: absolute;
-          top: calc(100% + 4px);
-          left: 0;
-          right: 0;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          z-index: 1000;
-          max-height: 300px;
-          overflow-y: auto;
-        }
-
-        .account-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .account-item:hover {
-          background: #f7fafc;
-        }
-
-        .account-item.active {
-          background: #ebf8ff;
-        }
-
-        .account-item.active .account-name {
-          color: #3182ce;
-          font-weight: 600;
-        }
-
-        .account-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .account-snapshot {
-          font-size: 12px;
-          color: #718096;
-        }
-
-        .remove-button {
-          width: 24px;
-          height: 24px;
-          border: none;
-          background: transparent;
-          color: #cbd5e0;
-          font-size: 20px;
-          cursor: pointer;
-          transition: color 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .remove-button:hover {
-          color: #e53e3e;
-        }
-      `}</style>
+    <div className={`space-y-2 ${className}`}>
+      <label
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        htmlFor="current-account">
+        当前账号
+      </label>
+      <select
+        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+        disabled={loading || isSwitching || accounts.length === 0}
+        id="current-account"
+        onChange={handleAccountChange}
+        value={currentAccountId}>
+        {accounts.length === 0 && <option value="">暂无账号</option>}
+        {accounts.map((account) => (
+          <option key={account.id} value={account.id}>
+            {formatAccountDisplay(
+              account.displayName,
+              account.type,
+              account.snapshot
+            )}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }

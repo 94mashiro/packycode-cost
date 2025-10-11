@@ -26,34 +26,18 @@ import { getMultiAccountStorageManager } from "../lib/storage"
 /**
  * 账号管理 Hook
  *
+ * @param accountType 账号类型（可选）。如果提供，则只返回该类型的账号；如果不提供，返回所有账号
+ *
  * @example
  * ```typescript
- * function AccountList() {
- *   const {
- *     accounts,
- *     currentAccount,
- *     loading,
- *     addAccount,
- *     removeAccount,
- *     switchAccount,
- *     refreshAccounts
- *   } = useAccountManager(AccountVersion.SHARED)
+ * // 获取特定类型的账号
+ * const { accounts } = useAccountManager(AccountVersion.SHARED)
  *
- *   return (
- *     <div>
- *       {accounts.map(account => (
- *         <AccountItem
- *           key={account.id}
- *           account={account}
- *           onSwitch={() => switchAccount(account.id)}
- *         />
- *       ))}
- *     </div>
- *   )
- * }
+ * // 获取所有账号（跨类型）
+ * const { accounts } = useAccountManager()
  * ```
  */
-export function useAccountManager(accountType: AccountVersion) {
+export function useAccountManager(accountType?: AccountVersion) {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null)
   const [loading, setLoading] = useState(true)
@@ -78,16 +62,23 @@ export function useAccountManager(accountType: AccountVersion) {
       // 获取所有账号
       const allAccounts = await manager.getAllAccounts()
 
-      // 筛选当前类型的账号
-      const filteredAccounts = allAccounts.filter(
-        (acc) => acc.type === accountType
-      )
+      // 根据 accountType 参数决定是否过滤
+      const filteredAccounts = accountType
+        ? allAccounts.filter((acc) => acc.type === accountType)
+        : allAccounts
 
       setAccounts(filteredAccounts)
 
       // 获取当前激活账号
-      const current = await manager.getCurrentAccount(accountType)
-      setCurrentAccount(current)
+      if (accountType) {
+        // 特定类型的当前账号
+        const current = await manager.getCurrentAccount(accountType)
+        setCurrentAccount(current)
+      } else {
+        // 全局当前账号（找到任何激活的账号）
+        const activeAccount = allAccounts.find((acc) => acc.isActive)
+        setCurrentAccount(activeAccount || null)
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error"
       setError(errorMessage)

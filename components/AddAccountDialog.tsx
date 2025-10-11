@@ -1,34 +1,57 @@
 /**
- * AddAccountDialog - 添加账号对话框
+ * AddAccountDialog - 添加账号对话框（shadcn/ui 版本）
  *
  * 功能：
  * 1. Token 输入表单
  * 2. 账号类型选择
- * 3. 自定义显示名称
- * 4. 表单验证和错误提示
+ * 3. 站点选择（三个站点）
+ * 4. 自定义显示名称
+ * 5. 表单验证和错误提示
  *
  * 设计原则 (四师协作):
  * 🐧 Linus: "表单要简洁，用户输入最小化"
- * ⚛️ Dan: "受控组件，状态驱动 UI"
- * ☕ Bloch: "清晰的表单验证规则"
+ * ⚛️ Dan: "受控组件，状态驱动 UI，shadcn/ui 组件库"
+ * ☕ Bloch: "清晰的表单验证规则，类型安全"
  * 🏛️ Fowler: "领域模型映射到表单字段"
  *
  * @since v3.0.0
+ * @version v3.2.0 - 使用 shadcn/ui 设计，添加站点选择
  */
 
 import { useState } from "react"
 
-import type { AccountVersion, TokenType } from "~/types"
+import type { TokenType } from "~/types"
+
+import { Button } from "@/components/shadcn/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/shadcn/dialog"
+import { Input } from "@/components/shadcn/input"
+import { Label } from "@/components/shadcn/label"
+import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/shadcn/select"
+import { Textarea } from "@/components/shadcn/textarea"
+import { PackySite } from "~/types/account"
 
 interface AddAccountDialogProps {
-  accountType: AccountVersion
   isOpen: boolean
   onClose: () => void
   onSubmit: (config: {
     displayName?: string
+    site: PackySite
     token: string
     tokenType: TokenType
-    type: AccountVersion
   }) => Promise<void>
 }
 
@@ -38,7 +61,6 @@ interface AddAccountDialogProps {
  * @example
  * ```tsx
  * <AddAccountDialog
- *   accountType={AccountVersion.SHARED}
  *   isOpen={showDialog}
  *   onClose={() => setShowDialog(false)}
  *   onSubmit={async (config) => {
@@ -48,20 +70,16 @@ interface AddAccountDialogProps {
  * ```
  */
 export function AddAccountDialog({
-  accountType,
   isOpen,
   onClose,
   onSubmit
 }: AddAccountDialogProps) {
   const [token, setToken] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [tokenType, setTokenType] = useState<TokenType>("jwt" as TokenType)
+  const [tokenType, setTokenType] = useState<TokenType>("jwt")
+  const [site, setSite] = useState<PackySite>(PackySite.WWW)
   const [error, setError] = useState<null | string>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  if (!isOpen) {
-    return null
-  }
 
   // 处理提交
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,26 +97,22 @@ export function AddAccountDialog({
       return
     }
 
-    if (tokenType === "api_key" && !token.startsWith("sk-ant-")) {
-      setError("API Key 格式不正确（应以 sk-ant- 开头）")
-      return
-    }
-
     try {
       setIsSubmitting(true)
       setError(null)
 
       await onSubmit({
         displayName: displayName.trim() || undefined,
+        site, // 必需字段
         token: token.trim(),
-        tokenType,
-        type: accountType
+        tokenType
       })
 
       // 重置表单
       setToken("")
       setDisplayName("")
-      setTokenType("jwt" as TokenType)
+      setTokenType("jwt")
+      setSite(PackySite.WWW)
       onClose()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "添加账号失败"
@@ -112,41 +126,88 @@ export function AddAccountDialog({
   const handleCancel = () => {
     setToken("")
     setDisplayName("")
-    setTokenType("jwt" as TokenType)
+    setTokenType("jwt")
+    setSite(PackySite.WWW)
     setError(null)
     onClose()
   }
 
   return (
-    <div className="dialog-overlay" onClick={handleCancel}>
-      <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-header">
-          <h2>添加账号</h2>
-          <button className="close-button" onClick={handleCancel}>
-            ×
-          </button>
-        </div>
+    <Dialog onOpenChange={handleCancel} open={isOpen}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>添加账号</DialogTitle>
+          <DialogDescription>
+            填写账号信息以添加新账号。所有账号数据将安全存储在本地。
+          </DialogDescription>
+        </DialogHeader>
 
-        <form className="dialog-form" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {/* 站点选择 */}
+          <div className="space-y-3">
+            <Label>选择站点 *</Label>
+            <RadioGroup
+              className="space-y-2"
+              onValueChange={(value) => setSite(value as PackySite)}
+              value={site}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem id="site-www" value={PackySite.WWW} />
+                <Label
+                  className="font-normal cursor-pointer"
+                  htmlFor="site-www">
+                  {PackySite.WWW}{" "}
+                  <span className="text-muted-foreground text-xs">(主站)</span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem id="site-shared" value={PackySite.SHARED} />
+                <Label
+                  className="font-normal cursor-pointer"
+                  htmlFor="site-shared">
+                  {PackySite.SHARED}{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (共享站点)
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem id="site-codex" value={PackySite.CODEX} />
+                <Label
+                  className="font-normal cursor-pointer"
+                  htmlFor="site-codex">
+                  {PackySite.CODEX}{" "}
+                  <span className="text-muted-foreground text-xs">
+                    (Codex 站点)
+                  </span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           {/* Token 类型选择 */}
-          <div className="form-group">
-            <label htmlFor="tokenType">Token 类型</label>
-            <select
+          <div className="space-y-2">
+            <Label htmlFor="tokenType">Token 类型 *</Label>
+            <Select
               disabled={isSubmitting}
-              id="tokenType"
-              onChange={(e) => setTokenType(e.target.value as TokenType)}
+              onValueChange={(value) => setTokenType(value as TokenType)}
               value={tokenType}>
-              <option value="jwt">JWT Token</option>
-              <option value="api_key">API Key</option>
-            </select>
+              <SelectTrigger id="tokenType">
+                <SelectValue placeholder="选择 Token 类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="jwt">JWT Token</SelectItem>
+                <SelectItem value="api_key">API Key</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Token 输入 */}
-          <div className="form-group">
-            <label htmlFor="token">
-              {tokenType === "jwt" ? "JWT Token" : "API Key"}
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="token">
+              {tokenType === "jwt" ? "JWT Token" : "API Key"} *
+            </Label>
+            <Textarea
+              className="font-mono text-xs"
               disabled={isSubmitting}
               id="token"
               onChange={(e) => setToken(e.target.value)}
@@ -155,12 +216,17 @@ export function AddAccountDialog({
               rows={4}
               value={token}
             />
+            <p className="text-xs text-muted-foreground">
+              {tokenType === "jwt"
+                ? "从浏览器 Cookie 中获取的 JWT Token"
+                : "从 PackyCode 控制台生成的 API Key"}
+            </p>
           </div>
 
           {/* 显示名称（可选） */}
-          <div className="form-group">
-            <label htmlFor="displayName">显示名称（可选）</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="displayName">显示名称（可选）</Label>
+            <Input
               disabled={isSubmitting}
               id="displayName"
               onChange={(e) => setDisplayName(e.target.value)}
@@ -168,190 +234,32 @@ export function AddAccountDialog({
               type="text"
               value={displayName}
             />
+            <p className="text-xs text-muted-foreground">
+              自定义账号显示名称，方便识别
+            </p>
           </div>
 
           {/* 错误提示 */}
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-          {/* 操作按钮 */}
-          <div className="dialog-actions">
-            <button
-              className="cancel-button"
+          <DialogFooter>
+            <Button
               disabled={isSubmitting}
               onClick={handleCancel}
-              type="button">
+              type="button"
+              variant="outline">
               取消
-            </button>
-            <button
-              className="submit-button"
-              disabled={isSubmitting}
-              type="submit">
+            </Button>
+            <Button disabled={isSubmitting} type="submit">
               {isSubmitting ? "添加中..." : "添加账号"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-
-        {/* 样式 */}
-        <style jsx>{`
-          .dialog-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            padding: 20px;
-          }
-
-          .dialog-content {
-            background: white;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 480px;
-            box-shadow:
-              0 20px 25px -5px rgba(0, 0, 0, 0.1),
-              0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          }
-
-          .dialog-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-          }
-
-          .dialog-header h2 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #2d3748;
-          }
-
-          .close-button {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: transparent;
-            color: #a0aec0;
-            font-size: 24px;
-            cursor: pointer;
-            transition: color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .close-button:hover {
-            color: #718096;
-          }
-
-          .dialog-form {
-            padding: 24px;
-          }
-
-          .form-group {
-            margin-bottom: 20px;
-          }
-
-          .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #4a5568;
-          }
-
-          .form-group input,
-          .form-group select,
-          .form-group textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 14px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-              sans-serif;
-            transition: border-color 0.2s;
-          }
-
-          .form-group input:focus,
-          .form-group select:focus,
-          .form-group textarea:focus {
-            outline: none;
-            border-color: #3182ce;
-          }
-
-          .form-group input:disabled,
-          .form-group select:disabled,
-          .form-group textarea:disabled {
-            background: #f7fafc;
-            color: #a0aec0;
-            cursor: not-allowed;
-          }
-
-          .form-group textarea {
-            resize: vertical;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
-              Courier, monospace;
-          }
-
-          .error-message {
-            padding: 12px;
-            background: #fed7d7;
-            color: #c53030;
-            border-radius: 6px;
-            font-size: 14px;
-            margin-bottom: 20px;
-          }
-
-          .dialog-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-          }
-
-          .cancel-button,
-          .submit-button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-
-          .cancel-button {
-            background: white;
-            color: #4a5568;
-            border: 1px solid #e2e8f0;
-          }
-
-          .cancel-button:hover {
-            background: #f7fafc;
-          }
-
-          .submit-button {
-            background: #3182ce;
-            color: white;
-          }
-
-          .submit-button:hover {
-            background: #2c5aa0;
-          }
-
-          .cancel-button:disabled,
-          .submit-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-        `}</style>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

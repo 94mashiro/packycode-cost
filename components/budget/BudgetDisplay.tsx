@@ -1,4 +1,4 @@
-import { AccountVersion } from "~/types"
+import { PackySite } from "~/types/account"
 
 import { CombinedBudget } from "../CombinedBudget"
 import { AccountBalance } from "./components/AccountBalance"
@@ -26,10 +26,10 @@ import { useBudgetDisplay } from "./hooks/useBudgetDisplay"
  * - 🎨 与现有设计系统完全一致
  * - 📱 响应式设计，支持暗黑模式
  * - 🧪 易于测试，状态逻辑完全封装
- * - 🔀 多模式支持：Shared 模式展示余额，其他模式展示预算
+ * - 🔀 多模式支持：WWW 公交车模式展示余额，其他模式展示预算
  */
 export function BudgetDisplay() {
-  const { accountVersion, balanceData, budgetData, error, loading } =
+  const { accountSite, balanceData, budgetData, error, loading } =
     useBudgetDisplay()
 
   // 加载状态
@@ -42,12 +42,12 @@ export function BudgetDisplay() {
     return <BudgetError error={error} />
   }
 
-  // Shared 模式 - 显示账户余额
-  if (accountVersion === AccountVersion.SHARED && balanceData) {
+  // WWW 公交车模式 - 显示账户余额
+  if (accountSite === PackySite.WWW && balanceData) {
     return <AccountBalance balance={balanceData.balance} />
   }
 
-  // 其他模式 (PRIVATE, CODEX_SHARED) - 显示预算信息
+  // 其他模式 (SHARED 滴滴车, CODEX) - 显示预算信息
   if (budgetData) {
     return (
       <CombinedBudget

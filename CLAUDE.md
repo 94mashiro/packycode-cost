@@ -187,6 +187,147 @@ Uses Plasmo Storage API with these key data:
 - `packy_config`: Purchase status from API
 - `cached_user_info`: Budget and usage data
 
+### Multi-Account Architecture (v3.5.0+)
+
+**核心架构决策**: PackySite as Single Source of Truth
+
+项目已完成从 `AccountVersion` 到 `PackySite` 的架构重构，现在所有业务逻辑统一使用 `account.site` 字段作为唯一真实数据源。
+
+#### 设计原则
+
+1. **单一数据源**: 所有业务逻辑必须直接从 `account.site` 读取站点信息
+2. **无转换层**: 业务代码不应使用 AccountVersion ↔ PackySite 转换函数
+3. **类型驱动**: 使用 TypeScript @deprecated 注解引导开发者使用正确的 API
+4. **迁移隔离**: AccountVersion 仅用于 v2.x 数据迁移，标记为 @deprecated @internal
+
+#### PackySite 枚举
+
+```typescript
+/**
+ * PackyCode 站点枚举 (v3.5.0+)
+ *
+ * 业务逻辑的唯一真实数据源
+ */
+export enum PackySite {
+  WWW = "www",           // 公交车模式 - www.packycode.com
+  SHARED = "shared",     // 滴滴车模式 - shared.packycode.com
+  CODEX = "codex"        // Codex 模式 - codex.packycode.com
+}
+```
+
+#### 正确的使用模式
+
+**✅ 正确**: 直接从当前账号读取 site
+
+```typescript
+// 1. 获取当前账号
+const accountManager = new AccountManager(getMultiAccountStorageManager())
+const currentAccount = await accountManager.getCurrentAccount()
+const currentSite = currentAccount?.site
+
+// 2. 基于 site 的业务逻辑
+if (currentSite === PackySite.WWW) {
+  // 公交车模式特有逻辑 (Opus 通知)
+} else if (currentSite === PackySite.SHARED) {
+  // 滴滴车模式特有逻辑 (同行消费、私有 Opus)
+} else if (currentSite === PackySite.CODEX) {
+  // Codex 模式特有逻辑
+}
+```
+
+**❌ 错误**: 使用 UserPreference 或 AccountVersion
+
+```typescript
+// ❌ 不要这样做 - UserPreference.account_version 已废弃
+const userPref = await storage.get<UserPreferenceStorage>(StorageDomain.USER_PREFERENCE)
+const accountType = userPref?.account_version
+
+// ❌ 不要这样做 - 不要在业务逻辑中使用转换函数
+const site = mapAccountTypeToSite(accountVersion)
+```
+
+#### 组件中的使用示例
+
+```typescript
+// CombinedStatus.tsx - 正确模式
+const [currentSite, setCurrentSite] = useState<PackySite>(PackySite.WWW)
+
+useEffect(() => {
+  const loadCurrentSite = async () => {
+    const accountManager = new AccountManager(getMultiAccountStorageManager())
+    const currentAccount = await accountManager.getCurrentAccount()
+    setCurrentSite(currentAccount?.site ?? PackySite.WWW)
+  }
+  loadCurrentSite()
+}, [])
+
+// 条件渲染
+{currentSite !== PackySite.CODEX && <OpusStatusCard />}
+```
+
+#### API 模块中的站点检查
+
+```typescript
+// modules/peerSpending/api.ts - 滴滴车模式检查
+export async function fetchPeerSpendingToday(): Promise<PeerSpendingStorage | null> {
+  const accountManager = new AccountManager(getMultiAccountStorageManager())
+  const currentAccount = await accountManager.getCurrentAccount()
+
+  if (currentAccount?.site !== PackySite.SHARED) {
+    logger.debug("跳过同行消费数据获取：当前不是滴滴车模式")
+    return null
+  }
+
+  // 滴滴车模式逻辑...
+}
+```
+
+#### 账号切换器模式
+
+```typescript
+// AccountTypeSwitcher.tsx - 基于站点切换账号
+const handleSiteChange = async (targetSite: PackySite) => {
+  const accounts = await accountManager.getAllAccounts()
+
+  // 查找目标站点的第一个账号
+  const targetAccount = accounts.find(acc => acc.site === targetSite)
+
+  if (targetAccount) {
+    await accountManager.switchAccount(targetAccount.id)
+    await executeAllTasks() // 刷新数据
+  }
+}
+```
+
+#### 废弃的类型和函数
+
+以下类型和函数标记为 @deprecated，仅用于 v2.x 迁移：
+
+- `AccountVersion` 枚举 (types/index.ts)
+- `UserPreferenceStorage.account_version` 字段
+- `DataMigrationManager.mapAccountTypeToSite()` (lib/account/DataMigrationManager.ts)
+- `BackgroundAccountService.mapAccountTypeToSite()` (modules/background/accountService.ts)
+- `StorageManager` 的版本感知逻辑 (lib/storage/storageManager.ts)
+
+**重要**: TypeScript 会对这些废弃 API 的使用发出警告。在业务逻辑中看到这些警告时，请立即重构为使用 `account.site`。
+
+#### 架构优势
+
+1. **概念清晰**: 站点 (Site) 准确描述了账号的归属，比抽象的"版本"更直观
+2. **无状态同步**: 不需要在 UserPreference 和 Account 之间同步 account_version
+3. **多账号支持**: 每个账号携带自己的 site 信息，支持同时管理多个站点的账号
+4. **类型安全**: PackySite 枚举提供编译时类型检查，防止站点名称拼写错误
+5. **可维护性**: 单一数据源减少了数据不一致的可能性
+
+#### 迁移检查清单
+
+添加新功能时，确保：
+- [ ] 不使用 `AccountVersion` 枚举（除非在迁移代码中）
+- [ ] 不从 `UserPreferenceStorage.account_version` 读取数据
+- [ ] 通过 `AccountManager.getCurrentAccount().site` 获取站点信息
+- [ ] 使用 `PackySite` 枚举进行站点比较
+- [ ] 不调用 `mapAccountTypeToSite()` 转换函数
+
 ## Technical Constraints
 
 ### Critical Rules

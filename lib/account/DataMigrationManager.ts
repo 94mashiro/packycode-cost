@@ -1,5 +1,8 @@
 /**
- * DataMigrationManager - v2.x → v3.1.0 数据迁移管理
+ * DataMigrationManager - v2.x → v3.x 数据迁移管理
+ *
+ * @deprecated v3.5.0+ 此类仅用于历史数据迁移
+ * @internal 业务逻辑不应使用此类
  *
  * 核心职责：
  * 1. 检测是否需要迁移
@@ -32,6 +35,7 @@ import {
   TokenType,
   type UserInfo
 } from "~/types"
+import { PackySite } from "~/types/account"
 
 import {
   getMultiAccountStorageManager,
@@ -69,7 +73,7 @@ export class DataMigrationManager {
       authKey: string
       hasAuth: boolean
       hasUserInfo: boolean
-      type: AccountVersion
+      site: PackySite
     }>
     migrationStatus: MigrationStatus | null
     oldKeys: {
@@ -100,7 +104,7 @@ export class DataMigrationManager {
       authKey: string
       hasAuth: boolean
       hasUserInfo: boolean
-      type: AccountVersion
+      site: PackySite
     }> = []
 
     if (registry) {
@@ -123,7 +127,7 @@ export class DataMigrationManager {
           authKey: storageKey, // 更新为聚合键
           hasAuth,
           hasUserInfo,
-          type: account.type
+          site: account.site
         })
       }
     }
@@ -194,7 +198,7 @@ export class DataMigrationManager {
       logger.info(`  - Total accounts: ${report.accounts.length}`)
       report.accounts.forEach((acc) => {
         logger.info(
-          `  - Account ${acc.accountId} (${acc.type}): auth=${acc.hasAuth}, userInfo=${acc.hasUserInfo}`
+          `  - Account ${acc.accountId} (${acc.site}): auth=${acc.hasAuth}, userInfo=${acc.hasUserInfo}`
         )
       })
       logger.info(`  - Old keys preserved:`)
@@ -290,15 +294,66 @@ export class DataMigrationManager {
   }
 
   /**
-   * 获取默认显示名称
+   * 提取 JWT Token 过期时间
+   *
+   * @param token JWT token 字符串
+   * @returns 过期时间（毫秒时间戳），如果提取失败则返回 undefined
    */
-  private getDefaultDisplayName(type: AccountVersion): string {
-    const names: Record<AccountVersion, string> = {
-      [AccountVersion.CODEX_SHARED]: "Codex 账号",
-      [AccountVersion.PRIVATE]: "滴滴车账号",
-      [AccountVersion.SHARED]: "公交车账号"
+  private extractTokenExpiry(token: string): number | undefined {
+    try {
+      // JWT 格式: header.payload.signature
+      const parts = token.split(".")
+      if (parts.length !== 3) {
+        return undefined
+      }
+
+      // 解码 payload（Base64）
+      const payload = JSON.parse(
+        Buffer.from(parts[1], "base64").toString("utf-8")
+      )
+
+      // exp 字段是 Unix 时间戳（秒），转换为毫秒
+      return payload.exp ? payload.exp * 1000 : undefined
+    } catch (error) {
+      logger.error("Failed to extract token expiry:", error)
+      return undefined
     }
-    return names[type]
+  }
+
+  /**
+   * 获取默认显示名称（基于站点）
+   *
+   * @version v3.5.0 改为基于 PackySite
+   */
+  private getDefaultDisplayName(site: PackySite): string {
+    const names: Record<PackySite, string> = {
+      [PackySite.CODEX]: "Codex 账号",
+      [PackySite.SHARED]: "滴滴车账号",
+      [PackySite.WWW]: "公交车账号"
+    }
+    return names[site]
+  }
+
+  /**
+   * 将 v2.x 账号类型映射到 v3.5.0 站点
+   *
+   * @deprecated v3.5.0+ 仅用于 v2 迁移，业务逻辑请使用 PackySite
+   * @internal 不要在新代码中使用此函数
+   *
+   * 映射规则：
+   * - CODEX_SHARED → CODEX (codex.packycode.com)
+   * - PRIVATE → SHARED (shared.packycode.com 滴滴车)
+   * - SHARED → WWW (www.packycode.com 公交车)
+   *
+   * @version v3.5.0 新增
+   */
+  private mapAccountTypeToSite(type: AccountVersion): PackySite {
+    const mapping: Record<AccountVersion, PackySite> = {
+      [AccountVersion.CODEX_SHARED]: PackySite.CODEX,
+      [AccountVersion.PRIVATE]: PackySite.SHARED,
+      [AccountVersion.SHARED]: PackySite.WWW
+    }
+    return mapping[type]
   }
 
   /**
@@ -318,12 +373,11 @@ export class DataMigrationManager {
   }
 
   /**
-   * 迁移单个账号类型的数据（v3.1.0+ 聚合写入模式）
+   * 迁移单个账号类型的数据
    *
-   * v3.1.0 优化：
-   * - 一次性读取所有 v2.x 数据
-   * - 聚合成单个 AccountData 对象
-   * - 一次性写入 account_{uuid}_info
+   * 数据结构重构：
+   * - Account 只包含表单字段
+   * - AccountData 包含所有 API 派生字段
    *
    * @param versionKey v2.x 版本键（如 "shared"）
    * @param accountType 账号类型
@@ -344,13 +398,16 @@ export class DataMigrationManager {
       return false
     }
 
-    // 2. 创建账号实体
+    // 2. 创建账号实体（只包含表单字段）
+    // v3.5.0+: 映射 AccountVersion → PackySite
+    const site = this.mapAccountTypeToSite(accountType)
+
     try {
       const accountId = await this.accountManager.addAccount({
-        displayName: this.getDefaultDisplayName(accountType),
+        displayName: this.getDefaultDisplayName(site),
+        site,
         token: auth.token,
-        tokenType: auth.type || ("jwt" as TokenType),
-        type: accountType
+        tokenType: auth.type || TokenType.JWT
       })
 
       logger.info(`Created account: ${accountId} for type: ${accountType}`)
@@ -381,18 +438,28 @@ export class DataMigrationManager {
             )
           : null
 
-      // 4. 聚合成 AccountData 对象
+      // 4. 聚合成 AccountData 对象（包含新增的 API 派生字段）
       const accountData: AccountData = {
+        // === 原有 API 数据 ===
         auth: {
           token: auth.token,
-          type: auth.type || ("jwt" as TokenType),
+          type: auth.type || TokenType.JWT,
           ...(auth.expiry && { expiry: auth.expiry })
         },
+        // === 新增：API 派生字段 ===
+        isValid: true, // 新创建的账号默认有效
+        lastSyncAt: Date.now(),
         notificationStates: notificationStates || {},
         peerSpending: peerSpending || null,
         purchaseConfig: purchaseConfig || null,
+        snapshot: undefined, // 初始无快照
+
         subscriptionInfo: subscriptionInfo || null,
         systemPreference: systemPreference || null,
+        tokenExpiry:
+          auth.type === TokenType.JWT
+            ? this.extractTokenExpiry(auth.token)
+            : undefined,
         userInfo: userInfo || null
       }
 
@@ -409,6 +476,9 @@ export class DataMigrationManager {
       if (purchaseConfig) logger.debug(`  - PURCHASE_CONFIG: ✓`)
       if (notificationStates) logger.debug(`  - NOTIFICATION_STATES: ✓`)
       if (peerSpending) logger.debug(`  - PEER_SPENDING: ✓`)
+      logger.debug(
+        `  - API_DERIVED_FIELDS: ✓ (isValid, tokenExpiry, lastSyncAt)`
+      )
 
       return true
     } catch (error) {

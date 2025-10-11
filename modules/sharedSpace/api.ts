@@ -6,17 +6,17 @@
  * Dan: "避免过度抽象，保持简单直接"
  */
 
+import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
+import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
-  AccountVersion,
   ApiEndpointType,
   type SharedSpaceApiResponse,
-  type SystemPreferenceStorage,
-  type UserPreferenceStorage
+  type SystemPreferenceStorage
 } from "~/types"
+import { PackySite } from "~/types/account"
 
 const logger = loggers.auth
 
@@ -24,32 +24,32 @@ const logger = loggers.auth
  * 获取滴滴车模式下的 Opus 状态
  *
  * 设计决策：
- * 1. 仅在滴滴车模式（PRIVATE）下执行
+ * 1. 仅在滴滴车模式（SHARED）下执行
  * 2. 从 my-assignments 接口获取第一个账号的 opus_enabled 状态
  * 3. 将状态存储到 SystemPreference，与现有机制保持一致
  * 4. 不创建独立的存储域，避免数据冗余
  */
 export async function fetchPrivateOpusStatus(): Promise<void> {
   try {
-    // 获取当前账号版本
-    const storageManager = await getStorageManager()
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
-      StorageDomain.USER_PREFERENCE
-    )
-    const currentVersion =
-      userPreference?.account_version ?? AccountVersion.SHARED
+    // 获取当前账号站点
+    const multiAccountStorageManager = getMultiAccountStorageManager()
+    const accountManager = new AccountManager(multiAccountStorageManager)
+    const currentAccount = await accountManager.getCurrentAccount()
+    const currentSite = currentAccount?.site
 
-    // 只在滴滴车模式下执行
-    if (currentVersion !== AccountVersion.PRIVATE) {
-      logger.debug(
-        `⏭️ 跳过私有 Opus 状态获取：当前为${
-          currentVersion === AccountVersion.SHARED
-            ? "公交车"
-            : currentVersion === AccountVersion.CODEX_SHARED
-              ? "Codex公交车"
-              : "未知"
-        }模式${currentVersion === AccountVersion.CODEX_SHARED ? "，没有 Opus 模型" : ""}`
-      )
+    // 只在滴滴车模式 (SHARED) 下执行
+    if (currentSite !== PackySite.SHARED) {
+      // 站点名称映射
+      const siteNames: Record<PackySite, string> = {
+        [PackySite.WWW]: "公交车",
+        [PackySite.SHARED]: "滴滴车",
+        [PackySite.CODEX]: "Codex"
+      }
+
+      const siteName = siteNames[currentSite ?? PackySite.WWW]
+      const siteNote = currentSite === PackySite.CODEX ? "，没有 Opus 模型" : ""
+
+      logger.debug(`⏭️ 跳过私有 Opus 状态获取：当前为${siteName}模式${siteNote}`)
       return
     }
 
@@ -81,6 +81,7 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
     // 获取当前存储的状态
+    const storageManager = await getStorageManager()
     const systemPref = await storageManager.get<SystemPreferenceStorage>(
       StorageDomain.SYSTEM_PREFERENCE
     )

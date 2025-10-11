@@ -1,5 +1,19 @@
 # 版本化存储系统 - 双账号数据隔离
 
+> **⚠️ 废弃通知 (v3.5.0+)**
+>
+> 本文档描述的版本化存储架构已被**多账号架构**替代。
+>
+> **请查阅最新架构**:
+> - [CLAUDE.md - Multi-Account Architecture](../../CLAUDE.md#multi-account-architecture-v350)
+> - 新架构使用 `account.site` (PackySite) 作为单一数据源
+> - 不再使用 `AccountVersion` 和版本化存储键
+> - 支持多账号同时存在和管理
+>
+> 本文档仅供参考历史架构设计。
+
+---
+
 > 本文档介绍 PackyCode Cost Monitor 的版本化存储架构实现，支持公交车和滴滴车两种账号模式的数据隔离。
 >
 > **相关文档**: [存储架构设计](../architecture/storage-architecture.md) | [滴滴车模式指南](private-car-mode.md)

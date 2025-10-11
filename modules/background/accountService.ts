@@ -28,9 +28,9 @@ import {
   AccountVersion,
   type AddAccountConfig,
   type AuthStorage,
-  TokenType,
-  type UserPreferenceStorage
+  TokenType
 } from "~/types"
+import { PackySite } from "~/types/account"
 
 const logger = loggers.background
 
@@ -69,23 +69,25 @@ export class BackgroundAccountService {
   }
 
   /**
-   * 获取当前激活账号信息
+   * 获取当前激活账号信息（v3.4.0+ 重构）
    *
-   * @param accountType 账号类型
    * @returns 当前账号的认证信息，如果没有则返回 null
    */
-  async getCurrentAccountAuth(
-    accountType: AccountVersion
-  ): Promise<AuthStorage | null> {
+  async getCurrentAccountAuth(): Promise<AuthStorage | null> {
     try {
-      const account = await this.accountManager.getCurrentAccount(accountType)
+      const account = await this.accountManager.getCurrentAccount()
 
       if (!account) {
         return null
       }
 
+      // 从 AccountData 中读取 tokenExpiry
+      const accountData = await this.storage.get<import("~/types").AccountData>(
+        `account_${account.id}_info`
+      )
+
       return {
-        expiry: account.tokenExpiry,
+        expiry: accountData?.tokenExpiry,
         token: account.token,
         type: account.tokenType
       }
@@ -116,10 +118,11 @@ export class BackgroundAccountService {
         // 新账号 - 创建
         logger.info(`✨ Creating new account for: ${accountType}`)
 
+        const site = this.mapAccountTypeToSite(accountType)
         const config: AddAccountConfig = {
+          site,
           token: apiKey,
-          tokenType: "api_key" as TokenType,
-          type: accountType
+          tokenType: "api_key" as TokenType
         }
 
         const accountId = await this.accountManager.addAccount(config)
@@ -167,10 +170,11 @@ export class BackgroundAccountService {
         // 新账号 - 创建
         logger.info(`✨ Creating new account for: ${accountType}`)
 
+        const site = this.mapAccountTypeToSite(accountType)
         const config: AddAccountConfig = {
+          site,
           token,
-          tokenType: "jwt" as TokenType,
-          type: accountType
+          tokenType: "jwt" as TokenType
         }
 
         const accountId = await this.accountManager.addAccount(config)
@@ -230,47 +234,34 @@ export class BackgroundAccountService {
         )
       }
 
-      // 2. 恢复最后使用的账号（如果有）
+      // 2. 确保有激活账号
+      // v3.5.0+: 不再依赖 userPreference.account_version
+      // 如果没有激活账号，激活第一个可用账号
       try {
-        const userPreference = await this.storage.get<UserPreferenceStorage>(
-          StorageDomain.USER_PREFERENCE
-        )
+        const currentAccount = await this.accountManager.getCurrentAccount()
 
-        if (userPreference?.account_version) {
-          const accountType = userPreference.account_version
-          logger.info(`📌 Restoring last active account type: ${accountType}`)
+        if (currentAccount) {
+          // 已经有激活账号
+          logger.info(
+            `✅ Account already active: ${currentAccount.id} (${currentAccount.site})`
+          )
+        } else {
+          // 没有激活账号，激活第一个可用账号
+          const accounts = await this.accountManager.getAllAccounts()
 
-          // 检查是否已有激活账号
-          const currentAccount =
-            await this.accountManager.getCurrentAccount(accountType)
-
-          if (currentAccount) {
-            // 已经有激活账号，无需恢复
+          if (accounts.length > 0) {
+            const firstAccount = accounts[0]
+            await this.accountManager.switchAccount(firstAccount.id)
             logger.info(
-              `✅ Account already active: ${currentAccount.id} (${accountType})`
+              `✅ Activated first available account: ${firstAccount.id} (${firstAccount.site})`
             )
           } else {
-            // 没有激活账号，查找该类型的任意账号并激活
-            const accounts = await this.accountManager.getAllAccounts()
-            const firstAccountOfType = accounts.find(
-              (acc) => acc.type === accountType
-            )
-
-            if (firstAccountOfType) {
-              await this.accountManager.switchAccount(firstAccountOfType.id)
-              logger.info(
-                `✅ Restored account: ${firstAccountOfType.id} (${accountType})`
-              )
-            } else {
-              logger.info(`ℹ️ No account found for type: ${accountType}`)
-            }
+            logger.info("ℹ️ No accounts found")
           }
-        } else {
-          logger.debug("No previous account type preference found")
         }
       } catch (error) {
         // 恢复账号失败不应阻止初始化
-        logger.warn("Failed to restore last active account:", error)
+        logger.warn("Failed to ensure active account:", error)
       }
 
       this.hasInitialized = true
@@ -279,6 +270,26 @@ export class BackgroundAccountService {
       logger.error("❌ Failed to initialize BackgroundAccountService:", error)
       throw error
     }
+  }
+
+  /**
+   * 映射 AccountVersion → PackySite
+   *
+   * @deprecated v3.5.0+ 仅用于 v2.x 数据迁移和 Token 自动检测的向后兼容
+   * @internal 业务逻辑不应调用此函数，请直接使用 account.site
+   *
+   * 与 DataMigrationManager 保持一致的映射规则：
+   * - CODEX_SHARED → CODEX (codex.packycode.com)
+   * - PRIVATE → SHARED (shared.packycode.com 滴滴车)
+   * - SHARED → WWW (www.packycode.com 公交车)
+   */
+  private mapAccountTypeToSite(type: AccountVersion): PackySite {
+    const mapping: Record<AccountVersion, PackySite> = {
+      [AccountVersion.CODEX_SHARED]: PackySite.CODEX,
+      [AccountVersion.PRIVATE]: PackySite.SHARED,
+      [AccountVersion.SHARED]: PackySite.WWW
+    }
+    return mapping[type]
   }
 }
 

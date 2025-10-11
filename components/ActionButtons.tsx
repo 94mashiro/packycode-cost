@@ -60,6 +60,18 @@ export function ActionButtons() {
           <span className="font-medium">延迟监控</span>
         </button>
 
+        <button
+          className="group flex flex-col items-center justify-center px-2 py-2.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all duration-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700 flex-1"
+          onClick={() =>
+            chrome.tabs.create({ url: "tabs/account-manager.html" })
+          }
+          title="管理所有账号，支持编辑、删除和新增操作">
+          <svg className="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+          </svg>
+          <span className="font-medium">管理账号</span>
+        </button>
+
         {/* <button
           className="group flex flex-col items-center justify-center px-2 py-2.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-all duration-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
           onClick={() =>

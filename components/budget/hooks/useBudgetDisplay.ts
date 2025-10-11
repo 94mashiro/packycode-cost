@@ -1,6 +1,7 @@
-import { useUserInfo, useUserPreference } from "~/hooks"
+import { useUserInfo } from "~/hooks"
 import { useSystemPreference } from "~/hooks/infrastructure/useStorageHooks"
-import { AccountVersion } from "~/types"
+import { useAccountManager } from "~/hooks/useAccountManager"
+import { PackySite } from "~/types/account"
 
 /**
  * 预算显示 Hook
@@ -12,18 +13,18 @@ import { AccountVersion } from "~/types"
  * 🏛️ Fowler: "单一职责原则，只处理预算显示相关逻辑"
  *
  * 改造说明 (v2):
- * - 支持多账号模式：Shared 公交车模式展示余额，其他模式展示预算
- * - 数据分流：根据账号类型提供不同的数据结构
+ * - 支持多账号模式：WWW 公交车模式展示余额，其他模式展示预算
+ * - 数据分流：根据账号站点提供不同的数据结构
  */
 
 export interface UseBudgetDisplayReturn {
-  /** 当前账号类型 */
-  accountVersion: AccountVersion
-  /** 余额信息（仅 Shared 模式） */
+  /** 当前账号站点 */
+  accountSite: PackySite
+  /** 余额信息（仅 WWW 公交车模式） */
   balanceData: null | {
     balance: string
   }
-  /** 用户预算信息（PRIVATE 和 CODEX_SHARED 模式） */
+  /** 用户预算信息（SHARED 滴滴车 和 CODEX 模式） */
   budgetData: null | {
     dailyBudget: number
     dailySpent: number
@@ -45,28 +46,27 @@ export interface UseBudgetDisplayReturn {
  * 2. 数据提取和转换
  * 3. 错误处理
  * 4. 加载状态管理
- * 5. 账号模式判断（新增）
+ * 5. 账号站点判断（新增）
  */
 export function useBudgetDisplay(): UseBudgetDisplayReturn {
   const { data: userInfo, error, loading } = useUserInfo()
   const { data: systemPref } = useSystemPreference()
-  const { data: userPreference } = useUserPreference()
+  const { currentAccount } = useAccountManager() // v3.4.0+: 从当前账号读取
 
-  // 获取当前账号类型，默认为 SHARED
-  const accountVersion =
-    userPreference?.account_version ?? AccountVersion.SHARED
+  // v3.5.0+: 从当前激活账号读取站点
+  const accountSite = currentAccount?.site ?? PackySite.WWW
 
-  // Shared 模式：提取余额数据
+  // WWW 公交车模式：提取余额数据
   const balanceData =
-    accountVersion === AccountVersion.SHARED && userInfo?.balance_usd
+    accountSite === PackySite.WWW && userInfo?.balance_usd
       ? {
           balance: userInfo.balance_usd
         }
       : null
 
-  // 其他模式：提取预算数据（现有逻辑）
+  // 其他模式（SHARED 滴滴车、CODEX）：提取预算数据
   const budgetData =
-    accountVersion !== AccountVersion.SHARED && userInfo
+    accountSite !== PackySite.WWW && userInfo
       ? {
           dailyBudget: userInfo.budgets.daily.limit,
           dailySpent: userInfo.budgets.daily.spent,
@@ -77,7 +77,7 @@ export function useBudgetDisplay(): UseBudgetDisplayReturn {
       : null
 
   return {
-    accountVersion,
+    accountSite,
     balanceData,
     budgetData,
     error,

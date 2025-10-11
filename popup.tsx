@@ -16,10 +16,12 @@ import { RefreshButton } from "./components/RefreshButton"
 import { SettingsButton } from "./components/SettingsButton"
 import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
-import { useAuth, useUserPreference } from "./hooks"
+import { useAuth } from "./hooks"
+import { useAccountManager } from "./hooks/useAccountManager"
 import { useTaskExecution } from "./hooks/useTaskExecution"
 import { enablePopupLogging } from "./lib/logger"
-import { AccountVersion, TokenType, ViewType } from "./types"
+import { TokenType, ViewType } from "./types"
+import { PackySite } from "./types/account"
 
 // 启用 Popup 日志接收
 enablePopupLogging()
@@ -32,7 +34,7 @@ if (process.env.NODE_ENV === "development") {
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
   const { data: authData } = useAuth()
-  const { data: userPreference } = useUserPreference()
+  const { currentAccount } = useAccountManager() // v3.4.0+: 从当前账号读取
   const { executeAll, loading: taskLoading } = useTaskExecution()
 
   const tokenExpiration = authData?.token
@@ -49,8 +51,8 @@ function IndexPopup() {
   // 完整的认证有效性：Token 存在且未过期
   const isAuthenticated = isTokenValid && isTokenEffective
 
-  const currentAccountType =
-    userPreference?.account_version ?? AccountVersion.SHARED
+  // v3.5.0+: 从当前激活账号读取站点
+  const currentAccountSite = currentAccount?.site ?? PackySite.WWW
 
   const handleRefresh = () => {
     if (isAuthenticated) {
@@ -117,15 +119,11 @@ function IndexPopup() {
             {/* 预算信息 */}
             <BudgetDisplay />
 
-            {/* 套餐信息 - 仅 CODEX_SHARED 和 PRIVATE 模式展示 */}
-            {currentAccountType !== AccountVersion.SHARED && (
-              <SubscriptionDisplay />
-            )}
+            {/* 套餐信息 - 仅 CODEX 和 SHARED（滴滴车）模式展示 */}
+            {currentAccountSite !== PackySite.WWW && <SubscriptionDisplay />}
 
-            {/* 乘客消费排行榜 - 仅 PRIVATE（滴滴车）模式展示 */}
-            {currentAccountType === AccountVersion.PRIVATE && (
-              <PeerSpendingChart />
-            )}
+            {/* 乘客消费排行榜 - 仅 SHARED（滴滴车）模式展示 */}
+            {currentAccountSite === PackySite.SHARED && <PeerSpendingChart />}
           </>
         )}
 

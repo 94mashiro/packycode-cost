@@ -1,14 +1,12 @@
+import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
+import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import {
-  AccountVersion,
-  type SystemPreferenceStorage,
-  type UserInfo,
-  type UserPreferenceStorage
-} from "~/types"
+import { type SystemPreferenceStorage, type UserInfo } from "~/types"
+import { PackySite } from "~/types/account"
 import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
+
 const logger = loggers.auth
 
 export async function fetchUserInfo(): Promise<null | UserInfo> {
@@ -41,15 +39,14 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
 
     const storageManager = await getStorageManager()
 
-    // 获取当前账号模式，检查是否为公交车模式
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
-      StorageDomain.USER_PREFERENCE
-    )
-    const currentVersion =
-      userPreference?.account_version ?? AccountVersion.SHARED
+    // 获取当前账号站点，检查是否为公交车模式
+    const multiAccountStorageManager = getMultiAccountStorageManager()
+    const accountManager = new AccountManager(multiAccountStorageManager)
+    const currentAccount = await accountManager.getCurrentAccount()
+    const currentSite = currentAccount?.site ?? PackySite.WWW
 
-    // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX_SHARED，因为没有 Opus 模型）
-    if (currentVersion === AccountVersion.SHARED) {
+    // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX，因为没有 Opus 模型）
+    if (currentSite === PackySite.WWW) {
       // 检查 opus_enabled 状态变化
       const systemPref = await storageManager.get<SystemPreferenceStorage>(
         StorageDomain.SYSTEM_PREFERENCE
@@ -82,21 +79,22 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
         opus_enabled: currentOpusState
       })
     } else {
-      logger.debug(
-        `⏭️ 跳过 Opus 状态更新：当前为${
-          currentVersion === AccountVersion.PRIVATE
-            ? "滴滴车"
-            : currentVersion === AccountVersion.CODEX_SHARED
-              ? "Codex公交车"
-              : "未知"
-        }模式${
-          currentVersion === AccountVersion.PRIVATE
-            ? "，由 SharedSpace API 负责管理"
-            : currentVersion === AccountVersion.CODEX_SHARED
-              ? "，没有 Opus 模型"
-              : ""
-        }`
-      )
+      // 站点名称映射
+      const siteNames: Record<PackySite, string> = {
+        [PackySite.WWW]: "公交车",
+        [PackySite.SHARED]: "滴滴车",
+        [PackySite.CODEX]: "Codex"
+      }
+
+      const siteName = siteNames[currentSite]
+      const siteNote =
+        currentSite === PackySite.SHARED
+          ? "，由 SharedSpace API 负责管理"
+          : currentSite === PackySite.CODEX
+            ? "，没有 Opus 模型"
+            : ""
+
+      logger.debug(`⏭️ 跳过 Opus 状态更新：当前为${siteName}模式${siteNote}`)
     }
 
     // 存储用户信息

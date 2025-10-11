@@ -2,15 +2,14 @@ import { useEffect, useState } from "react"
 
 import { dynamicApiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
-import { getStorageManager } from "../lib/storage"
-import { StorageDomain } from "../lib/storage/domains"
+import { AccountManager } from "../lib/account"
+import { getMultiAccountStorageManager } from "../lib/storage"
 import {
-  AccountVersion,
   type TokenData,
   type TokenExpiration,
-  TokenType,
-  type UserPreferenceStorage
+  TokenType
 } from "../types"
+import { PackySite } from "../types/account"
 
 interface CombinedStatusProps {
   tokenData: TokenData
@@ -28,26 +27,22 @@ export function CombinedStatus({
   // 动态获取URL状态
   const [dashboardUrl, setDashboardUrl] = useState<string>("")
   const [pricingUrl, setPricingUrl] = useState<string>("")
-  const [currentAccountType, setCurrentAccountType] =
-    useState<AccountVersion | null>(null)
+  const [currentSite, setCurrentSite] = useState<PackySite>(PackySite.WWW)
 
-  // 获取当前账户类型
+  // 获取当前账号站点
   useEffect(() => {
-    const loadAccountType = async () => {
+    const loadCurrentSite = async () => {
       try {
-        const storageManager = await getStorageManager()
-        const userPreference = await storageManager.get<UserPreferenceStorage>(
-          StorageDomain.USER_PREFERENCE
-        )
-        setCurrentAccountType(
-          userPreference?.account_version ?? AccountVersion.SHARED
-        )
+        const storageManager = getMultiAccountStorageManager()
+        const accountManager = new AccountManager(storageManager)
+        const currentAccount = await accountManager.getCurrentAccount()
+        setCurrentSite(currentAccount?.site ?? PackySite.WWW)
       } catch (error) {
-        console.error("Failed to load account type:", error)
-        setCurrentAccountType(AccountVersion.SHARED)
+        console.error("Failed to load current account site:", error)
+        setCurrentSite(PackySite.WWW)
       }
     }
-    loadAccountType()
+    loadCurrentSite()
   }, [])
 
   useEffect(() => {
@@ -87,7 +82,7 @@ export function CombinedStatus({
       {/* 状态网格 - shadcn/ui 风格，与乘客消费排行榜保持一致 */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 shadow-sm">
         <div
-          className={`grid ${currentAccountType === AccountVersion.CODEX_SHARED ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
+          className={`grid ${currentSite === PackySite.CODEX ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
           {/* 认证状态 */}
           <div className="space-y-1">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -158,8 +153,8 @@ export function CombinedStatus({
             </div>
           </div>
 
-          {/* Opus 状态 - 仅在非 CODEX_SHARED 账户类型时显示 */}
-          {currentAccountType !== AccountVersion.CODEX_SHARED && (
+          {/* Opus 状态 - 仅在非 CODEX 站点时显示 */}
+          {currentSite !== PackySite.CODEX && (
             <div className="space-y-1">
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 Opus 状态

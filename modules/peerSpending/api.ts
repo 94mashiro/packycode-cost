@@ -8,17 +8,17 @@
  * 🏛️ Fowler: "将业务逻辑与数据获取分离"
  */
 
+import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
+import { getMultiAccountStorageManager, getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
-  AccountVersion,
   ApiEndpointType,
   type PeerSpendingApiResponse,
-  type PeerSpendingStorage,
-  type UserPreferenceStorage
+  type PeerSpendingStorage
 } from "~/types"
+import { PackySite } from "~/types/account"
 
 const logger = loggers.api
 
@@ -28,17 +28,14 @@ const logger = loggers.api
  */
 export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStorage> {
   try {
-    // 1. 检查当前账号版本
-    const storageManager = await getStorageManager()
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
-      StorageDomain.USER_PREFERENCE
-    )
+    // 1. 检查当前账号站点
+    const multiAccountStorageManager = getMultiAccountStorageManager()
+    const accountManager = new AccountManager(multiAccountStorageManager)
+    const currentAccount = await accountManager.getCurrentAccount()
+    const currentSite = currentAccount?.site
 
-    const currentVersion =
-      userPreference?.account_version ?? AccountVersion.SHARED
-
-    // 2. 仅在滴滴车模式下执行
-    if (currentVersion !== AccountVersion.PRIVATE) {
+    // 2. 仅在滴滴车模式 (SHARED) 下执行
+    if (currentSite !== PackySite.SHARED) {
       logger.debug("跳过同行消费数据获取：当前不是滴滴车模式")
       return null
     }
@@ -54,6 +51,7 @@ export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStora
     const peerSpendingData = transformPeerSpendingData(rawData)
 
     // 5. 存储数据
+    const storageManager = await getStorageManager()
     await storageManager.set(
       StorageDomain.PEER_SPENDING,
       peerSpendingData,
@@ -86,12 +84,11 @@ export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStora
  */
 export async function isPrivateMode(): Promise<boolean> {
   try {
-    const storageManager = await getStorageManager()
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
-      StorageDomain.USER_PREFERENCE
-    )
+    const multiAccountStorageManager = getMultiAccountStorageManager()
+    const accountManager = new AccountManager(multiAccountStorageManager)
+    const currentAccount = await accountManager.getCurrentAccount()
 
-    return userPreference?.account_version === AccountVersion.PRIVATE
+    return currentAccount?.site === PackySite.SHARED
   } catch {
     return false
   }

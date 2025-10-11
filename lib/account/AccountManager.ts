@@ -21,13 +21,15 @@ import { v4 as uuidv4 } from "uuid"
 import { loggers } from "~/lib/logger"
 import {
   type Account,
-  type AccountCollection,
+  type AccountData,
   type AccountDetectionResult,
   type AccountRegistry,
   type AccountSnapshot,
-  AccountVersion,
-  type AddAccountConfig
+  type AddAccountConfig,
+  TokenType,
+  type UpdateAccountConfig
 } from "~/types"
+import { PackySite } from "~/types/account"
 
 import { StorageDomain } from "../storage/domains"
 import { MultiAccountStorageManager } from "../storage/MultiAccountStorageManager"
@@ -80,7 +82,7 @@ export class AccountManager {
    * ```
    */
   async addAccount(config: AddAccountConfig): Promise<string> {
-    logger.info(`Adding new account: ${config.type}`)
+    logger.info(`Adding new account for site: ${config.site}`)
 
     // 1. 检测是否为已存在的账号
     const detection = await this.detectNewAccount(config.token)
@@ -92,22 +94,18 @@ export class AccountManager {
     // 2. 生成账号ID（使用 UUID v4）
     const accountId = this.generateAccountId()
 
-    // 3. 创建账号实体
+    // 3. 创建账号实体（只包含表单字段）
     const now = Date.now()
     const account: Account = {
       createdAt: now,
       displayName:
-        config.displayName || this.getDefaultDisplayName(config.type),
+        config.displayName || this.getDefaultDisplayName(config.site),
       id: accountId,
       isActive: false, // 稍后会设置为激活
-      isValid: true, // 默认有效，后续由验证流程更新
       lastUsedAt: now,
+      site: config.site,
       token: config.token,
-      tokenType: config.tokenType,
-      type: config.type,
-      ...(config.tokenType === "jwt" && {
-        tokenExpiry: this.extractTokenExpiry(config.token)
-      })
+      tokenType: config.tokenType
     }
 
     // 4. 获取当前账号注册表
@@ -119,7 +117,32 @@ export class AccountManager {
     // 6. 保存注册表
     await this.saveRegistry(registry)
 
-    // 7. 设置为当前激活账号
+    // 7. 创建初始 AccountData（包含 API 派生字段）
+    const accountData: AccountData = {
+      auth: {
+        token: config.token,
+        type: config.tokenType
+      },
+      isValid: true, // 默认有效，后续由验证流程更新
+      lastSyncAt: undefined,
+      notificationStates: {},
+      peerSpending: null,
+      purchaseConfig: null,
+      snapshot: undefined,
+      subscriptionInfo: null,
+      systemPreference: null,
+      tokenExpiry:
+        config.tokenType === TokenType.JWT
+          ? this.extractTokenExpiry(config.token)
+          : undefined,
+      userInfo: null
+    }
+
+    // 8. 保存 AccountData（直接使用底层 Storage）
+    const storage = this.storageManager.getUnderlyingStorage()
+    await storage.set(`account_${accountId}_info`, accountData)
+
+    // 9. 设置为当前激活账号
     await this.switchAccount(accountId)
 
     logger.info(`✅ Account added successfully: ${accountId}`)
@@ -167,23 +190,24 @@ export class AccountManager {
   /**
    * 获取所有账号列表
    *
-   * @returns 账号列表（按最后使用时间倒序）
+   * @returns 账号列表（按创建时间升序，固定顺序）
    */
   async getAllAccounts(): Promise<Account[]> {
     const registry = await this.getOrCreateRegistry()
-    // 按最后使用时间倒序排列
-    return [...registry.accounts].sort((a, b) => b.lastUsedAt - a.lastUsedAt)
+    // 按创建时间升序排列（固定顺序，不随切换变化）
+    return [...registry.accounts].sort((a, b) => a.createdAt - b.createdAt)
   }
 
   /**
    * 获取当前激活账号
    *
-   * @param type 账号类型
+   * v3.4.0+ 重构：不再需要类型参数，返回全局唯一的激活账号
+   *
    * @returns 当前激活账号，如果没有则返回 null
    */
-  async getCurrentAccount(type: AccountVersion): Promise<Account | null> {
+  async getCurrentAccount(): Promise<Account | null> {
     const registry = await this.getOrCreateRegistry()
-    const activeAccountId = registry.activeAccounts[type]
+    const { activeAccountId } = registry
 
     if (!activeAccountId) {
       return null
@@ -221,14 +245,9 @@ export class AccountManager {
     // 2. 从注册表移除
     registry.accounts = registry.accounts.filter((acc) => acc.id !== accountId)
 
-    // 3. 如果是激活账号，切换到同类型的其他账号
-    if (registry.activeAccounts[account.type] === accountId) {
-      const otherAccount = registry.accounts.find(
-        (acc) => acc.type === account.type
-      )
-      registry.activeAccounts[account.type] = otherAccount
-        ? otherAccount.id
-        : null
+    // 3. 如果删除的是激活账号，清空激活状态（v3.4.0+ 简化逻辑）
+    if (registry.activeAccountId === accountId) {
+      registry.activeAccountId = null
     }
 
     // 4. 保存注册表
@@ -243,11 +262,11 @@ export class AccountManager {
   /**
    * 切换账号
    *
-   * 功能：
-   * 1. 更新账号注册表中的激活状态
+   * 功能（v3.4.0+ 重构）：
+   * 1. 更新账号注册表中的激活状态（全局唯一）
    * 2. 设置存储管理器的当前账号
    * 3. 更新账号的最后使用时间
-   * 4. 保存账号类型到用户偏好（v3.1.0+）
+   * 4. 保存账号类型到用户偏好
    *
    * @param accountId 账号ID
    *
@@ -267,18 +286,17 @@ export class AccountManager {
       throw new Error(`Account not found: ${accountId}`)
     }
 
-    // 2. 更新激活状态
-    const oldActiveId = registry.activeAccounts[account.type]
-    if (oldActiveId) {
-      const oldAccount = registry.accounts.find((acc) => acc.id === oldActiveId)
-      if (oldAccount) {
-        oldAccount.isActive = false
+    // 2. 更新激活状态（全局唯一激活账号）
+    // 将所有其他账号设为非激活
+    registry.accounts.forEach((acc) => {
+      if (acc.id !== accountId) {
+        acc.isActive = false
       }
-    }
+    })
 
     account.isActive = true
     account.lastUsedAt = Date.now()
-    registry.activeAccounts[account.type] = accountId
+    registry.activeAccountId = accountId
 
     // 3. 保存注册表
     await this.saveRegistry(registry)
@@ -286,21 +304,111 @@ export class AccountManager {
     // 4. 设置存储管理器的当前账号
     await this.storageManager.setCurrentAccount(accountId)
 
-    // 5. 保存账号类型到用户偏好（v3.1.0+）
+    // 5. 保存账号站点到用户偏好
     try {
-      await this.saveLastActiveAccountType(account.type)
+      await this.saveLastActiveSite(account.site)
     } catch (error) {
       // 保存偏好失败不应影响切换操作
-      logger.warn("Failed to save last active account type:", error)
+      logger.warn("Failed to save last active site:", error)
     }
 
     logger.info(`✅ Switched to account: ${accountId}`)
   }
 
   /**
+   * 更新账号信息
+   *
+   * 功能：
+   * 1. 更新账号的表单字段（displayName, site, token, tokenType）
+   * 2. 支持部分更新（只更新提供的字段）
+   * 3. 更新 token 时自动更新 AccountData 中的认证信息和 JWT expiry
+   *
+   * 设计原则 (四师协作):
+   * 🐧 Linus: "简单的字段更新，不要过度复杂化"
+   * ⚛️ Dan: "乐观更新，快速反馈"
+   * ☕ Bloch: "防御性编程，验证账号存在性"
+   * 🏛️ Fowler: "保持领域模型的一致性"
+   *
+   * @param accountId 账号ID
+   * @param updates 更新配置
+   * @throws 如果账号不存在
+   *
+   * @example
+   * ```typescript
+   * await manager.updateAccount("acc_123", {
+   *   displayName: "我的新账号名称",
+   *   site: PackySite.WWW,
+   *   token: "new_token_value"
+   * })
+   * ```
+   *
+   * @since v3.2.0
+   */
+  async updateAccount(
+    accountId: string,
+    updates: UpdateAccountConfig
+  ): Promise<void> {
+    logger.info(`Updating account: ${accountId}`, updates)
+
+    const registry = await this.getOrCreateRegistry()
+
+    // 1. 查找账号
+    const account = registry.accounts.find((acc) => acc.id === accountId)
+    if (!account) {
+      throw new Error(`Account not found: ${accountId}`)
+    }
+
+    // 2. 应用更新到 Account（只更新表单字段）
+    if (updates.displayName !== undefined) {
+      account.displayName = updates.displayName
+    }
+
+    if (updates.site !== undefined) {
+      account.site = updates.site
+    }
+
+    if (updates.tokenType !== undefined) {
+      account.tokenType = updates.tokenType
+    }
+
+    if (updates.token !== undefined) {
+      account.token = updates.token
+    }
+
+    // 3. 保存注册表
+    await this.saveRegistry(registry)
+
+    // 4. 如果更新了 token，需要更新 AccountData
+    if (updates.token !== undefined || updates.tokenType !== undefined) {
+      const storage = this.storageManager.getUnderlyingStorage()
+      const accountData =
+        (await storage.get<AccountData>(`account_${accountId}_info`)) ||
+        this.createEmptyAccountData()
+
+      // 更新认证信息
+      accountData.auth = {
+        token: account.token,
+        type: account.tokenType
+      }
+
+      // 如果是 JWT，提取过期时间；否则移除过期时间
+      if (account.tokenType === TokenType.JWT) {
+        accountData.tokenExpiry = this.extractTokenExpiry(account.token)
+      } else {
+        delete accountData.tokenExpiry
+      }
+
+      await storage.set(`account_${accountId}_info`, accountData)
+    }
+
+    logger.info(`✅ Account updated successfully: ${accountId}`)
+  }
+
+  /**
    * 更新账号快照数据
    *
    * 用途：缓存账号的关键信息，用于列表显示
+   * 快照数据存储在 AccountData 中
    *
    * @param accountId 账号ID
    * @param snapshot 快照数据
@@ -326,15 +434,23 @@ export class AccountManager {
       throw new Error(`Account not found: ${accountId}`)
     }
 
-    account.snapshot = snapshot
-    account.lastSyncAt = Date.now()
+    // 更新 AccountData 中的快照数据
+    const storage = this.storageManager.getUnderlyingStorage()
+    const accountData =
+      (await storage.get<AccountData>(`account_${accountId}_info`)) ||
+      this.createEmptyAccountData()
 
-    await this.saveRegistry(registry)
+    accountData.snapshot = snapshot
+    accountData.lastSyncAt = Date.now()
+
+    await storage.set(`account_${accountId}_info`, accountData)
     logger.debug(`Updated snapshot for account: ${accountId}`)
   }
 
   /**
    * 更新账号有效性状态
+   *
+   * 有效性状态存储在 AccountData 中
    *
    * @param accountId 账号ID
    * @param isValid 是否有效
@@ -350,10 +466,37 @@ export class AccountManager {
       throw new Error(`Account not found: ${accountId}`)
     }
 
-    account.isValid = isValid
-    await this.saveRegistry(registry)
+    // 更新 AccountData 中的有效性状态
+    const storage = this.storageManager.getUnderlyingStorage()
+    const accountData =
+      (await storage.get<AccountData>(`account_${accountId}_info`)) ||
+      this.createEmptyAccountData()
+
+    accountData.isValid = isValid
+    await storage.set(`account_${accountId}_info`, accountData)
 
     logger.info(`Updated account validity: ${accountId} -> ${isValid}`)
+  }
+
+  /**
+   * 创建空的 AccountData 对象
+   *
+   * 用于当 AccountData 不存在时提供默认值
+   */
+  private createEmptyAccountData(): AccountData {
+    return {
+      auth: null,
+      isValid: false,
+      lastSyncAt: undefined,
+      notificationStates: {},
+      peerSpending: null,
+      purchaseConfig: null,
+      snapshot: undefined,
+      subscriptionInfo: null,
+      systemPreference: null,
+      tokenExpiry: undefined,
+      userInfo: null
+    }
   }
 
   /**
@@ -381,21 +524,24 @@ export class AccountManager {
   }
 
   /**
-   * 获取默认显示名称
+   * 获取默认显示名称（基于站点）
+   *
+   * @version v3.5.0 改为基于 PackySite
    */
-  private getDefaultDisplayName(type: AccountVersion): string {
-    const names: Record<AccountVersion, string> = {
-      [AccountVersion.CODEX_SHARED]: "Codex 账号",
-      [AccountVersion.PRIVATE]: "滴滴车账号",
-      [AccountVersion.SHARED]: "公交车账号"
+  private getDefaultDisplayName(site: PackySite): string {
+    const names: Record<PackySite, string> = {
+      [PackySite.CODEX]: "Codex 账号",
+      [PackySite.SHARED]: "滴滴车账号",
+      [PackySite.WWW]: "公交车账号"
     }
-    return names[type]
+    return names[site]
   }
 
   /**
    * 获取或创建账号注册表
    *
    * v3.1.0 优化：使用缓存机制减少存储读取
+   * v3.4.0 优化：自动检测并迁移旧格式数据
    * - 缓存有效期：5秒
    * - 命中率预期：90%+
    */
@@ -415,20 +561,24 @@ export class AccountManager {
       .get<AccountRegistry>(StorageDomain.ACCOUNT_REGISTRY)
 
     if (existing) {
+      // v3.4.0+: 检测并迁移旧格式数据
+      if ("activeAccounts" in existing) {
+        logger.info("Detected old registry format, migrating...")
+        const migrated = await this.migrateRegistryFormat(existing as any)
+        await this.saveRegistry(migrated)
+        return migrated
+      }
+
       // 更新缓存
       this.registryCache = existing
       this.cacheTimestamp = now
       return existing
     }
 
-    // 3. 不存在则创建默认注册表
+    // 3. 不存在则创建默认注册表（新格式）
     const defaultRegistry: AccountRegistry = {
       accounts: [],
-      activeAccounts: {
-        [AccountVersion.CODEX_SHARED]: null,
-        [AccountVersion.PRIVATE]: null,
-        [AccountVersion.SHARED]: null
-      } as AccountCollection,
+      activeAccountId: null,
       version: 1
     }
 
@@ -439,25 +589,83 @@ export class AccountManager {
   }
 
   /**
-   * 保存上次激活的账号类型到用户偏好（v3.1.0+）
+   * 迁移旧格式的注册表（v3.4.0+ 数据迁移）
+   *
+   * 将 activeAccounts (按类型索引) 转换为 activeAccountId (全局唯一)
+   *
+   * 迁移策略：
+   * 1. 找到所有 isActive=true 的账号
+   * 2. 如果有多个，选择 lastUsedAt 最新的
+   * 3. 如果没有，设置为 null
+   *
+   * @param oldRegistry 旧格式的注册表（包含 activeAccounts 字段）
+   * @returns 新格式的注册表（包含 activeAccountId 字段）
+   */
+  private async migrateRegistryFormat(
+    oldRegistry: AccountRegistry & {
+      activeAccounts?: Record<string, null | string>
+    }
+  ): Promise<AccountRegistry> {
+    logger.info("🔄 Migrating registry format from v3.3 to v3.4...")
+
+    // 找到所有激活的账号
+    const activeAccounts = oldRegistry.accounts.filter((acc) => acc.isActive)
+
+    // 选择最近使用的账号作为全局激活账号
+    let activeAccountId: null | string = null
+
+    if (activeAccounts.length > 0) {
+      // 按 lastUsedAt 降序排序，取第一个
+      const [mostRecentAccount] = activeAccounts.sort(
+        (a, b) => b.lastUsedAt - a.lastUsedAt
+      )
+      activeAccountId = mostRecentAccount.id
+
+      logger.info(
+        `Selected account ${activeAccountId} as global active account`
+      )
+
+      // 将其他激活账号设为非激活
+      oldRegistry.accounts.forEach((acc) => {
+        if (acc.id !== activeAccountId) {
+          acc.isActive = false
+        }
+      })
+    }
+
+    // 构建新格式的注册表
+    const newRegistry: AccountRegistry = {
+      accounts: oldRegistry.accounts,
+      activeAccountId,
+      version: oldRegistry.version
+    }
+
+    logger.info("✅ Registry format migration completed")
+
+    return newRegistry
+  }
+
+  /**
+   * 保存上次激活的站点到用户偏好（v3.5.0+）
    *
    * 用于在下次启动时恢复用户的账号选择
+   *
+   * @version v3.5.0 改为保存站点而非账号类型
    */
-  private async saveLastActiveAccountType(
-    accountType: AccountVersion
-  ): Promise<void> {
+  private async saveLastActiveSite(site: PackySite): Promise<void> {
     const storage = this.storageManager.getUnderlyingStorage()
 
     // 读取当前用户偏好
     const currentPreference = await storage.get(StorageDomain.USER_PREFERENCE)
 
-    // 更新账号类型
+    // 更新站点信息（使用类型断言确保安全展开）
+    const preference = (currentPreference as Record<string, unknown>) || {}
     await storage.set(StorageDomain.USER_PREFERENCE, {
-      ...currentPreference,
-      account_version: accountType
+      ...preference,
+      last_active_site: site
     })
 
-    logger.debug(`Saved last active account type: ${accountType}`)
+    logger.debug(`Saved last active site: ${site}`)
   }
 
   /**

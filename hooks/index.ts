@@ -16,7 +16,7 @@ export * from "./infrastructure"
 export { usePurchaseStatus } from "~/modules/purchase/hooks"
 
 // 🧠 业务逻辑层 - 从模块重导出，保持开发体验
-export { useOpusStatus, useVersionSwitcher } from "~/modules/user/hooks"
+export { useOpusStatus } from "~/modules/user/hooks"
 
 // 🌐 跨领域层 - 暂时为空，按需添加
 // export * from './shared'

@@ -18,7 +18,13 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import type { Account, AccountVersion, AddAccountConfig } from "~/types"
+import type {
+  Account,
+  AccountData,
+  AddAccountConfig,
+  UpdateAccountConfig
+} from "~/types"
+import { PackySite } from "~/types/account"
 
 import { AccountManager } from "../lib/account"
 import { getMultiAccountStorageManager } from "../lib/storage"
@@ -26,19 +32,22 @@ import { getMultiAccountStorageManager } from "../lib/storage"
 /**
  * 账号管理 Hook
  *
- * @param accountType 账号类型（可选）。如果提供，则只返回该类型的账号；如果不提供，返回所有账号
+ * @param site 账号站点（可选）。如果提供，则只返回该站点的账号；如果不提供，返回所有账号
  *
  * @example
  * ```typescript
- * // 获取特定类型的账号
- * const { accounts } = useAccountManager(AccountVersion.SHARED)
+ * // 获取特定站点的账号
+ * const { accounts } = useAccountManager(PackySite.WWW)
  *
- * // 获取所有账号（跨类型）
+ * // 获取所有账号（跨站点）
  * const { accounts } = useAccountManager()
  * ```
  */
-export function useAccountManager(accountType?: AccountVersion) {
+export function useAccountManager(site?: PackySite) {
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [accountDataMap, setAccountDataMap] = useState<
+    Record<string, AccountData>
+  >({})
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<null | string>(null)
@@ -58,26 +67,43 @@ export function useAccountManager(accountType?: AccountVersion) {
       setError(null)
 
       const manager = getManager()
+      const storageManager = getMultiAccountStorageManager()
+      const storage = storageManager.getUnderlyingStorage()
 
       // 获取所有账号
       const allAccounts = await manager.getAllAccounts()
 
-      // 根据 accountType 参数决定是否过滤
-      const filteredAccounts = accountType
-        ? allAccounts.filter((acc) => acc.type === accountType)
+      // 根据 site 参数决定是否过滤
+      const filteredAccounts = site
+        ? allAccounts.filter((acc) => acc.site === site)
         : allAccounts
 
       setAccounts(filteredAccounts)
 
-      // 获取当前激活账号
-      if (accountType) {
-        // 特定类型的当前账号
-        const current = await manager.getCurrentAccount(accountType)
+      // 加载每个账号的 AccountData
+      const dataMap: Record<string, AccountData> = {}
+      for (const account of filteredAccounts) {
+        const accountData = await storage.get<AccountData>(
+          `account_${account.id}_info`
+        )
+        if (accountData) {
+          dataMap[account.id] = accountData
+        }
+      }
+      setAccountDataMap(dataMap)
+
+      // 获取当前激活账号（v3.4.0+ 重构）
+      if (site) {
+        // 特定站点的当前账号：找到该站点中激活的账号
+        const siteAccounts = filteredAccounts.filter(
+          (acc) => acc.site === site
+        )
+        const current = siteAccounts.find((acc) => acc.isActive) || null
         setCurrentAccount(current)
       } else {
-        // 全局当前账号（找到任何激活的账号）
-        const activeAccount = allAccounts.find((acc) => acc.isActive)
-        setCurrentAccount(activeAccount || null)
+        // 全局当前账号：直接调用 getCurrentAccount()
+        const current = await manager.getCurrentAccount()
+        setCurrentAccount(current)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error"
@@ -86,7 +112,7 @@ export function useAccountManager(accountType?: AccountVersion) {
     } finally {
       setLoading(false)
     }
-  }, [accountType, getManager])
+  }, [site, getManager])
 
   /**
    * 添加新账号
@@ -154,6 +180,27 @@ export function useAccountManager(accountType?: AccountVersion) {
   )
 
   /**
+   * 更新账号信息
+   */
+  const updateAccount = useCallback(
+    async (accountId: string, updates: UpdateAccountConfig): Promise<void> => {
+      try {
+        const manager = getManager()
+        await manager.updateAccount(accountId, updates)
+
+        // 刷新账号列表
+        await loadAccounts()
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update account"
+        setError(errorMessage)
+        throw err
+      }
+    },
+    [getManager, loadAccounts]
+  )
+
+  /**
    * 刷新账号列表
    */
   const refreshAccounts = useCallback(async () => {
@@ -167,6 +214,7 @@ export function useAccountManager(accountType?: AccountVersion) {
 
   return {
     // 账号数据
+    accountDataMap,
     accounts,
     // 操作方法
     addAccount,
@@ -178,6 +226,7 @@ export function useAccountManager(accountType?: AccountVersion) {
     loading,
     refreshAccounts,
     removeAccount,
-    switchAccount
+    switchAccount,
+    updateAccount
   }
 }

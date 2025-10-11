@@ -1,5 +1,21 @@
 # Chrome Extension 存储架构设计
 
+> **⚠️ 废弃通知 (v3.5.0+)**
+>
+> 本文档描述的版本感知存储架构已被**多账号存储架构**替代。
+>
+> **主要变更**:
+> - ❌ 不再使用 `StorageManager.getCurrentVersion()` 和版本化存储键
+> - ✅ 使用 `MultiAccountStorageManager` 管理多账号数据
+> - ✅ 每个账号的数据使用 `account_{accountId}_info` 聚合键存储
+> - ✅ 账号站点信息存储在 `Account.site` (PackySite 枚举)
+>
+> **新架构文档**: [CLAUDE.md - Multi-Account Architecture](../../CLAUDE.md#multi-account-architecture-v350)
+>
+> 本文档仅供参考历史架构设计和设计理念。
+
+---
+
 > 本文档深度解析 PackyCode Cost Monitor 的存储系统架构，重点介绍 StorageManager 重构历程和技术实现细节。
 >
 > **相关文档**: [版本化存储系统](../guides/versioned-storage-guide.md) | [日志通信机制](log-bridge-design.md)

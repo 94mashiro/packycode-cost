@@ -10,7 +10,6 @@
  */
 
 import type {
-  AccountVersion,
   AuthStorage,
   NotificationStates,
   PackyConfig,
@@ -22,94 +21,90 @@ import type {
 } from "./index"
 
 /**
- * 账号实体 - 多账号管理的核心数据结构
+ * PackyCode 站点枚举
  *
- * 每个账号代表一个独立的认证身份，拥有独立的数据空间
+ * 三个可用站点：
+ * - WWW: 主站 (www.packycode.com)
+ * - SHARED: 共享站点 (shared.packycode.com)
+ * - CODEX: Codex 站点 (codex.packycode.com)
+ *
+ * @since v3.2.0
+ */
+export enum PackySite {
+  CODEX = "codex.packycode.com",
+  SHARED = "shared.packycode.com",
+  WWW = "www.packycode.com"
+}
+
+/**
+ * 账号实体 - 表单数据 + 身份标识
+ *
+ * 设计原则：
+ * - 只包含用户可编辑的表单字段
+ * - API 派生字段存储在 AccountData 中
+ *
+ * @since v3.0.0
  */
 export interface Account {
   // === 元数据 ===
   /** 账号创建时间（毫秒时间戳） */
   createdAt: number
 
-  // === 用户信息 ===
   /** 用户自定义显示名称 */
   displayName: string
 
-  /** 邮箱地址（如果可获取） */
-  email?: string
-
   // === 身份标识 ===
-  /** UUID - 账号唯一标识（基于 token hash 生成） */
+  /** UUID - 账号唯一标识 */
   readonly id: string
 
-  // === 状态标记 ===
   /** 是否为当前激活账号 */
   isActive: boolean
-
-  /** Token 是否有效（服务器验证结果） */
-  isValid: boolean
-
-  // === 元数据 ===
-  /** 最后数据同步时间 */
-  lastSyncAt?: number
 
   /** 最后使用时间（用于 LRU 缓存） */
   lastUsedAt: number
 
-  // === 快照数据（用于列表显示，避免频繁API调用） ===
   /**
-   * 账号数据快照
-   * 在账号列表中显示关键信息，无需激活账号即可查看
+   * 账号所属站点（必需字段）
+   * 用于区分不同的 PackyCode 站点（www/shared/codex）
+   * 所有业务逻辑（API endpoint、UI 展示）都基于此字段派生
+   *
+   * @since v3.2.0
+   * @version v3.5.0 改为必需字段，作为账号系统的单一数据源
    */
-  snapshot?: AccountSnapshot
+  site: PackySite
 
-  // === 认证信息 ===
-  /** 当前有效的认证令牌 */
+  // === 表单字段（用户可编辑） ===
+  /** 认证令牌 */
   token: string
 
-  /** JWT 过期时间（毫秒时间戳，API Key 无此字段） */
-  tokenExpiry?: number
-
-  /** JWT | API_KEY */
+  /** Token 类型（JWT | API_KEY） */
   tokenType: TokenType
-
-  // === 身份标识 ===
-  /** 账号类型（公交车/滴滴车/Codex） */
-  readonly type: AccountVersion
-
-  /** API 返回的用户ID */
-  userId?: string
 }
 
 /**
- * 账号集合配置 - 管理每种类型的激活账号
- *
- * 设计思路：
- * - 每种账号类型（SHARED/PRIVATE/CODEX_SHARED）都有一个当前激活的账号
- * - 切换账号类型时，自动切换到该类型的激活账号
- * - 值为 null 表示该类型还没有添加任何账号
- */
-export interface AccountCollection {
-  [AccountVersion.CODEX_SHARED]: null | string
-  [AccountVersion.PRIVATE]: null | string
-  [AccountVersion.SHARED]: null | string
-}
-
-/**
- * 账号聚合数据 - 单个账号的所有数据（v3.1.0+）
+ * 账号聚合数据 - 单个账号的所有数据
  *
  * 存储位置: account_{uuid}_info
  *
  * 设计目标：
  * - 将原本分散在多个键的数据聚合到单个对象
+ * - 包含所有 API 获取的运行时数据
  * - 减少存储键数量，提升读写性能
  * - 保证数据原子性和一致性
  *
  * @since v3.1.0
  */
 export interface AccountData {
+  // === API 获取的运行时数据 ===
   /** 认证信息 */
   auth: AuthStorage | null
+
+  // === API 派生字段（从 Account 迁移） ===
+  /** Token 是否有效（服务器验证结果） */
+  isValid: boolean
+
+  /** 最后数据同步时间 */
+  lastSyncAt?: number
 
   /** 通知状态 */
   notificationStates: NotificationStates
@@ -120,13 +115,22 @@ export interface AccountData {
   /** 购买配置 */
   purchaseConfig: null | PackyConfig
 
+  /**
+   * 账号数据快照
+   * 在账号列表中显示关键信息，无需激活账号即可查看
+   */
+  snapshot?: AccountSnapshot
+
   /** 订阅信息 */
   subscriptionInfo: null | SubscriptionApiResponse
 
   /** 系统偏好 */
   systemPreference: null | SystemPreferenceStorage
 
-  /** 用户信息 */
+  /** JWT 过期时间（毫秒时间戳，API Key 无此字段） */
+  tokenExpiry?: number
+
+  /** 用户信息（包含 email 等） */
   userInfo: null | UserInfo
 }
 
@@ -147,13 +151,18 @@ export interface AccountDetectionResult {
  *
  * 存储位置: StorageDomain.ACCOUNT_REGISTRY
  * 作用: 中心化管理所有账号，避免数据分散
+ *
+ * 设计原则 (v3.4.0+ 重构):
+ * - 全局唯一激活账号（而非每种类型一个）
+ * - 账号维度的切换（而非类型维度）
+ * - 所有账号一视同仁
  */
 export interface AccountRegistry {
   /** 所有账号列表 */
   accounts: Account[]
 
-  /** 每种类型的当前激活账号ID */
-  activeAccounts: AccountCollection
+  /** 当前全局激活账号ID */
+  activeAccountId: null | string
 
   /** 数据模型版本（用于未来迁移） */
   version: number
@@ -182,19 +191,24 @@ export interface AccountSnapshot {
 /**
  * 账号创建配置
  * 用于 AccountManager.addAccount() 方法
+ *
+ * 设计原则 (v3.5.0+):
+ * - site 为必需字段，作为账号的单一数据源
+ * - 所有业务逻辑（API endpoint、UI 展示）基于 site 派生
+ * - 只包含表单字段，不包含 API 派生字段
  */
 export interface AddAccountConfig {
   /** 自定义显示名称（可选） */
   displayName?: string
+
+  /** 账号所属站点（必需） */
+  site: PackySite
 
   /** 认证令牌 */
   token: string
 
   /** 令牌类型 */
   tokenType: TokenType
-
-  /** 账号类型 */
-  type: AccountVersion
 }
 
 /**
@@ -216,4 +230,29 @@ export interface MigrationStatus {
 
   /** 目标版本 */
   toVersion: string
+}
+
+/**
+ * 账号更新配置
+ * 用于 AccountManager.updateAccount() 方法
+ *
+ * 设计原则 (Joshua Bloch):
+ * - 只包含表单字段（用户可编辑）
+ * - 所有字段可选，支持部分更新
+ * - 不包含 API 派生字段
+ *
+ * @since v3.2.0
+ */
+export interface UpdateAccountConfig {
+  /** 自定义显示名称 */
+  displayName?: string
+
+  /** 账号所属站点 */
+  site?: PackySite
+
+  /** 认证令牌 */
+  token?: string
+
+  /** 令牌类型 */
+  tokenType?: TokenType
 }

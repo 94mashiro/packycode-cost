@@ -4,7 +4,18 @@
  */
 
 // ===== 枚举定义 =====
-// 账号版本
+/**
+ * 账号版本枚举
+ *
+ * @deprecated v3.5.0+ 仅用于 v2.x 数据迁移，业务逻辑请使用 PackySite
+ * @see PackySite in types/account.ts
+ * @internal 不要在新代码中使用此枚举
+ *
+ * 迁移说明：
+ * - CODEX_SHARED → PackySite.CODEX (codex.packycode.com)
+ * - PRIVATE → PackySite.SHARED (shared.packycode.com 滴滴车)
+ * - SHARED → PackySite.WWW (www.packycode.com 公交车)
+ */
 export enum AccountVersion {
   CODEX_SHARED = "codex_shared",
   PRIVATE = "private",
@@ -399,7 +410,11 @@ export interface UserInfoData {
 
 // 用户偏好
 export interface UserPreferenceStorage {
-  account_version: AccountVersion
+  /**
+   * @deprecated v3.5.0+ 废弃，仅用于向后兼容
+   * 业务逻辑请从 AccountManager.getCurrentAccount().site 读取
+   */
+  account_version?: AccountVersion
   /** Opus 模型状态通知设置 */
   opus_notification?: boolean
   /** 购买开放通知设置 */
@@ -409,11 +424,11 @@ export interface UserPreferenceStorage {
 // ===== 多账号管理系统类型 (v3.0.0+) =====
 export type {
   Account,
-  AccountCollection,
   AccountData,
   AccountDetectionResult,
   AccountRegistry,
   AccountSnapshot,
   AddAccountConfig,
-  MigrationStatus
+  MigrationStatus,
+  UpdateAccountConfig
 } from "./account"

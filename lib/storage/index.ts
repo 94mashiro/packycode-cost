@@ -19,6 +19,7 @@ import { Storage } from "@plasmohq/storage"
 import { loggers } from "~/lib/logger"
 
 import { MultiAccountStorageManager } from "./MultiAccountStorageManager"
+import { createStorageAdapter, type IStorageAdapter } from "./StorageAdapter"
 import { StorageManager } from "./storageManager"
 
 const logger = loggers.storage

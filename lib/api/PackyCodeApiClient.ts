@@ -23,7 +23,7 @@ import {
  * 统一的PackyCode API客户端
  * 集成了URL适配、认证管理、错误处理的完整解决方案
  *
- * v3.6.0 架构改进:
+ * 架构改进:
  * - 接收 AccountContext 而非单独的 authData
  * - 从 context.site 生成目标站点 URL，确保站点和 token 匹配
  * - 消除对 getCurrentApiUrl() 的依赖
@@ -130,7 +130,7 @@ export class PackyCodeApiClient {
   /**
    * 根据站点生成 API URL (私有方法)
    *
-   * 核心改进 (v3.6.0):
+   * 核心改进:
    * - 直接使用传入的站点，而非查询当前账号
    * - 确保 URL 和 token 的站点匹配
    *
@@ -158,7 +158,7 @@ export const packyCodeApi = new PackyCodeApiClient()
  * 便捷的函数式API
  * 提供函数式调用方式，方便现有代码迁移
  *
- * v3.6.0: 所有方法改为接收 AccountContext
+ * 所有方法改为接收 AccountContext
  */
 export const api = {
   /**

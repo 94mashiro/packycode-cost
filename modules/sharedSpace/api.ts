@@ -6,7 +6,6 @@
  * Dan: "避免过度抽象，保持简单直接"
  */
 
-import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
@@ -85,10 +84,11 @@ export async function fetchPrivateOpusStatus(
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
     // 获取当前存储的状态
-    const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
-      accountId,
-      StorageDomain.SYSTEM_PREFERENCE
-    )
+    const systemPref =
+      await storageManager.get<SystemPreferenceStorage>(
+        accountId,
+        StorageDomain.SYSTEM_PREFERENCE
+      )
     const previousOpusState = systemPref?.opus_enabled
     const previousRateLimitResetAt = systemPref?.rate_limit_reset_at
 
@@ -111,7 +111,7 @@ export async function fetchPrivateOpusStatus(
       }
 
       // 更新系统偏好，包含 opus_enabled 和 rate_limit_reset_at
-      await storageManager.setForAccount(
+      await storageManager.set(
         accountId,
         StorageDomain.SYSTEM_PREFERENCE,
         {

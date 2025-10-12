@@ -53,7 +53,7 @@ export async function fetchPeerSpendingToday(
     const peerSpendingData = transformPeerSpendingData(rawData)
 
     // 存储数据
-    await storageManager.setForAccount(
+    await storageManager.set(
       accountId,
       StorageDomain.PEER_SPENDING,
       peerSpendingData

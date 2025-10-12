@@ -11,6 +11,7 @@
 import { AccountManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
 import { fetchPeerSpendingToday } from "~/modules/peerSpending"
 import { checkAndNotifyPurchaseStatus } from "~/modules/purchase/status"
 import { fetchPrivateOpusStatus } from "~/modules/sharedSpace"
@@ -42,8 +43,9 @@ export type DataTaskAction = `${DataTaskType}`
 interface TaskDefinition {
   readonly applicableSites: PackySite[] // 适用站点列表
   readonly description: string // 任务描述
-  readonly handler: (context: import("~/types").AccountContext) => Promise<unknown> // 任务执行函数（接收完整账号上下文）
-  readonly priority: number // 执行优先级
+  readonly handler: (
+    context: import("~/types").AccountContext
+  ) => Promise<unknown> // 任务执行函数（接收完整账号上下文）
   readonly type: DataTaskType // 任务类型标识
 }
 
@@ -53,35 +55,30 @@ export const TASK_REGISTRY: Record<DataTaskType, TaskDefinition> = {
     applicableSites: [PackySite.WWW, PackySite.SHARED, PackySite.CODEX], // 所有站点
     description: "检查购买状态和系统配置",
     handler: checkAndNotifyPurchaseStatus,
-    priority: 2,
     type: DataTaskType.CHECK_PURCHASE_STATUS
   },
   [DataTaskType.FETCH_PEER_SPENDING]: {
     applicableSites: [PackySite.SHARED], // 仅滴滴车
     description: "获取同行消费数据（仅滴滴车模式）",
     handler: fetchPeerSpendingToday,
-    priority: 5, // 最低优先级，在其他任务之后执行
     type: DataTaskType.FETCH_PEER_SPENDING
   },
   [DataTaskType.FETCH_PRIVATE_OPUS_STATUS]: {
     applicableSites: [PackySite.SHARED], // 仅滴滴车
     description: "获取滴滴车模式 Opus 状态",
     handler: fetchPrivateOpusStatus,
-    priority: 4,
     type: DataTaskType.FETCH_PRIVATE_OPUS_STATUS
   },
   [DataTaskType.FETCH_SUBSCRIPTION_INFO]: {
     applicableSites: [PackySite.SHARED, PackySite.CODEX], // 仅滴滴车和Codex
     description: "获取用户订阅状态和计划信息",
     handler: fetchSubscriptionInfo,
-    priority: 3,
     type: DataTaskType.FETCH_SUBSCRIPTION_INFO
   },
   [DataTaskType.FETCH_USER_INFO]: {
     applicableSites: [PackySite.WWW, PackySite.SHARED, PackySite.CODEX], // 所有站点
     description: "获取用户预算和使用量信息",
     handler: fetchUserInfo,
-    priority: 1,
     type: DataTaskType.FETCH_USER_INFO
   }
   // 新增任务类型时，TypeScript 会强制要求在这里添加对应配置
@@ -124,7 +121,7 @@ export async function executeAllTasks(): Promise<{
   // 并行执行每个账号的任务（不切换全局状态）
   const results = await Promise.allSettled(
     accounts.map(async (account) => {
-      return await executeTasksForAccount(account.id, account.site)
+      return await executeTasksForAccount(account)
     })
   )
 
@@ -214,7 +211,8 @@ export async function executeTaskByAction(action: DataTaskAction): Promise<{
     }
 
     const authData = await storageManager.get<import("~/types").AuthStorage>(
-      import("~/lib/storage/domains").StorageDomain.AUTH
+      currentAccount.id,
+      StorageDomain.AUTH
     )
 
     if (!authData) {
@@ -223,8 +221,8 @@ export async function executeTaskByAction(action: DataTaskAction): Promise<{
 
     const context: import("~/types").AccountContext = {
       accountId: currentAccount.id,
-      site: currentAccount.site,
       authData,
+      site: currentAccount.site,
       timestamp: Date.now()
     }
 
@@ -239,13 +237,10 @@ export async function executeTaskByAction(action: DataTaskAction): Promise<{
  * 获取所有数据获取任务的信息（类型安全版）
  */
 export function getTasksInfo() {
-  return Object.values(DataTaskType)
-    .map((taskType) => ({
-      description: TASK_REGISTRY[taskType].description,
-      priority: TASK_REGISTRY[taskType].priority,
-      type: taskType
-    }))
-    .sort((a, b) => a.priority - b.priority)
+  return Object.values(DataTaskType).map((taskType) => ({
+    description: TASK_REGISTRY[taskType].description,
+    type: taskType
+  }))
 }
 
 /**
@@ -269,97 +264,89 @@ export function isDataTaskAction(action: string): action is DataTaskAction {
 /**
  * 为单个账号执行任务（私有函数）
  *
- * 核心改进 (v3.6.0):
+ * 核心改进:
  * - 在此处一次性构建完整的 AccountContext
  * - 传递完整上下文给所有任务，消除隐式查询
  * - 确保站点和 token 完美匹配
  *
- * @param accountId 账号ID
- * @param site 账号站点
+ * @param account 账号对象（包含 id 和 site）
  */
 async function executeTasksForAccount(
-  accountId: string,
-  site: PackySite
+  account: import("~/types").Account
 ): Promise<{ error?: string; success: boolean; taskCount: number }> {
-  logger.info(`📍 账号 ${accountId} (${site}) 开始执行任务`)
+  logger.info(`📍 账号 ${account.id} (${account.site}) 开始执行任务`)
 
   try {
     // 🔑 核心改进：在此处一次性构建完整的账号上下文
     const storageManager = getStorageManager()
-    const authData = await storageManager.getForAccount<import("~/types").AuthStorage>(
-      accountId,
-      import("~/lib/storage/domains").StorageDomain.AUTH
-    )
+    const authData = await storageManager.get<
+      import("~/types").AuthStorage
+    >(account.id, StorageDomain.AUTH)
 
     if (!authData) {
-      logger.warn(`⚠️ 账号 ${accountId} 无认证数据，跳过任务执行`)
+      logger.warn(`⚠️ 账号 ${account.id} 无认证数据，跳过任务执行`)
       return { error: "No authentication data", success: false, taskCount: 0 }
     }
 
     // 构建完整的执行上下文
     const context: import("~/types").AccountContext = {
-      accountId,
-      site,
+      accountId: account.id,
       authData,
+      site: account.site,
       timestamp: Date.now()
     }
 
-    logger.debug(`✅ 账号上下文已构建: ${accountId} @ ${site}`)
+    logger.debug(`✅ 账号上下文已构建: ${account.id} @ ${account.site}`)
 
     // 1. 根据站点过滤适用的任务
     const applicableTasks = Object.values(DataTaskType).filter((taskType) => {
-      return TASK_REGISTRY[taskType].applicableSites.includes(site)
+      return TASK_REGISTRY[taskType].applicableSites.includes(account.site)
     })
 
     logger.info(`  🎯 适用任务: ${applicableTasks.length} 个`)
 
     if (applicableTasks.length === 0) {
-      logger.info(`  ⏭️  账号 ${accountId} 无适用任务，跳过`)
+      logger.info(`  ⏭️  账号 ${account.id} 无适用任务，跳过`)
       return { success: true, taskCount: 0 }
     }
 
-    // 2. 按优先级排序
-    const sortedTasks = applicableTasks.sort(
-      (a, b) => TASK_REGISTRY[a].priority - TASK_REGISTRY[b].priority
-    )
-
-    // 3. 执行任务（传入完整上下文，无需切换全局状态）
+    // 2. 并行执行所有任务（传入完整上下文，无需切换全局状态）
     const results = await Promise.allSettled(
-      sortedTasks.map(async (taskType) => {
+      applicableTasks.map(async (taskType) => {
         return await executeTask(taskType, context) // ✅ 传递完整上下文
       })
     )
 
-    // 4. 统计成功数
+    // 3. 统计成功数
     const successCount = results.filter(
       (r) => r.status === "fulfilled" && r.value.success
     ).length
-    const allSuccess = successCount === sortedTasks.length
+    const allSuccess = successCount === applicableTasks.length
 
-    // 5. 收集错误信息
+    // 4. 收集错误信息
     const errors = results
       .map((r, i) => {
         if (r.status === "rejected") {
-          return `${sortedTasks[i]}: ${r.reason}`
+          return `${applicableTasks[i]}: ${r.reason}`
         } else if (!r.value.success) {
-          return `${sortedTasks[i]}: ${r.value.error}`
+          return `${applicableTasks[i]}: ${r.value.error}`
         }
         return null
       })
       .filter((e) => e !== null)
 
     logger.info(
-      `  ${allSuccess ? "✅" : "⚠️"} 账号 ${accountId}: ${successCount}/${sortedTasks.length} 成功`
+      `  ${allSuccess ? "✅" : "⚠️"} 账号 ${account.id}: ${successCount}/${applicableTasks.length} 成功`
     )
 
     return {
       error: errors.length > 0 ? errors.join("; ") : undefined,
       success: allSuccess,
-      taskCount: sortedTasks.length
+      taskCount: applicableTasks.length
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error"
-    logger.error(`  ❌ 账号 ${accountId} 执行失败:`, errorMsg)
+    logger.error(`  ❌ 账号 ${account.id} 执行失败:`, errorMsg)
     return {
       error: errorMsg,
       success: false,

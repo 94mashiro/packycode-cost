@@ -1,7 +1,7 @@
 /**
  * DataMigrationManager - v2.x → v3.x 数据迁移管理
  *
- * @deprecated v3.5.0+ 此类仅用于历史数据迁移
+ * @deprecated 此类仅用于历史数据迁移
  * @internal 业务逻辑不应使用此类
  *
  * 核心职责：
@@ -15,9 +15,6 @@
  * ⚛️ Dan: "清晰的迁移状态和错误处理"
  * ☕ Bloch: "幂等性和防御性编程"
  * 🏛️ Fowler: "Repository 模式管理数据访问"
- *
- * @since v3.0.0
- * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
 
 import { loggers } from "~/lib/logger"
@@ -49,7 +46,7 @@ const logger = loggers.migration
 /**
  * 数据迁移管理器
  *
- * 负责 v2.x 到 v3.1.0 的数据结构迁移
+ * 负责 v2.x 到 v3.0.0 的数据结构迁移
  */
 export class DataMigrationManager {
   private accountManager: AccountManager
@@ -111,13 +108,13 @@ export class DataMigrationManager {
       const storageManager = getStorageManager()
 
       for (const account of registry.accounts) {
-        // v3.1.0+: 使用聚合存储键
+        // 使用聚合存储键
         const storageKey = `account_${account.id}_info`
-        const hasAuth = !!(await storageManager.getForAccount(
+        const hasAuth = !!(await storageManager.get(
           account.id,
           StorageDomain.AUTH
         ))
-        const hasUserInfo = !!(await storageManager.getForAccount(
+        const hasUserInfo = !!(await storageManager.get(
           account.id,
           StorageDomain.USER_INFO
         ))
@@ -323,7 +320,7 @@ export class DataMigrationManager {
   /**
    * 获取默认显示名称（基于站点）
    *
-   * @version v3.5.0 改为基于 PackySite
+   * @version 3.0.0 - 改为基于 PackySite
    */
   private getDefaultDisplayName(site: PackySite): string {
     const names: Record<PackySite, string> = {
@@ -335,17 +332,15 @@ export class DataMigrationManager {
   }
 
   /**
-   * 将 v2.x 账号类型映射到 v3.5.0 站点
+   * 将 v2.x 账号类型映射到站点
    *
-   * @deprecated v3.5.0+ 仅用于 v2 迁移，业务逻辑请使用 PackySite
+   * @deprecated 仅用于 v2 迁移，业务逻辑请使用 PackySite
    * @internal 不要在新代码中使用此函数
    *
    * 映射规则：
    * - CODEX_SHARED → CODEX (codex.packycode.com)
    * - PRIVATE → SHARED (shared.packycode.com 滴滴车)
    * - SHARED → WWW (www.packycode.com 公交车)
-   *
-   * @version v3.5.0 新增
    */
   private mapAccountTypeToSite(type: AccountVersion): PackySite {
     const mapping: Record<AccountVersion, PackySite> = {
@@ -399,7 +394,7 @@ export class DataMigrationManager {
     }
 
     // 2. 创建账号实体（只包含表单字段）
-    // v3.5.0+: 映射 AccountVersion → PackySite
+    // 映射 AccountVersion → PackySite
     const site = this.mapAccountTypeToSite(accountType)
 
     try {

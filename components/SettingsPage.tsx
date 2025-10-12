@@ -1,4 +1,4 @@
-import { AccountTypeSwitcher } from "./AccountTypeSwitcher"
+import { AccountSwitcher } from "./AccountSwitcher"
 import { DeveloperPanel } from "./DeveloperPanel"
 import { LogoutSection } from "./LogoutSection"
 import { NotificationSettings } from "./NotificationSettings"
@@ -38,8 +38,8 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
 
       {/* 设置内容 */}
       <div className="space-y-6">
-        {/* 账号版本设置 */}
-        <AccountTypeSwitcher
+        {/* 账号切换器 */}
+        <AccountSwitcher
           onAccountChanged={onRefresh}
           showNotification={false}
         />

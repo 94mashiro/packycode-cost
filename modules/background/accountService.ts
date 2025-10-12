@@ -11,9 +11,6 @@
  * ⚛️ Dan: "清晰的错误处理和日志记录"
  * ☕ Bloch: "防御性编程，处理所有边界情况"
  * 🏛️ Fowler: "服务层封装业务逻辑"
- *
- * @since v3.0.0
- * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
 
 import { AccountManager, DataMigrationManager } from "~/lib/account"
@@ -68,7 +65,7 @@ export class BackgroundAccountService {
   }
 
   /**
-   * 获取当前激活账号信息（v3.4.0+ 重构）
+   * 获取当前激活账号信息
    *
    * @returns 当前账号的认证信息，如果没有则返回 null
    */
@@ -234,7 +231,7 @@ export class BackgroundAccountService {
       }
 
       // 2. 确保有激活账号
-      // v3.5.0+: 不再依赖 userPreference.account_version
+      // 不再依赖 userPreference.account_version
       // 如果没有激活账号，激活第一个可用账号
       try {
         const currentAccount = await this.accountManager.getCurrentAccount()
@@ -274,7 +271,7 @@ export class BackgroundAccountService {
   /**
    * 映射 AccountVersion → PackySite
    *
-   * @deprecated v3.5.0+ 仅用于 v2.x 数据迁移和 Token 自动检测的向后兼容
+   * @deprecated 仅用于 v2.x 数据迁移和 Token 自动检测的向后兼容
    * @internal 业务逻辑不应调用此函数，请直接使用 account.site
    *
    * 与 DataMigrationManager 保持一致的映射规则：

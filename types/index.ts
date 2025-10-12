@@ -7,7 +7,7 @@
 /**
  * 账号版本枚举
  *
- * @deprecated v3.5.0+ 仅用于 v2.x 数据迁移，业务逻辑请使用 PackySite
+ * @deprecated 仅用于 v2.x 数据迁移，业务逻辑请使用 PackySite
  * @see PackySite in types/account.ts
  * @internal 不要在新代码中使用此枚举
  *
@@ -411,7 +411,7 @@ export interface UserInfoData {
 // 用户偏好
 export interface UserPreferenceStorage {
   /**
-   * @deprecated v3.5.0+ 废弃，仅用于向后兼容
+   * @deprecated 废弃，仅用于向后兼容
    * 业务逻辑请从 AccountManager.getCurrentAccount().site 读取
    */
   account_version?: AccountVersion
@@ -421,7 +421,7 @@ export interface UserPreferenceStorage {
   purchase_notification?: boolean
 }
 
-// ===== 多账号管理系统类型 (v3.0.0+) =====
+// ===== 多账号管理系统类型 =====
 export type {
   Account,
   AccountContext,

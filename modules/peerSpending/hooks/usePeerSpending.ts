@@ -10,9 +10,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import type { PeerSpendingStorage } from "~/types"
+import type { AccountContext, AuthStorage, PeerSpendingStorage } from "~/types"
 
 import { usePeerSpendingStorage } from "~/hooks/infrastructure"
+import { AccountManager } from "~/lib/account"
+import { getStorageManager, StorageDomain } from "~/lib/storage"
 import { fetchPeerSpendingToday } from "~/modules/peerSpending"
 
 /**
@@ -46,7 +48,32 @@ export function usePeerSpending(): PeerSpendingData {
     setError(null)
 
     try {
-      await fetchPeerSpendingToday()
+      // 构建 AccountContext
+      const storageManager = getStorageManager()
+      const accountManager = new AccountManager(storageManager)
+      const currentAccount = await accountManager.getCurrentAccount()
+
+      if (!currentAccount) {
+        throw new Error("No active account")
+      }
+
+      const authData = await storageManager.get<AuthStorage>(
+        currentAccount.id,
+        StorageDomain.AUTH
+      )
+
+      if (!authData) {
+        throw new Error("No authentication data")
+      }
+
+      const context: AccountContext = {
+        accountId: currentAccount.id,
+        authData,
+        site: currentAccount.site,
+        timestamp: Date.now()
+      }
+
+      await fetchPeerSpendingToday(context)
       // 数据会通过存储订阅自动更新
     } catch (err) {
       const errorMessage =

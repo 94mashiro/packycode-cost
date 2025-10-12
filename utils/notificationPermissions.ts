@@ -1,5 +1,5 @@
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
+import { getActiveAccountData } from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 import { type UserPreferenceStorage } from "~/types"
 
@@ -36,8 +36,7 @@ export async function checkNotificationPermission(
  */
 export async function checkOpusNotificationPermission(): Promise<boolean> {
   try {
-    const storageManager = getStorageManager()
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
+    const userPreference = await getActiveAccountData<UserPreferenceStorage>(
       StorageDomain.USER_PREFERENCE
     )
 
@@ -59,8 +58,7 @@ export async function checkOpusNotificationPermission(): Promise<boolean> {
  */
 export async function checkPurchaseNotificationPermission(): Promise<boolean> {
   try {
-    const storageManager = getStorageManager()
-    const userPreference = await storageManager.get<UserPreferenceStorage>(
+    const userPreference = await getActiveAccountData<UserPreferenceStorage>(
       StorageDomain.USER_PREFERENCE
     )
 

@@ -1,7 +1,7 @@
 import { useState } from "react"
 
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
+import { removeActiveAccountData } from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 
 const logger = loggers.ui
@@ -18,14 +18,12 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
     try {
       logger.info("用户发起登出操作")
 
-      const storageManager = getStorageManager()
-
       // 并发清空所有存储数据
       await Promise.all([
-        storageManager.remove(StorageDomain.AUTH),
-        storageManager.remove(StorageDomain.USER_INFO),
-        storageManager.remove(StorageDomain.PURCHASE_CONFIG),
-        storageManager.remove(StorageDomain.SYSTEM_PREFERENCE)
+        removeActiveAccountData(StorageDomain.AUTH),
+        removeActiveAccountData(StorageDomain.USER_INFO),
+        removeActiveAccountData(StorageDomain.PURCHASE_CONFIG),
+        removeActiveAccountData(StorageDomain.SYSTEM_PREFERENCE)
       ])
 
       logger.debug(

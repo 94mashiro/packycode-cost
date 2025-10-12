@@ -2,6 +2,11 @@ import browser from "webextension-polyfill"
 
 import { loggers } from "~/lib/logger"
 import { httpClient } from "~/lib/request/AuthenticatedClient"
+import {
+  getActiveAccountData,
+  getActiveAccountId,
+  setActiveAccountData
+} from "~/lib/storage/activeAccountHelpers"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { parseJWT } from "~/modules/auth"
@@ -62,8 +67,7 @@ async function backgroundExecuteAllTasks() {
 
 async function updateBadge() {
   try {
-    const storageManager = getStorageManager()
-    const userInfo = await storageManager.get<UserInfo>(StorageDomain.USER_INFO)
+    const userInfo = await getActiveAccountData<UserInfo>(StorageDomain.USER_INFO)
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(
@@ -86,8 +90,7 @@ browser.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
     logger.debug("Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const storageManager = getStorageManager()
-      const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
+      const authData = await getActiveAccountData<AuthStorage>(StorageDomain.AUTH)
 
       logger.debug("Current state:", {
         hasToken: !!authData?.token,
@@ -122,12 +125,12 @@ browser.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
           // 解析JWT获取过期时间
           const payload = parseJWT(tokenValue)
-          const authData: AuthStorage = {
+          const newAuthData: AuthStorage = {
             token: tokenValue,
             type: "jwt" as TokenType,
             ...(payload?.exp && { expiry: payload.exp * 1000 }) // 转换为毫秒
           }
-          await storageManager.set(StorageDomain.AUTH, authData, true)
+          await setActiveAccountData(StorageDomain.AUTH, newAuthData, true)
           logger.info("Token stored successfully")
         }
       }
@@ -156,8 +159,7 @@ browser.runtime.onMessage.addListener(
 
     if (action === BackgroundActionEnum.GET_STORED_TOKEN) {
       ;(async () => {
-        const storageManager = getStorageManager()
-        const authData = await storageManager.get<AuthStorage>(
+        const authData = await getActiveAccountData<AuthStorage>(
           StorageDomain.AUTH
         )
         logger.debug("Retrieved auth data:", authData)
@@ -188,10 +190,17 @@ browser.runtime.onMessage.addListener(
 // 设置基于 Plasmo Storage 的存储监听
 async function setupStorageListening() {
   try {
+    const activeAccountId = await getActiveAccountId()
+
+    if (!activeAccountId) {
+      logger.warn("⚠️ No active account, skipping storage listening setup")
+      return
+    }
+
     const storageManager = getStorageManager()
 
-    // 使用 StorageManager 的版本感知 watch
-    storageManager.watch({
+    // 使用 MultiAccountStorageManager 的 watch API（需要显式传入 accountId）
+    storageManager.watch(activeAccountId, {
       [StorageDomain.USER_INFO]: () => {
         logger.debug("User info changed, updating badge")
         updateBadge()
@@ -199,7 +208,7 @@ async function setupStorageListening() {
     })
 
     logger.info(
-      "✅ Storage listening setup completed using StorageManager watch"
+      `✅ Storage listening setup completed for account: ${activeAccountId}`
     )
   } catch (error) {
     logger.error("❌ Failed to setup storage listening:", error)
@@ -299,13 +308,12 @@ async function setupDynamicWebRequestListener() {
             }
 
             // 存储API Key，覆盖现有token
-            const storageManager = getStorageManager()
             const newAuthData: AuthStorage = {
               token: apiKey,
               type: "api_key" as TokenType
               // API Key不需要过期时间
             }
-            await storageManager.set(StorageDomain.AUTH, newAuthData, true)
+            await setActiveAccountData(StorageDomain.AUTH, newAuthData, true)
 
             logger.info("✅ API key存储成功，来源:", details.url)
             // 触发重新获取用户信息以更新额度显示
@@ -333,22 +341,32 @@ async function setupDynamicWebRequestListener() {
 // 监听用户偏好变化，动态更新webRequest监听器
 async function setupUserPreferenceWatcher() {
   try {
-    const storageManager = getStorageManager()
+    const activeAccountId = await getActiveAccountId()
 
-    // 直接使用 Plasmo Storage watch 监听用户偏好变化
-    const watchKeys: Record<string, () => void> = {}
-
-    watchKeys[StorageDomain.USER_PREFERENCE] = async () => {
-      logger.info("🔄 检测到用户偏好变化，重新设置webRequest监听器")
-
-      // 延迟一点时间确保存储已完全更新
-      setTimeout(() => {
-        setupDynamicWebRequestListener()
-      }, 500)
+    if (!activeAccountId) {
+      logger.warn(
+        "⚠️ No active account, skipping user preference watcher setup"
+      )
+      return
     }
 
-    storageManager.watch(watchKeys)
-    logger.info("✅ 用户偏好监听器设置完成")
+    const storageManager = getStorageManager()
+
+    // 使用 MultiAccountStorageManager 的 watch API（需要显式传入 accountId）
+    storageManager.watch(activeAccountId, {
+      [StorageDomain.USER_PREFERENCE]: async () => {
+        logger.info("🔄 检测到用户偏好变化，重新设置webRequest监听器")
+
+        // 延迟一点时间确保存储已完全更新
+        setTimeout(() => {
+          setupDynamicWebRequestListener()
+        }, 500)
+      }
+    })
+
+    logger.info(
+      `✅ 用户偏好监听器设置完成 for account: ${activeAccountId}`
+    )
   } catch (error) {
     logger.error("❌ 用户偏好监听器设置失败:", error)
   }

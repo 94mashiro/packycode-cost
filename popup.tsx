@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === "development") {
 function IndexPopup() {
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
   const { data: authData, refresh: refreshAuth } = useAuth()
-  const { currentAccount, refreshAccounts } = useAccountManager() // v3.4.0+: 从当前账号读取
+  const { currentAccount, refreshAccounts } = useAccountManager() // 从当前账号读取
   const { executeAll, loading: taskLoading } = useTaskExecution()
 
   const tokenExpiration = authData?.token
@@ -51,7 +51,7 @@ function IndexPopup() {
   // 完整的认证有效性：Token 存在且未过期
   const isAuthenticated = isTokenValid && isTokenEffective
 
-  // v3.5.0+: 从当前激活账号读取站点
+  // 从当前激活账号读取站点
   const currentAccountSite = currentAccount?.site ?? PackySite.WWW
 
   const handleRefresh = async () => {

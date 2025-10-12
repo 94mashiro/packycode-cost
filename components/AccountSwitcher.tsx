@@ -12,10 +12,6 @@
  * ⚛️ Dan: "清晰的状态反馈和加载提示，使用现代 UI 组件"
  * ☕ Bloch: "类型安全的组件设计"
  * 🏛️ Fowler: "关注点分离，UI 与业务逻辑解耦"
- *
- * @since v3.1.0 - 原生 select 实现
- * @since v3.2.0 - 升级为 shadcn/ui Select 组件
- * @since v3.5.1 - 回退到原生 select 元素（Chrome Extension popup 兼容性）
  */
 
 import { useCallback, useEffect, useState } from "react"

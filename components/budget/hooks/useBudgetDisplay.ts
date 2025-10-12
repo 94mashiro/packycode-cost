@@ -51,9 +51,9 @@ export interface UseBudgetDisplayReturn {
 export function useBudgetDisplay(): UseBudgetDisplayReturn {
   const { data: userInfo, error, loading } = useUserInfo()
   const { data: systemPref } = useSystemPreference()
-  const { currentAccount } = useAccountManager() // v3.4.0+: 从当前账号读取
+  const { currentAccount } = useAccountManager() // 从当前账号读取
 
-  // v3.5.0+: 从当前激活账号读取站点
+  // 从当前激活账号读取站点
   const accountSite = currentAccount?.site ?? PackySite.WWW
 
   // WWW 公交车模式：提取余额数据

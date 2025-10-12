@@ -93,21 +93,10 @@ export class DevToolsValidator {
     try {
       this.deps.logger.info("🔄 验证账号切换功能...")
 
-      const currentAccountType = this.deps.apiConfigManager.getAccountType()
+      // 简化验证，仅检查 URL 有效性
+      // TODO: 重构为基于 PackySite 的验证逻辑
       const currentBaseUrl = this.deps.apiConfigManager.getBaseUrl()
       const issues: ValidationIssue[] = []
-
-      // 验证当前配置有效性
-      const validAccountTypes = ["shared", "private", "codex_shared"]
-      if (!validAccountTypes.includes(currentAccountType)) {
-        issues.push(
-          this.createIssue(
-            ValidationLevel.ERROR,
-            `无效的账号类型: ${currentAccountType}`,
-            `支持的类型: ${validAccountTypes.join(", ")}`
-          )
-        )
-      }
 
       // 验证URL环境感知
       const isPrivateDomain = currentBaseUrl.includes("share.packycode.com")
@@ -120,37 +109,6 @@ export class DevToolsValidator {
             ValidationLevel.WARNING,
             `未识别的域名: ${currentBaseUrl}`,
             "请确认这是有效的 PackyCode 环境"
-          )
-        )
-      }
-
-      // 验证账号类型与域名一致性
-      if (currentAccountType === "private" && !isPrivateDomain) {
-        issues.push(
-          this.createIssue(
-            ValidationLevel.WARNING,
-            "账号类型与域名不匹配",
-            "滴滴车模式应该使用 share.packycode.com 域名"
-          )
-        )
-      }
-
-      if (currentAccountType === "shared" && !isSharedDomain) {
-        issues.push(
-          this.createIssue(
-            ValidationLevel.WARNING,
-            "账号类型与域名不匹配",
-            "共享模式应该使用 www.packycode.com 域名"
-          )
-        )
-      }
-
-      if (currentAccountType === "codex_shared" && !isCodexDomain) {
-        issues.push(
-          this.createIssue(
-            ValidationLevel.WARNING,
-            "账号类型与域名不匹配",
-            "Codex公交车模式应该使用 codex.packycode.com 域名"
           )
         )
       }
@@ -189,7 +147,6 @@ export class DevToolsValidator {
       this.deps.logger.info("🔍 验证API配置...")
 
       const baseUrl = this.deps.apiConfigManager.getBaseUrl()
-      const accountType = this.deps.apiConfigManager.getAccountType()
       const issues: ValidationIssue[] = []
 
       // 验证基础URL格式
@@ -200,22 +157,13 @@ export class DevToolsValidator {
           this.createIssue(
             ValidationLevel.ERROR,
             `无效的基础URL: ${baseUrl}`,
-            "请检查账号类型配置"
+            "请检查账号配置"
           )
         )
       }
 
-      // 验证账号类型
-      const validAccountTypes = ["shared", "private", "codex_shared"]
-      if (!validAccountTypes.includes(accountType)) {
-        issues.push(
-          this.createIssue(
-            ValidationLevel.WARNING,
-            `未知的账号类型: ${accountType}`,
-            `支持的账号类型: ${validAccountTypes.join(", ")}`
-          )
-        )
-      }
+      // 移除 AccountVersion 相关验证
+      // TODO: 重构为基于 PackySite 的验证逻辑
 
       const success =
         issues.filter((i) => i.level === ValidationLevel.ERROR).length === 0

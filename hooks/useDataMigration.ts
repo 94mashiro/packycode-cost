@@ -11,9 +11,6 @@
  * ⚛️ Dan: "清晰的加载状态和错误处理"
  * ☕ Bloch: "幂等性保证，可重复执行"
  * 🏛️ Fowler: "单一职责，只负责迁移逻辑"
- *
- * @since v3.0.0
- * @updated v3.1.0 - 使用 StorageAdapter 替代直接的 Storage 依赖
  */
 
 import { useCallback, useEffect, useState } from "react"

@@ -17,12 +17,12 @@ import type {
  * - 版本化域: 会根据当前账号版本添加前缀 (shared./private.)
  * - 全局域: 以 global. 开头，在所有版本间共享
  *
- * v3.0.0+ 多账号管理架构:
+ * 多账号管理架构:
  * - 账号特定域: 格式为 account_{accountId}.{domain}
  * - 账号管理域: 全局共享的账号注册表和配置
  */
 export enum StorageDomain {
-  // === 全局账号管理域 (v3.0.0+) ===
+  // === 全局账号管理域 ===
   /** 账号注册表 - 所有账号的索引 */
   ACCOUNT_REGISTRY = "global.account.registry",
   // === 账号特定域（多账号架构） ===
@@ -52,7 +52,7 @@ export type StorageDataType<T extends keyof StorageDomainMap> =
  * - useVersionedStorage(StorageDomain.AUTH) 自动推导为 AuthStorage | null
  * - useVersionedStorage(StorageDomain.USER_INFO) 自动推导为 UserInfo | null
  *
- * v3.0.0+ 新增:
+ * 新增:
  * - ACCOUNT_REGISTRY 映射到 AccountRegistry
  */
 export interface StorageDomainMap {
@@ -68,7 +68,7 @@ export interface StorageDomainMap {
 }
 
 /**
- * 域名到 AccountData 字段的映射（v3.1.0+）
+ * 域名到 AccountData 字段的映射
  *
  * 用于聚合存储模式下的字段访问
  */

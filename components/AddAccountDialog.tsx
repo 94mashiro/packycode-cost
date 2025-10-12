@@ -14,13 +14,12 @@
  * ☕ Bloch: "清晰的表单验证规则，类型安全"
  * 🏛️ Fowler: "领域模型映射到表单字段"
  *
- * @since v3.0.0
- * @version v3.2.0 - 使用 shadcn/ui 设计，添加站点选择
+ * @version 3.0.0 - 使用 shadcn/ui 设计，添加站点选择
  */
 
 import { useState } from "react"
 
-import type { TokenType } from "~/types"
+import { TokenType } from "~/types"
 
 import { Button } from "@/components/shadcn/button"
 import {
@@ -76,7 +75,7 @@ export function AddAccountDialog({
 }: AddAccountDialogProps) {
   const [token, setToken] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [tokenType, setTokenType] = useState<TokenType>("jwt")
+  const [tokenType, setTokenType] = useState<TokenType>(TokenType.JWT)
   const [site, setSite] = useState<PackySite>(PackySite.WWW)
   const [error, setError] = useState<null | string>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -111,7 +110,7 @@ export function AddAccountDialog({
       // 重置表单
       setToken("")
       setDisplayName("")
-      setTokenType("jwt")
+      setTokenType(TokenType.JWT)
       setSite(PackySite.WWW)
       onClose()
     } catch (err) {
@@ -126,7 +125,7 @@ export function AddAccountDialog({
   const handleCancel = () => {
     setToken("")
     setDisplayName("")
-    setTokenType("jwt")
+    setTokenType(TokenType.JWT)
     setSite(PackySite.WWW)
     setError(null)
     onClose()

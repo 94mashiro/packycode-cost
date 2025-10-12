@@ -1,6 +1,6 @@
 import type { AuthStorage } from "~/types"
 
-import { getStorageManager } from "~/lib/storage"
+import { getActiveAccountData } from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 
 /**
@@ -8,8 +8,7 @@ import { StorageDomain } from "~/lib/storage/domains"
  */
 export async function getStoredToken(): Promise<null | string> {
   try {
-    const storageManager = getStorageManager()
-    const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
+    const authData = await getActiveAccountData<AuthStorage>(StorageDomain.AUTH)
     return authData?.token || null
   } catch {
     return null
@@ -25,16 +24,18 @@ export async function getStoredToken(): Promise<null | string> {
  */
 export async function userLogout(): Promise<boolean> {
   try {
-    const storageManager = getStorageManager()
+    const { setActiveAccountData } = await import(
+      "~/lib/storage/activeAccountHelpers"
+    )
 
     // 清理认证信息
-    await storageManager.set(StorageDomain.AUTH, null)
+    await setActiveAccountData(StorageDomain.AUTH, null)
 
     // 清理用户信息
-    await storageManager.set(StorageDomain.USER_INFO, null)
+    await setActiveAccountData(StorageDomain.USER_INFO, null)
 
     // 清理系统偏好
-    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, null)
+    await setActiveAccountData(StorageDomain.SYSTEM_PREFERENCE, null)
 
     return true
   } catch {

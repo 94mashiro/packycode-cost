@@ -11,8 +11,6 @@
  * ⚛️ Dan: "清晰的类型约束和错误处理"
  * ☕ Bloch: "接口隔离原则，只暴露必要方法"
  * 🏛️ Fowler: "适配器模式，隔离第三方依赖"
- *
- * @since v3.1.0
  */
 
 import type { Storage } from "@plasmohq/storage"

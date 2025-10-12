@@ -18,13 +18,15 @@ export async function fetchSubscriptionInfo(
     const subscriptionData = await api.getSubscriptions(context)
 
     // 存储API响应数据
-    await storageManager.setForAccount(
+    await storageManager.set(
       accountId,
       StorageDomain.SUBSCRIPTION_INFO,
       subscriptionData
     )
 
-    logger.debug(`Subscription info fetched and stored successfully for ${site}`)
+    logger.debug(
+      `Subscription info fetched and stored successfully for ${site}`
+    )
     return subscriptionData
   } catch (error) {
     // 统一API客户端已经处理了认证错误和token清理

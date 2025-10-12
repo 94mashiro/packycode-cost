@@ -12,7 +12,7 @@ import { PackySite } from "~/types/account"
  * API 环境配置定义
  * 每种 API 环境的所有相关配置都在这里统一管理
  *
- * @version v3.5.0 改为基于 PackySite 而非 AccountVersion
+ * @version 3.0.0 - 改为基于 PackySite 而非 AccountVersion
  */
 export interface ApiEnvironmentConfig {
   /** 基础域名 */
@@ -33,7 +33,7 @@ export interface ApiEnvironmentConfig {
  * API 环境配置注册表 - 单一数据源
  * TypeScript 强制要求所有 PackySite 枚举值都有对应配置
  *
- * @version v3.5.0 改为基于 PackySite 索引
+ * @version 3.0.0 - 改为基于 PackySite 索引
  */
 export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
   {
@@ -103,7 +103,7 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
  * API 配置管理器类
  * 提供统一的 API 配置访问接口
  *
- * @version v3.5.0 改为基于 PackySite
+ * @version 3.0.0 - 改为基于 PackySite
  */
 export class ApiConfigManager {
   private readonly config: ApiEnvironmentConfig
@@ -182,12 +182,13 @@ export class ApiConfigManager {
  * API 配置管理器的管理器
  * 基于存储的用户偏好动态获取 API 配置
  *
- * @version v3.5.0 改为基于 PackySite
+ * 架构清理：移除缓存，每次重新创建 ApiConfigManager
+ * - ApiConfigManager 实例本身是轻量的
+ * - 配置数据是静态的，无需缓存
+ *
+ * @version 3.0.0 - 改为基于 PackySite
  */
 export class ApiConfigManagerController {
-  private cachedConfigManager: ApiConfigManager | null = null
-  private cachedSite: null | PackySite = null
-
   /**
    * 获取当前站点的API URL (类型安全版本)
    */
@@ -207,20 +208,14 @@ export class ApiConfigManagerController {
   /**
    * 获取当前 API 配置管理器
    * 自动从存储读取当前激活账号的站点
+   *
+   * 每次重新创建，无缓存（ApiConfigManager 实例轻量）
    */
   async getCurrentConfigManager(): Promise<ApiConfigManager> {
     const currentSite = await this.getCurrentSite()
 
-    // 如果站点没有变化，返回缓存的管理器
-    if (this.cachedConfigManager && this.cachedSite === currentSite) {
-      return this.cachedConfigManager
-    }
-
-    // 创建新的管理器并缓存
-    this.cachedConfigManager = new ApiConfigManager(currentSite)
-    this.cachedSite = currentSite
-
-    return this.cachedConfigManager
+    // 创建新的管理器（无缓存）
+    return new ApiConfigManager(currentSite)
   }
 
   /**
@@ -250,15 +245,15 @@ export class ApiConfigManagerController {
   /**
    * 强制刷新适配器缓存
    * 在用户切换账号后调用
+   *
+   * 现在只是为了保持 API 兼容性，实际无操作
    */
   async refreshConfigManager(): Promise<ApiConfigManager> {
-    this.cachedConfigManager = null
-    this.cachedSite = null
     return this.getCurrentConfigManager()
   }
 
   /**
-   * 获取当前激活账号的站点 (v3.5.0+ 重构)
+   * 获取当前激活账号的站点（重构）
    *
    * 从当前激活账号读取 site 字段
    */

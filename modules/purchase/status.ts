@@ -57,10 +57,11 @@ export async function checkAndNotifyPurchaseStatus(
 
     // 2. 检查购买状态变化并决定是否通知
     const storageManager = getStorageManager()
-    const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
-      accountId,
-      StorageDomain.SYSTEM_PREFERENCE
-    )
+    const systemPref =
+      await storageManager.get<SystemPreferenceStorage>(
+        accountId,
+        StorageDomain.SYSTEM_PREFERENCE
+      )
     const previousPurchaseState = systemPref?.purchase_disabled
     const shouldNotify = checkPurchaseNotification(
       previousPurchaseState,
@@ -91,14 +92,14 @@ export async function checkAndNotifyPurchaseStatus(
     }
 
     // 4. 更新存储状态
-    await storageManager.setForAccount(
+    await storageManager.set(
       accountId,
       StorageDomain.SYSTEM_PREFERENCE,
       {
         purchase_disabled: currentConfig.purchaseDisabled
       }
     )
-    await storageManager.setForAccount(
+    await storageManager.set(
       accountId,
       StorageDomain.PURCHASE_CONFIG,
       currentConfig
@@ -126,8 +127,10 @@ export async function checkAndNotifyPurchaseStatus(
  */
 export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
   try {
-    const storageManager = getStorageManager()
-    return await storageManager.get<PackyConfig>(StorageDomain.PURCHASE_CONFIG)
+    const { getActiveAccountData } = await import(
+      "~/lib/storage/activeAccountHelpers"
+    )
+    return await getActiveAccountData<PackyConfig>(StorageDomain.PURCHASE_CONFIG)
   } catch (error) {
     logger.error("Failed to get current purchase config:", error)
     return null

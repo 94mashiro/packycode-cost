@@ -8,8 +8,6 @@
  * ⚛️ Dan: "清晰的 API 边界，避免混淆两种管理器"
  * ☕ Bloch: "懒加载优化性能，避免不必要的初始化"
  * 🏛️ Fowler: "Repository 模式的工厂方法实现"
- *
- * @since v3.5.0
  */
 
 import { Storage } from "@plasmohq/storage"
@@ -21,13 +19,13 @@ import { createStorageAdapter, type IStorageAdapter } from "./StorageAdapter"
 
 const logger = loggers.storage
 
-// ===== 多账号存储管理器 (v3.0.0+) =====
+// ===== 多账号存储管理器 =====
 
 // 全局存储管理器实例
 let globalStorageManager: MultiAccountStorageManager | null = null
 
 /**
- * 创建默认的存储适配器实例（v3.1.0+）
+ * 创建默认的存储适配器实例
  *
  * 用途：避免其他模块直接导入 @plasmohq/storage
  *

@@ -1,15 +1,10 @@
 import browser from "webextension-polyfill"
 
-import { AccountManager } from "~/lib/account"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import {
-  type AuthStorage,
-  type SystemPreferenceStorage,
-  type UserInfo
-} from "~/types"
+import { type SystemPreferenceStorage, type UserInfo } from "~/types"
 import { PackySite } from "~/types/account"
 import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
 
@@ -52,10 +47,11 @@ export async function fetchUserInfo(
     // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX，因为没有 Opus 模型）
     if (site === PackySite.WWW) {
       // 检查 opus_enabled 状态变化
-      const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
-        accountId,
-        StorageDomain.SYSTEM_PREFERENCE
-      )
+      const systemPref =
+        await storageManager.get<SystemPreferenceStorage>(
+          accountId,
+          StorageDomain.SYSTEM_PREFERENCE
+        )
       const previousOpusState = systemPref?.opus_enabled
       const currentOpusState = Boolean(rawData.opus_enabled)
 
@@ -80,7 +76,7 @@ export async function fetchUserInfo(
       }
 
       // 更新系统偏好
-      await storageManager.setForAccount(
+      await storageManager.set(
         accountId,
         StorageDomain.SYSTEM_PREFERENCE,
         {
@@ -107,7 +103,7 @@ export async function fetchUserInfo(
     }
 
     // 存储用户信息
-    await storageManager.setForAccount(
+    await storageManager.set(
       accountId,
       StorageDomain.USER_INFO,
       userInfoStorage

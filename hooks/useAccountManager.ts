@@ -12,8 +12,6 @@
  * ⚛️ Dan: "React Hook 最佳实践，清晰的状态管理"
  * ☕ Bloch: "类型安全的 API 设计"
  * 🏛️ Fowler: "展示层与业务层分离"
- *
- * @since v3.0.0
  */
 
 import { useCallback, useEffect, useState } from "react"
@@ -97,7 +95,7 @@ export function useAccountManager(site?: PackySite) {
       }
       setAccountDataMap(dataMap)
 
-      // 获取当前激活账号（v3.4.0+ 重构）
+      // 获取当前激活账号
       if (site) {
         // 特定站点的当前账号：找到该站点中激活的账号
         const siteAccounts = filteredAccounts.filter((acc) => acc.site === site)
@@ -215,7 +213,7 @@ export function useAccountManager(site?: PackySite) {
     loadAccounts()
   }, [loadAccounts])
 
-  // 监听账号注册表变化（v3.5.2+ 新增）
+  // 监听账号注册表变化
   // 当其他组件切换账号时，自动重新加载账号列表
   useEffect(() => {
     const storage = getStorageManager().getUnderlyingStorage()

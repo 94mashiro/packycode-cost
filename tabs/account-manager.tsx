@@ -13,9 +13,6 @@
  * ⚛️ Dan: "shadcn/ui 组件库，一致的设计语言"
  * ☕ Bloch: "类型安全，所有字段都有明确类型"
  * 🏛️ Fowler: "领域模型映射到 UI，每列都有业务意义"
- *
- * @since v3.2.0
- * @version v3.3.0 - shadcn 设计规范重构，添加站点和 Token 列
  */
 
 import "~/reset.css"

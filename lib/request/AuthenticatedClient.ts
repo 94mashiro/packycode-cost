@@ -232,8 +232,12 @@ export class AuthenticatedClient {
    */
   private async getValidAuthData(): Promise<AuthStorage | null> {
     try {
-      const storageManager = getStorageManager()
-      const authData = await storageManager.get<AuthStorage>(StorageDomain.AUTH)
+      const { getActiveAccountData } = await import(
+        "~/lib/storage/activeAccountHelpers"
+      )
+      const authData = await getActiveAccountData<AuthStorage>(
+        StorageDomain.AUTH
+      )
 
       if (!authData?.token) {
         logger.debug("No authentication token found")

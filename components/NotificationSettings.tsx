@@ -1,5 +1,8 @@
 import { useUserPreference } from "~/hooks/infrastructure/useStorageHooks"
-import { getStorageManager } from "~/lib/storage"
+import {
+  getActiveAccountData,
+  setActiveAccountData
+} from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 import { type UserPreferenceStorage } from "~/types"
 
@@ -34,8 +37,7 @@ export function NotificationSettings({
 
   const toggleSetting = async (settingId: NotificationKey) => {
     try {
-      const storageManager = getStorageManager()
-      const currentPreference = await storageManager.get<UserPreferenceStorage>(
+      const currentPreference = await getActiveAccountData<UserPreferenceStorage>(
         StorageDomain.USER_PREFERENCE
       )
 
@@ -47,7 +49,7 @@ export function NotificationSettings({
         [settingId]: newValue
       }
 
-      await storageManager.set(StorageDomain.USER_PREFERENCE, updatedPreference)
+      await setActiveAccountData(StorageDomain.USER_PREFERENCE, updatedPreference)
     } catch (error) {
       console.error("Failed to toggle notification setting:", error)
     }

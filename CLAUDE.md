@@ -127,6 +127,107 @@ If diagnostics reveal any issues:
 
 This is a **non-negotiable requirement** for maintaining the project's high code quality standards.
 
+## Version Numbering Policy
+
+### 📌 Single Source of Truth
+
+**Project Version**: The ONLY official version number is in `package.json`.
+
+```json
+{
+  "version": "3.0.0"  // ← This is the ONLY version number that matters
+}
+```
+
+### 🚫 Prohibited Practices
+
+**NEVER** add version numbers in code comments, such as:
+
+❌ **禁止使用的模式**:
+```typescript
+// ❌ 不要这样做
+/**
+ * @since v3.1.0
+ * @version v3.2.0 - 新增某功能
+ */
+
+// ❌ 不要这样做
+// v3.5.0+: 架构改进
+
+// ❌ 不要这样做
+function getData() {
+  // v3.6.0 重构版
+}
+```
+
+✅ **正确的做法**:
+```typescript
+// ✅ 这样做
+/**
+ * 新增某功能的实现
+ */
+
+// ✅ 这样做
+// 架构改进：移除缓存层
+
+// ✅ 这样做
+function getData() {
+  // 重构：使用聚合存储
+}
+```
+
+### 🎯 Rationale
+
+**问题**: 之前的 agent 在代码注释中引入了自定义的版本号（v3.1.0, v3.2.0, ..., v4.0.0），这些版本号：
+1. 与 `package.json` 的实际版本（3.0.0）不一致
+2. 作为架构迭代标记使用，但不代表实际发布版本
+3. 造成了混淆和维护负担
+
+**解决方案**:
+- 所有版本信息必须且只能引用 `package.json` 中的版本号
+- 代码注释应描述功能和设计思想，而不是版本历史
+- 架构演进通过 Git 提交历史追踪，而非注释中的版本号
+
+### 📝 Acceptable Use Cases
+
+**唯一允许的版本引用**:
+
+1. **引用实际 package.json 版本**:
+```typescript
+/**
+ * @version 3.0.0 - 当前实现
+ */
+```
+
+2. **历史数据迁移上下文** (仅在迁移代码中):
+```typescript
+/**
+ * @deprecated 仅用于 v2.x 数据迁移
+ */
+function migrateFromV2() {
+  // 迁移逻辑...
+}
+```
+
+### 🔍 Code Review Checklist
+
+添加或修改代码时，确保：
+- [ ] 没有在注释中添加 `v3.x.x` 或 `v4.x.x` 等版本号
+- [ ] 没有使用 `@since v3.x.x` 标签
+- [ ] 如果需要标注版本，只使用 `package.json` 中的版本号（当前为 3.0.0）
+- [ ] 架构改进和功能描述使用语义化的描述文字，而非版本号
+- [ ] `@deprecated` 标签只在必要时使用，且不附带版本号
+
+### 🏛️ 四师共识
+
+**🐧 Linus**: "版本号应该由构建系统管理，而不是散落在代码注释中。"
+
+**⚛️ Dan**: "代码注释应该解释 'why'，而不是 'when'。版本历史属于 Git，不属于注释。"
+
+**☕ Bloch**: "API 文档应该描述当前行为，历史信息会让文档变得混乱。"
+
+**🏛️ Fowler**: "持续重构意味着代码永远是当前最佳实践，不需要版本号来标记过去的状态。"
+
 ## Architecture Overview
 
 ### Core Components
@@ -187,16 +288,16 @@ Uses Plasmo Storage API with these key data:
 - `packy_config`: Purchase status from API
 - `cached_user_info`: Budget and usage data
 
-#### ⚠️ Storage Watch Mechanism (v3.6.1+ Critical Fix)
+#### ⚠️ Storage Watch Mechanism (Critical Fix)
 
 **Architecture Decision**: Aggregate Key Storage with Field-Level Change Detection
 
 **Core Design**:
-- **Storage Format**: All account data aggregated in single key `account_{id}_info` (v3.1.0+)
-- **Watch Mechanism**: `MultiAccountStorageManager.watch()` monitors the aggregate key and detects field-level changes (v3.6.1+ fix)
+- **Storage Format**: All account data aggregated in single key `account_{id}_info`
+- **Watch Mechanism**: `MultiAccountStorageManager.watch()` monitors the aggregate key and detects field-level changes
 - **Change Propagation**: When aggregate key updates, compares old/new `AccountData` fields and triggers corresponding domain callbacks
 
-**Historical Bug (v3.1.0 - v3.6.0)**:
+**Historical Bug**:
 ```
 ❌ Broken: watch() monitored scattered keys (account_{id}.user.info)
 ✅ Fixed: watch() now monitors aggregate key (account_{id}_info)
@@ -226,7 +327,7 @@ Uses Plasmo Storage API with these key data:
 - ☕ **Bloch**: Clear field change detection logic, easy to test
 - 🏛️ **Fowler**: Fix technical debt, restore architectural consistency
 
-### Multi-Account Architecture (v3.5.0+)
+### Multi-Account Architecture
 
 **核心架构决策**: PackySite as Single Source of Truth
 
@@ -243,7 +344,7 @@ Uses Plasmo Storage API with these key data:
 
 ```typescript
 /**
- * PackyCode 站点枚举 (v3.5.0+)
+ * PackyCode 站点枚举
  *
  * 业务逻辑的唯一真实数据源
  */
@@ -388,6 +489,81 @@ const handleSiteChange = async (targetSite: PackySite) => {
 - **PackyCode API**: https://www.packycode.com/api/config for purchase status
 - **User API**: https://packy.te.sb/backend/users/me for budget data
 - **CORS**: Background script handles all external API calls
+
+## Performance & Caching Policy
+
+### 🚫 缓存使用限制（四师共识）
+
+**核心原则**: 优先保证数据一致性，避免过早优化
+
+#### 禁止的缓存模式
+
+❌ **时间驱动缓存**（TTL-based）
+- **问题**: 账号切换等事件可能在 TTL 窗口内发生
+- **风险**: 读取到过期数据导致数据不一致
+- **示例**: `activeAccountIdCache` (100ms TTL)
+
+❌ **跨实例缓存**
+- **问题**: Popup 和 Background 是独立上下文
+- **风险**: 实例间缓存无法同步
+- **示例**: 在 StorageManager 实例中缓存账号状态
+
+❌ **全局变量缓存**
+- **问题**: 生命周期不明确，难以管理
+- **风险**: 内存泄漏，数据泄漏
+- **示例**: `let cachedUserInfo = null`
+
+❌ **无失效机制的永久缓存**
+- **问题**: 与 Chrome Storage 可能不同步
+- **风险**: UI 显示陈旧数据
+- **示例**: `accountDataCache: Map<string, AccountData>`
+
+#### 允许的缓存场景（需经过架构评审）
+
+✅ **单一数据源 - Chrome Storage**
+- Chrome Storage 本身就是缓存层
+- Plasmo Storage 在底层已做内存缓存优化
+- 所有数据直接从 Storage 读取，无需应用层缓存
+
+✅ **React 组件级缓存**
+- `useMemo` / `useCallback` 有明确依赖数组
+- 生命周期由 React 管理
+- 失效机制清晰可控
+
+#### 架构决策理由
+
+**🐧 Linus Torvalds**:
+> "10ms 的性能优化不值得引入缓存不一致的风险。Chrome Storage 的本地读取已经足够快（< 10ms），过早优化是万恶之源。"
+
+**⚛️ Dan Abramov**:
+> "如果需要缓存，必须有明确的依赖和失效机制。时间驱动的 TTL 缓存隐藏了数据依赖关系，让系统行为难以预测。"
+
+**☕ Joshua Bloch**:
+> "缓存应该是实现细节，不应影响正确性。当微优化的复杂度超过收益时，就该重新审视设计。"
+
+**🏛️ Martin Fowler**:
+> "架构清晰度 > 微观性能。单一数据源（Chrome Storage）让数据流清晰可追踪，避免缓存带来的技术债务。"
+
+#### Code Review 检查点
+
+添加新功能时，确保：
+- [ ] 没有引入新的时间驱动缓存（TTL）
+- [ ] 没有在类中添加缓存 Map/对象
+- [ ] 没有使用模块级变量缓存数据
+- [ ] 所有数据直接从 Chrome Storage 读取
+- [ ] 如果确实需要缓存，通过架构评审（需四师共识）
+
+#### 性能考量
+
+**微优化的代价**:
+- Chrome Storage 本地读取：~5-10ms
+- 引入缓存的复杂度：失效逻辑、同步机制、调试难度
+- 结论：直接读取 Storage 的简洁性 >> 10ms 的性能提升
+
+**真正需要优化的场景**:
+- 使用 React 的 `useMemo` 优化计算密集型操作
+- 使用 `useCallback` 避免不必要的组件重渲染
+- 优化数据结构和算法，而非引入缓存层
 
 ## Component Patterns
 

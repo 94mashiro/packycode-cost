@@ -12,8 +12,6 @@
  * ⚛️ Dan: "清晰的错误边界和状态管理"
  * ☕ Bloch: "不可变性优先，防御性编程"
  * 🏛️ Fowler: "领域驱动设计，业务逻辑集中管理"
- *
- * @since v3.0.0
  */
 
 import { v4 as uuidv4 } from "uuid"
@@ -41,16 +39,11 @@ const logger = loggers.account
  *
  * 核心业务逻辑层，所有账号操作的入口
  *
- * v3.1.0 优化：
- * - 添加注册表缓存，减少 85% 的存储读取操作
- * - 使用 TTL 机制确保缓存新鲜度
+ * 架构清理：
+ * - 移除注册表缓存，确保数据一致性
+ * - Chrome Storage 本身有内存缓存，无需应用层缓存
  */
 export class AccountManager {
-  private cacheTimestamp: number = 0
-
-  private readonly cacheTTL: number = 5000 // 5秒缓存 TTL
-  // v3.1.0+ 注册表缓存优化
-  private registryCache: AccountRegistry | null = null
   private storageManager: MultiAccountStorageManager
 
   constructor(storageManager: MultiAccountStorageManager) {
@@ -201,7 +194,7 @@ export class AccountManager {
   /**
    * 获取当前激活账号
    *
-   * v3.4.0+ 重构：不再需要类型参数，返回全局唯一的激活账号
+   * 重构：不再需要类型参数，返回全局唯一的激活账号
    *
    * @returns 当前激活账号，如果没有则返回 null
    */
@@ -245,7 +238,7 @@ export class AccountManager {
     // 2. 从注册表移除
     registry.accounts = registry.accounts.filter((acc) => acc.id !== accountId)
 
-    // 3. 如果删除的是激活账号，清空激活状态（v3.4.0+ 简化逻辑）
+    // 3. 如果删除的是激活账号，清空激活状态（简化逻辑）
     if (registry.activeAccountId === accountId) {
       registry.activeAccountId = null
     }
@@ -262,7 +255,7 @@ export class AccountManager {
   /**
    * 切换账号
    *
-   * 功能（v3.4.0+ 重构）：
+   * 功能（重构）：
    * 1. 更新账号注册表中的激活状态（全局唯一）
    * 2. 设置存储管理器的当前账号
    * 3. 更新账号的最后使用时间
@@ -301,10 +294,7 @@ export class AccountManager {
     // 3. 保存注册表
     await this.saveRegistry(registry)
 
-    // 4. 设置存储管理器的当前账号
-    await this.storageManager.setCurrentAccount(accountId)
-
-    // 5. 保存账号站点到用户偏好
+    // 4. 保存账号站点到用户偏好（移除了 setCurrentAccount 调用 - 无状态架构）
     try {
       await this.saveLastActiveSite(account.site)
     } catch (error) {
@@ -341,8 +331,6 @@ export class AccountManager {
    *   token: "new_token_value"
    * })
    * ```
-   *
-   * @since v3.2.0
    */
   async updateAccount(
     accountId: string,
@@ -526,7 +514,7 @@ export class AccountManager {
   /**
    * 获取默认显示名称（基于站点）
    *
-   * @version v3.5.0 改为基于 PackySite
+   * @version 3.0.0 - 改为基于 PackySite
    */
   private getDefaultDisplayName(site: PackySite): string {
     const names: Record<PackySite, string> = {
@@ -540,28 +528,23 @@ export class AccountManager {
   /**
    * 获取或创建账号注册表
    *
-   * v3.1.0 优化：使用缓存机制减少存储读取
-   * v3.4.0 优化：自动检测并迁移旧格式数据
-   * - 缓存有效期：5秒
-   * - 命中率预期：90%+
+   * 架构清理：移除缓存，直接从 Chrome Storage 读取
+   * 优化：自动检测并迁移旧格式数据
+   *
+   * 设计原则：
+   * - 🐧 Linus: "数据一致性 > 微优化"
+   * - ⚛️ Dan: "单一数据源，清晰的数据流"
+   * - ☕ Bloch: "简单直接，易于理解"
+   * - 🏛️ Fowler: "避免缓存带来的复杂度"
    */
   private async getOrCreateRegistry(): Promise<AccountRegistry> {
-    const now = Date.now()
-
-    // 1. 检查缓存是否有效
-    if (this.registryCache && now - this.cacheTimestamp < this.cacheTTL) {
-      logger.debug("Registry cache hit")
-      return this.registryCache
-    }
-
-    // 2. 缓存失效或不存在，从存储读取
-    logger.debug("Registry cache miss, loading from storage")
+    // 直接从存储读取（Chrome Storage 本身有内存缓存）
     const existing = await this.storageManager
       .getUnderlyingStorage()
       .get<AccountRegistry>(StorageDomain.ACCOUNT_REGISTRY)
 
     if (existing) {
-      // v3.4.0+: 检测并迁移旧格式数据
+      // 检测并迁移旧格式数据
       if ("activeAccounts" in existing) {
         logger.info("Detected old registry format, migrating...")
         const migrated = await this.migrateRegistryFormat(existing as any)
@@ -569,13 +552,10 @@ export class AccountManager {
         return migrated
       }
 
-      // 更新缓存
-      this.registryCache = existing
-      this.cacheTimestamp = now
       return existing
     }
 
-    // 3. 不存在则创建默认注册表（新格式）
+    // 不存在则创建默认注册表（新格式）
     const defaultRegistry: AccountRegistry = {
       accounts: [],
       activeAccountId: null,
@@ -589,7 +569,7 @@ export class AccountManager {
   }
 
   /**
-   * 迁移旧格式的注册表（v3.4.0+ 数据迁移）
+   * 迁移旧格式的注册表（数据迁移）
    *
    * 将 activeAccounts (按类型索引) 转换为 activeAccountId (全局唯一)
    *
@@ -606,7 +586,7 @@ export class AccountManager {
       activeAccounts?: Record<string, null | string>
     }
   ): Promise<AccountRegistry> {
-    logger.info("🔄 Migrating registry format from v3.3 to v3.4...")
+    logger.info("🔄 Migrating registry format...")
 
     // 找到所有激活的账号
     const activeAccounts = oldRegistry.accounts.filter((acc) => acc.isActive)
@@ -646,11 +626,11 @@ export class AccountManager {
   }
 
   /**
-   * 保存上次激活的站点到用户偏好（v3.5.0+）
+   * 保存上次激活的站点到用户偏好
    *
    * 用于在下次启动时恢复用户的账号选择
    *
-   * @version v3.5.0 改为保存站点而非账号类型
+   * @version 3.0.0 - 改为保存站点而非账号类型
    */
   private async saveLastActiveSite(site: PackySite): Promise<void> {
     const storage = this.storageManager.getUnderlyingStorage()
@@ -658,8 +638,12 @@ export class AccountManager {
     // 读取当前用户偏好
     const currentPreference = await storage.get(StorageDomain.USER_PREFERENCE)
 
-    // 更新站点信息（使用类型断言确保安全展开）
-    const preference = (currentPreference as Record<string, unknown>) || {}
+    // 更新站点信息（安全类型断言）
+    const preference =
+      typeof currentPreference === "object" && currentPreference !== null
+        ? (currentPreference as Record<string, unknown>)
+        : {}
+
     await storage.set(StorageDomain.USER_PREFERENCE, {
       ...preference,
       last_active_site: site
@@ -671,16 +655,13 @@ export class AccountManager {
   /**
    * 保存账号注册表
    *
-   * v3.1.0 优化：同步更新缓存
+   * 架构清理：移除缓存，直接写入 Chrome Storage
    */
   private async saveRegistry(registry: AccountRegistry): Promise<void> {
     await this.storageManager
       .getUnderlyingStorage()
       .set(StorageDomain.ACCOUNT_REGISTRY, registry)
 
-    // 同步更新缓存
-    this.registryCache = registry
-    this.cacheTimestamp = Date.now()
-    logger.debug("Registry saved and cache updated")
+    logger.debug("Registry saved")
   }
 }

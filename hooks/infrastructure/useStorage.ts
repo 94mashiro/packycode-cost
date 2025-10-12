@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 
+import { AccountManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain, type StorageDomainMap } from "~/lib/storage/domains"
@@ -7,17 +8,17 @@ import { StorageDomain, type StorageDomainMap } from "~/lib/storage/domains"
 const logger = loggers.ui
 
 /**
- * 通用存储 Hook
+ * 通用存储 Hook (显式 accountId 版本)
  *
  * 特性:
  * 1. 类型安全 - 根据存储域自动推导数据类型
- * 2. 响应式 - 监听目标域和版本变化，自动重新加载数据
+ * 2. 响应式 - 监听当前账号数据变化和账号切换事件
  * 3. 错误处理 - 统一的错误状态管理
  * 4. 性能优化 - 避免不必要的重新渲染和重复监听
  *
- * 版本感知机制:
- * - 对于版本化域（如USER_INFO），同时监听目标域和USER_PREFERENCE变化
- * - 当账号版本切换时，自动refresh以获取新版本的数据
+ * 账号切换机制:
+ * - 监听 ACCOUNT_REGISTRY 变化，自动切换到新账号并重新加载数据
+ * - 为当前账号设置数据监听，数据变化时自动刷新
  *
  * @param domain 存储域 (使用 StorageDomain 枚举)
  * @returns 类型安全的存储数据和操作函数
@@ -35,6 +36,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
   const [data, setData] = useState<null | StorageDomainMap[T]>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<null | string>(null)
+  const [currentAccountId, setCurrentAccountId] = useState<null | string>(null)
 
   // 刷新数据
   const refresh = useCallback(async () => {
@@ -43,7 +45,22 @@ export function useStorage<T extends keyof StorageDomainMap>(
       setError(null)
 
       const storage = getStorageManager()
-      const result = await storage.get<StorageDomainMap[T]>(domain)
+      const accountManager = new AccountManager(storage)
+      const currentAccount = await accountManager.getCurrentAccount()
+
+      if (!currentAccount) {
+        logger.debug(`useStorage: No active account, returning null for ${domain}`)
+        setData(null)
+        setCurrentAccountId(null)
+        setLoading(false)
+        return
+      }
+
+      setCurrentAccountId(currentAccount.id)
+      const result = await storage.get<StorageDomainMap[T]>(
+        currentAccount.id,
+        domain
+      )
 
       setData(result)
       logger.debug(`useStorage refresh: ${domain}`, result ? "loaded" : "null")
@@ -62,8 +79,12 @@ export function useStorage<T extends keyof StorageDomainMap>(
       try {
         setError(null)
 
+        if (!currentAccountId) {
+          throw new Error("No active account to update")
+        }
+
         const storage = getStorageManager()
-        await storage.set(domain, value, true) // 使用强制覆盖模式，确保完全替换
+        await storage.set(currentAccountId, domain, value, true) // 使用强制覆盖模式
 
         setData(value)
         logger.debug(`useStorage update: ${domain}`)
@@ -75,7 +96,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
         throw err // 重新抛出，让调用者处理
       }
     },
-    [domain]
+    [domain, currentAccountId]
   )
 
   // 初始化和监听设置
@@ -88,46 +109,47 @@ export function useStorage<T extends keyof StorageDomainMap>(
 
         // 初始化加载数据
         await refresh()
-        logger.debug(`✅ useStorage initial refresh completed for: ${domain}`)
 
-        if (mounted) {
-          const storage = getStorageManager()
-          logger.debug(
-            `📊 useStorage setting up StorageManager watch for domain: ${domain}`
-          )
+        if (!mounted) return
 
-          // ✅ 使用 StorageManager 的版本感知 watch
-          // 1. 监听目标域数据变化
-          storage.watch({
-            [domain]: () => {
-              if (mounted) {
-                logger.debug(
-                  `📝 [useStorage] Domain data changed, refreshing: ${domain}`
-                )
-                refresh()
-              }
-            }
-          })
+        const storage = getStorageManager()
+        const accountManager = new AccountManager(storage)
+        const currentAccount = await accountManager.getCurrentAccount()
 
-          // 2. 监听账号切换事件（v3.5.2+ 新增）
-          // 当账号切换时，自动刷新数据以获取新账号的数据
-          storage.getUnderlyingStorage().watch({
-            [StorageDomain.ACCOUNT_REGISTRY]: () => {
-              if (mounted) {
-                logger.debug(
-                  `🔄 [useStorage] Account switched, refreshing: ${domain}`
-                )
-                refresh()
-              }
-            }
-          })
-
-          const watchDescription = `${domain} + ACCOUNT_REGISTRY`
-
-          logger.debug(
-            `🔗 useStorage watch registered for: ${watchDescription}`
-          )
+        if (!currentAccount) {
+          logger.debug(`⚠️ useStorage: No active account for ${domain}`)
+          return
         }
+
+        logger.debug(
+          `📊 useStorage setting up watch for account ${currentAccount.id}, domain: ${domain}`
+        )
+
+        // 1. 监听当前账号的数据变化
+        storage.watch(currentAccount.id, {
+          [domain]: () => {
+            if (mounted) {
+              logger.debug(
+                `📝 [useStorage] Data changed for ${currentAccount.id}.${domain}, refreshing`
+              )
+              refresh()
+            }
+          }
+        })
+
+        // 2. 监听账号切换事件
+        storage.getUnderlyingStorage().watch({
+          [StorageDomain.ACCOUNT_REGISTRY]: () => {
+            if (mounted) {
+              logger.debug(
+                `🔄 [useStorage] Account switched, refreshing ${domain}`
+              )
+              refresh()
+            }
+          }
+        })
+
+        logger.debug(`🔗 useStorage watch registered for: ${domain}`)
       } catch (err) {
         logger.error(`❌ useStorage initialization error: ${domain}`, err)
         if (mounted) {
@@ -143,7 +165,6 @@ export function useStorage<T extends keyof StorageDomainMap>(
     return () => {
       logger.debug(`🧹 useStorage cleanup for domain: ${domain}`)
       mounted = false
-      // Plasmo Storage 会自动清理 watch（当组件卸载时）
       logger.debug(`✅ useStorage cleanup completed for domain: ${domain}`)
     }
   }, [domain, refresh])

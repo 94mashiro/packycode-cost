@@ -2,7 +2,7 @@
  * EditAccountDialog - 编辑账号对话框
  *
  * 功能：
- * 1. 编辑账号所有字段（v3.3.0+ 放开所有字段编辑）
+ * 1. 编辑账号所有字段（放开所有字段编辑）
  * 2. 支持修改站点、Token类型、Token、显示名称、邮箱
  * 3. 表单验证和错误提示
  *
@@ -12,8 +12,7 @@
  * ☕ Bloch: "类型安全，清晰的接口"
  * 🏛️ Fowler: "单一职责，只负责编辑"
  *
- * @since v3.2.0
- * @version v3.3.0 - 放开所有字段编辑
+ * @version 3.0.0 - 放开所有字段编辑
  */
 
 import { useEffect, useState } from "react"

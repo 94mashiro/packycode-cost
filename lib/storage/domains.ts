@@ -1,42 +1,36 @@
 import type {
   AccountRegistry,
-  AuthStorage,
-  NotificationStates,
-  PackyConfig,
-  PeerSpendingStorage,
-  SubscriptionApiResponse,
-  SystemPreferenceStorage,
-  UserInfo,
+  AuthDomain,
+  CapabilitiesDomain,
+  CollaborationDomain,
+  FinanceDomain,
+  SubscriptionDomain,
   UserPreferenceStorage
 } from "../../types"
 
 /**
- * 存储域枚举 - 定义所有可用的存储域
+ * 存储域枚举 - 领域驱动设计
  *
  * 设计原则:
- * - 版本化域: 会根据当前账号版本添加前缀 (shared./private.)
- * - 全局域: 以 global. 开头，在所有版本间共享
+ * 1. 枚举名称直接对应 AccountData 的5大领域
+ * 2. 1:1 映射关系，清晰直观
+ * 3. 移除所有废弃和冗余的枚举值
+ * 4. 命名统一：小写点号分隔
  *
  * 多账号管理架构:
- * - 账号特定域: 格式为 account_{accountId}.{domain}
- * - 账号管理域: 全局共享的账号注册表和配置
+ * - 账号特定域: 存储在 account_{accountId}_info 聚合键中
+ * - 全局域: 以 global. 开头，在所有账号间共享
  */
 export enum StorageDomain {
-  // === 全局账号管理域 ===
-  /** 账号注册表 - 所有账号的索引 */
+  // === 全局域（跨账号共享） ===
   ACCOUNT_REGISTRY = "global.account.registry",
-  // === 账号特定域（多账号架构） ===
+  // === 账号领域（5大核心领域，与 AccountData 完美对应） ===
   AUTH = "auth",
-  TOKEN_VALIDATION = "token.validation",
-  NOTIFICATION_STATES = "notification.states",
-  PEER_SPENDING = "peer.spending",
-  PURCHASE_CONFIG = "purchase_config",
-  SUBSCRIPTION_INFO = "subscription.info",
-  SYSTEM_PREFERENCE = "system.preference",
 
-  USER_INFO = "user.info",
-
-  // === 全局用户偏好域 ===
+  CAPABILITIES = "capabilities",
+  COLLABORATION = "collaboration",
+  FINANCE = "finance",
+  SUBSCRIPTION = "subscription",
   USER_PREFERENCE = "global.user.preference"
 }
 
@@ -49,41 +43,36 @@ export type StorageDataType<T extends keyof StorageDomainMap> =
 /**
  * 存储域到数据类型的映射
  *
- * 这个映射实现了类型安全的自动推导:
- * - useVersionedStorage(StorageDomain.AUTH) 自动推导为 AuthStorage | null
- * - useVersionedStorage(StorageDomain.USER_INFO) 自动推导为 UserInfo | null
- *
- * 新增:
- * - ACCOUNT_REGISTRY 映射到 AccountRegistry
+ * 领域驱动设计：每个枚举值直接映射到对应的领域类型
+ * - StorageDomain.AUTH → AuthDomain
+ * - StorageDomain.FINANCE → FinanceDomain
+ * - StorageDomain.CAPABILITIES → CapabilitiesDomain
+ * - StorageDomain.SUBSCRIPTION → SubscriptionDomain
+ * - StorageDomain.COLLABORATION → CollaborationDomain
  */
 export interface StorageDomainMap {
   [StorageDomain.ACCOUNT_REGISTRY]: AccountRegistry
-  [StorageDomain.AUTH]: AuthStorage
-  [StorageDomain.TOKEN_VALIDATION]: import("~/types").TokenValidationState
-  [StorageDomain.NOTIFICATION_STATES]: NotificationStates
-  [StorageDomain.PEER_SPENDING]: PeerSpendingStorage
-  [StorageDomain.PURCHASE_CONFIG]: PackyConfig
-  [StorageDomain.SUBSCRIPTION_INFO]: SubscriptionApiResponse
-  [StorageDomain.SYSTEM_PREFERENCE]: SystemPreferenceStorage
-  [StorageDomain.USER_INFO]: UserInfo
+  [StorageDomain.AUTH]: AuthDomain
+  [StorageDomain.CAPABILITIES]: CapabilitiesDomain
+  [StorageDomain.COLLABORATION]: CollaborationDomain
+  [StorageDomain.FINANCE]: FinanceDomain
+  [StorageDomain.SUBSCRIPTION]: SubscriptionDomain
   [StorageDomain.USER_PREFERENCE]: UserPreferenceStorage
 }
 
 /**
  * 域名到 AccountData 字段的映射
  *
- * 用于聚合存储模式下的字段访问
+ * 领域驱动设计：完美的 1:1 映射
+ * 枚举名称直接对应 AccountData 字段名
  */
 export const DOMAIN_TO_FIELD_MAP: Record<
   string,
   keyof import("~/types").AccountData
 > = {
   [StorageDomain.AUTH]: "auth",
-  [StorageDomain.TOKEN_VALIDATION]: "tokenValidation",
-  [StorageDomain.NOTIFICATION_STATES]: "notificationStates",
-  [StorageDomain.PEER_SPENDING]: "peerSpending",
-  [StorageDomain.PURCHASE_CONFIG]: "purchaseConfig",
-  [StorageDomain.SUBSCRIPTION_INFO]: "subscriptionInfo",
-  [StorageDomain.SYSTEM_PREFERENCE]: "systemPreference",
-  [StorageDomain.USER_INFO]: "userInfo"
+  [StorageDomain.CAPABILITIES]: "capabilities",
+  [StorageDomain.COLLABORATION]: "collaboration",
+  [StorageDomain.FINANCE]: "finance",
+  [StorageDomain.SUBSCRIPTION]: "subscription"
 }

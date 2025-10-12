@@ -1,4 +1,4 @@
-import type { PackyConfig, SystemPreferenceStorage } from "~/types"
+import type { CapabilitiesDomain, PackyConfig } from "~/types"
 
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
@@ -11,8 +11,6 @@ import {
 
 const logger = loggers.purchase
 
-export { type PackyConfig }
-
 /**
  * 统一的购买状态检查方法（支持多账号并发）
  * 1. 获取最新API数据
@@ -24,7 +22,7 @@ export { type PackyConfig }
 export async function checkAndNotifyPurchaseStatus(
   context: import("~/types").AccountContext
 ): Promise<{
-  config?: PackyConfig
+  purchaseDisabled: boolean
   success: boolean
   triggered: boolean
 }> {
@@ -33,22 +31,24 @@ export async function checkAndNotifyPurchaseStatus(
     const { accountId, site } = context
 
     // 1. 获取最新的API数据（使用账号的站点，确保站点和 token 匹配）
-    logger.debug(`[API] Fetching purchase config for ${site} (account: ${accountId})`)
+    logger.debug(
+      `[API] Fetching purchase config for ${site} (account: ${accountId})`
+    )
     const currentConfig = await api.getConfig(site)
 
     // 验证响应数据结构
     if (!isValidPackyConfig(currentConfig)) {
       logger.debug("[API] Invalid response structure")
-      return { success: false, triggered: false }
+      return { purchaseDisabled: true, success: false, triggered: false }
     }
 
     // 2. 检查购买状态变化并决定是否通知
     const storageManager = getStorageManager()
-    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+    const capabilities = await storageManager.get<CapabilitiesDomain>(
       accountId,
-      StorageDomain.SYSTEM_PREFERENCE
+      StorageDomain.CAPABILITIES
     )
-    const previousPurchaseState = systemPref?.purchase_disabled
+    const previousPurchaseState = capabilities?.purchaseDisabled
     const shouldNotify = checkPurchaseNotification(
       previousPurchaseState,
       currentConfig.purchaseDisabled
@@ -62,7 +62,8 @@ export async function checkAndNotifyPurchaseStatus(
     let notificationTriggered = false
     if (shouldNotify) {
       // 检查用户是否开启了购买通知（站点级控制）
-      const notificationEnabled = await checkPurchaseNotificationPermission(site)
+      const notificationEnabled =
+        await checkPurchaseNotificationPermission(site)
 
       if (notificationEnabled) {
         logger.debug(
@@ -78,42 +79,39 @@ export async function checkAndNotifyPurchaseStatus(
     }
 
     // 4. 更新存储状态（多账号安全：Chrome Storage 原子性保证）
-    await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
-      purchase_disabled: currentConfig.purchaseDisabled
+    await storageManager.set(accountId, StorageDomain.CAPABILITIES, {
+      ...capabilities,
+      purchaseDisabled: currentConfig.purchaseDisabled
     })
-    await storageManager.set(
-      accountId,
-      StorageDomain.PURCHASE_CONFIG,
-      currentConfig
-    )
 
     logger.debug("[STORAGE] Purchase status updated in storage")
 
     return {
-      config: currentConfig,
+      purchaseDisabled: currentConfig.purchaseDisabled,
       success: true,
       triggered: notificationTriggered
     }
   } catch (error) {
     logger.error("[ERROR] Purchase status check failed:", error)
-    return { success: false, triggered: false }
+    return { purchaseDisabled: true, success: false, triggered: false }
   }
 }
 
 /**
- * 获取当前配置（供UI组件使用）
+ * 获取当前购买状态（供UI组件使用）
  */
-export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
+export async function getCurrentPurchaseDisabled(): Promise<boolean> {
   try {
     const { getActiveAccountData } = await import(
       "~/lib/storage/activeAccountHelpers"
     )
-    return await getActiveAccountData<PackyConfig>(
-      StorageDomain.PURCHASE_CONFIG
+    const capabilities = await getActiveAccountData<CapabilitiesDomain>(
+      StorageDomain.CAPABILITIES
     )
+    return capabilities?.purchaseDisabled ?? true
   } catch (error) {
-    logger.error("Failed to get current purchase config:", error)
-    return null
+    logger.error("Failed to get current purchase disabled:", error)
+    return true
   }
 }
 

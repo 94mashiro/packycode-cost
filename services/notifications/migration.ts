@@ -34,7 +34,8 @@ export async function migrateNotificationPreferences(): Promise<boolean> {
 
     if (userPreference.purchase_notification !== undefined) {
       if (migrated.purchase_notification_www === undefined) {
-        migrated.purchase_notification_www = userPreference.purchase_notification
+        migrated.purchase_notification_www =
+          userPreference.purchase_notification
         needsMigration = true
         logger.info(
           `Migrating purchase_notification → purchase_notification_www: ${userPreference.purchase_notification}`

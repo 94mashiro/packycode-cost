@@ -15,6 +15,7 @@ import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
   ApiEndpointType,
+  type CollaborationDomain,
   type PeerSpendingApiResponse,
   type PeerSpendingStorage
 } from "~/types"
@@ -29,7 +30,7 @@ const logger = loggers.api
  */
 export async function fetchPeerSpendingToday(
   context: import("~/types").AccountContext
-): Promise<null | PeerSpendingStorage> {
+): Promise<CollaborationDomain | null> {
   try {
     // 直接从 context 解构所需信息
     const { accountId, site } = context
@@ -52,16 +53,19 @@ export async function fetchPeerSpendingToday(
     // 数据转换和计算
     const peerSpendingData = transformPeerSpendingData(rawData)
 
+    // 转换为协作领域类型
+    const collaborationData = transformToCollaborationDomain(peerSpendingData)
+
     // 存储数据
     await storageManager.set(
       accountId,
-      StorageDomain.PEER_SPENDING,
-      peerSpendingData
+      StorageDomain.COLLABORATION,
+      collaborationData
     )
 
     logger.info(`✅ 同行消费数据获取成功：${peerSpendingData.peerCount} 位同行`)
 
-    return peerSpendingData
+    return collaborationData
   } catch (error) {
     // 认证错误已由 API 客户端处理
     if (error instanceof Error && error.name === "AuthenticationError") {
@@ -132,5 +136,22 @@ function transformPeerSpendingData(
     peerCount: peers.length,
     topPeers,
     totalSpentToday: Math.round(totalSpent * 100) / 100 // 保留两位小数
+  }
+}
+
+/**
+ * 从 PeerSpendingStorage 转换为 CollaborationDomain
+ */
+function transformToCollaborationDomain(
+  data: PeerSpendingStorage
+): CollaborationDomain {
+  return {
+    averageSpent: data.averageSpentToday,
+    peerCount: data.peerCount,
+    topPeers: data.topPeers.map((peer) => ({
+      name: peer.displayName,
+      spent: peer.spentToday
+    })),
+    totalSpent: data.totalSpentToday
   }
 }

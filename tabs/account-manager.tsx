@@ -19,6 +19,7 @@ import "~/reset.css"
 
 import { Check, Copy, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { toast, Toaster } from "sonner"
 
 import { Alert, AlertDescription } from "@/components/shadcn/alert"
 import {
@@ -48,7 +49,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/shadcn/tooltip"
-import { toast, Toaster } from "sonner"
 import { AddAccountDialog } from "~/components/AddAccountDialog"
 import { EditAccountDialog } from "~/components/EditAccountDialog"
 import { NotificationSettingsSection } from "~/components/NotificationSettingsSection"
@@ -58,7 +58,12 @@ import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { getTokenExpiration } from "~/modules/auth/jwt"
 import { fetchAllDataAsync } from "~/modules/tasks"
-import { type Account, TokenType, type TokenValidationState } from "~/types"
+import {
+  type Account,
+  type AuthDomain,
+  TokenType,
+  type TokenValidationState
+} from "~/types"
 import { PackySite } from "~/types/account"
 import { getSiteName as getSiteDisplayName } from "~/utils/siteHelpers"
 
@@ -98,11 +103,11 @@ function AccountManagerPage() {
         const result: Record<string, TokenValidationState | undefined> = {}
         await Promise.all(
           accounts.map(async (acc) => {
-            const st = await storage.get<TokenValidationState>(
+            const authData = await storage.get<AuthDomain>(
               acc.id,
-              StorageDomain.TOKEN_VALIDATION
+              StorageDomain.AUTH
             )
-            result[acc.id] = st || { status: "unknown" }
+            result[acc.id] = authData?.validation || { status: "unknown" }
           })
         )
         setStatusMap(result)

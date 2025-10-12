@@ -10,12 +10,8 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import {
-  ApiEndpointType,
-  type SharedSpaceApiResponse,
-  type SystemPreferenceStorage
-} from "~/types"
-import { PackySite } from "~/types/account"
+import { ApiEndpointType, type SharedSpaceApiResponse } from "~/types"
+import { type CapabilitiesDomain, PackySite } from "~/types/account"
 import { getSiteName } from "~/utils/siteHelpers"
 
 const logger = loggers.auth
@@ -78,12 +74,12 @@ export async function fetchPrivateOpusStatus(
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
     // 获取当前存储的状态
-    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+    const capabilities = await storageManager.get<CapabilitiesDomain>(
       accountId,
-      StorageDomain.SYSTEM_PREFERENCE
+      StorageDomain.CAPABILITIES
     )
-    const previousOpusState = systemPref?.opus_enabled
-    const previousRateLimitResetAt = systemPref?.rate_limit_reset_at
+    const previousOpusState = capabilities?.opusEnabled
+    const previousRateLimitResetAt = capabilities?.rateLimitResetAt
 
     // 检查是否有任何变化
     const hasOpusChange = previousOpusState !== opusEnabled
@@ -105,10 +101,10 @@ export async function fetchPrivateOpusStatus(
         )
       }
 
-      // 更新系统偏好，包含 opus_enabled 和 rate_limit_reset_at
-      await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
-        opus_enabled: opusEnabled,
-        rate_limit_reset_at: rateLimitResetAt
+      // 更新 capabilities，包含 opusEnabled 和 rateLimitResetAt
+      await storageManager.set(accountId, StorageDomain.CAPABILITIES, {
+        opusEnabled,
+        rateLimitResetAt
       })
     } else {
       logger.debug(`✅ Opus 状态和 Rate limit 时间均未变化`)

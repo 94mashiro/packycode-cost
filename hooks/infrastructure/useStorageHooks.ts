@@ -5,87 +5,55 @@ import { useStorage } from "./useStorage"
 /**
  * 业务专用存储 Hooks
  *
- * 这些 hooks 提供最简洁的使用体验:
+ * 领域驱动设计：每个 hook 对应一个领域
  * 1. 零配置 - 无需传入存储域参数
- * 2. 类型安全 - 自动推导正确的数据类型
- * 3. 语义清晰 - 函数名直接表达业务意图
+ * 2. 类型安全 - 自动推导正确的领域类型
+ * 3. 语义清晰 - 函数名直接表达领域概念
  * 4. 一致性 - 统一的返回格式和错误处理
  */
 
 /**
  * 认证数据 Hook
- *
- * 管理当前版本的认证信息 (JWT token 或 API key)
- * 自动推导类型: AuthStorage | null
+ * 自动推导类型: AuthDomain | null
  */
 export const useAuth = () => useStorage(StorageDomain.AUTH)
 
 /**
- * 用户信息 Hook
- *
- * 管理当前版本的用户预算和使用量信息
- * 自动推导类型: UserInfoStorage | null
+ * 财务数据 Hook
+ * 管理预算和余额数据
+ * 自动推导类型: FinanceDomain | null
  */
-export const useUserInfo = () => useStorage(StorageDomain.USER_INFO)
+export const useFinance = () => useStorage(StorageDomain.FINANCE)
 
 /**
- * 购买配置 Hook
- *
- * 管理当前版本的购买状态和配置信息
- * 自动推导类型: PackyConfig | null
+ * 能力状态 Hook
+ * 管理 Opus、购买状态等系统能力
+ * 自动推导类型: CapabilitiesDomain | null
  */
-export const usePurchaseConfig = () => useStorage(StorageDomain.PURCHASE_CONFIG)
-
-/**
- * 系统偏好 Hook
- *
- * 管理当前版本的系统级配置 (API端点、购买状态等)
- * 自动推导类型: SystemPreferenceStorage | null
- */
-export const useSystemPreference = () =>
-  useStorage(StorageDomain.SYSTEM_PREFERENCE)
+export const useCapabilities = () => useStorage(StorageDomain.CAPABILITIES)
 
 /**
  * 订阅信息 Hook
- *
- * 管理当前版本的用户订阅信息
- * 自动推导类型: SubscriptionApiResponse | null
+ * 自动推导类型: SubscriptionDomain | null
  */
-export const useSubscriptionInfo = () =>
-  useStorage(StorageDomain.SUBSCRIPTION_INFO)
+export const useSubscription = () => useStorage(StorageDomain.SUBSCRIPTION)
+
+/**
+ * 协作数据 Hook
+ * 管理团队消费统计数据
+ * 自动推导类型: CollaborationDomain | null
+ */
+export const useCollaboration = () => useStorage(StorageDomain.COLLABORATION)
 
 /**
  * 用户偏好 Hook
- *
- * 管理全局用户偏好设置 (版本选择、主题等)
- * 注意: 这是全局数据，在所有版本间共享
+ * 管理全局用户偏好设置
+ * 注意: 这是全局数据，在所有账号间共享
  * 自动推导类型: UserPreferenceStorage | null
  */
 export const useUserPreference = () => useStorage(StorageDomain.USER_PREFERENCE)
 
 /**
- * 同行消费数据 Hook
- *
- * 管理滴滴车模式下的同行消费数据
- * 注意: 仅在滴滴车模式下有数据
- * 自动推导类型: PeerSpendingStorage | null
- */
-export const usePeerSpendingStorage = () =>
-  useStorage(StorageDomain.PEER_SPENDING)
-
-/**
  * 导出通用的 Hook 以备灵活使用
- *
- * 如果业务 hooks 不够用，可以直接使用通用版本:
- * const { data } = useStorage(StorageDomain.CUSTOM_DOMAIN)
  */
 export { useStorage }
-
-/**
- * Token 可用性 Hook（当前激活账号）
- *
- * 注意：此 Hook 基于当前激活账号，如果需要在列表页渲染所有账号的状态，
- * 请使用 getStorageManager().get(accountId, StorageDomain.TOKEN_VALIDATION) 逐个读取。
- */
-export const useTokenValidation = () =>
-  useStorage(StorageDomain.TOKEN_VALIDATION)

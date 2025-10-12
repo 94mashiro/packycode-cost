@@ -1,4 +1,4 @@
-import { type SubscriptionApiResponse } from "~/types"
+import { type SubscriptionDomain } from "~/types/account"
 
 /**
  * 订阅数据映射器 - 四师简化版
@@ -27,47 +27,27 @@ export interface PackageInfo {
  * 订阅数据到套餐信息的转换
  *
  * 简化的业务逻辑：
- * 1. 只处理 active 状态的订阅
- * 2. 多个订阅时选择最晚到期的
- * 3. 过期判断基于 active 状态 + 当前时间
+ * 1. 直接从 SubscriptionDomain 读取数据（已经是第一个订阅项）
+ * 2. 过期判断基于 status + 当前时间
+ * 3. SubscriptionDomain 已经通过 transformer 提取了核心字段
  */
 export function convertSubscriptionToPackageInfo(
-  subscriptionData: null | SubscriptionApiResponse
+  subscription: null | SubscriptionDomain
 ): null | PackageInfo {
   // 基础数据检查
-  if (!subscriptionData?.data || subscriptionData.data.length === 0) {
+  if (!subscription) {
     return null
   }
-
-  // 筛选活跃订阅
-  const activeSubscriptions = subscriptionData.data.filter(
-    (item) => item.status === "active"
-  )
-
-  if (activeSubscriptions.length === 0) {
-    return null
-  }
-
-  // 选择最佳订阅（单个直接返回，多个选最晚到期）
-  const bestSubscription =
-    activeSubscriptions.length === 1
-      ? activeSubscriptions[0]
-      : activeSubscriptions.reduce((best, current) => {
-          const bestEndTime = new Date(best.current_period_end).getTime()
-          const currentEndTime = new Date(current.current_period_end).getTime()
-          return currentEndTime > bestEndTime ? current : best
-        })
 
   // 构建套餐信息
-  const startDate = new Date(bestSubscription.current_period_start)
-  const endDate = new Date(bestSubscription.current_period_end)
+  const startDate = new Date()
+  const endDate = new Date(subscription.currentPeriodEnd)
   const now = new Date()
 
   return {
     endDate,
-    isExpired: bestSubscription.status !== "active" || now > endDate,
-    packageType:
-      bestSubscription.plan_name || `计划 ${bestSubscription.plan_id}`,
+    isExpired: subscription.status !== "active" || now > endDate,
+    packageType: subscription.planName || "未知计划",
     startDate
   }
 }

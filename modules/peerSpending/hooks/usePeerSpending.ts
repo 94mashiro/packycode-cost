@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import type { AccountContext, AuthStorage, PeerSpendingStorage } from "~/types"
 
-import { usePeerSpendingStorage } from "~/hooks/infrastructure"
+import { useCollaboration } from "~/hooks/infrastructure/useStorageHooks"
 import { AccountManager } from "~/lib/account"
 import { getStorageManager, StorageDomain } from "~/lib/storage"
 import { fetchPeerSpendingToday } from "~/modules/peerSpending"
@@ -40,7 +40,24 @@ export function usePeerSpending(): PeerSpendingData {
   const [error, setError] = useState<null | string>(null)
 
   // 订阅存储中的数据
-  const storageData = usePeerSpendingStorage()
+  const collaboration = useCollaboration()
+
+  // 将 CollaborationDomain 转换为 PeerSpendingStorage 格式
+  const storageData: { data: null | PeerSpendingStorage } = {
+    data: collaboration.data
+      ? {
+          averageSpentToday: collaboration.data.averageSpent,
+          date: new Date().toISOString().split("T")[0], // YYYY-MM-DD
+          lastUpdated: new Date().toISOString(),
+          peerCount: collaboration.data.peerCount,
+          topPeers: collaboration.data.topPeers.map((peer) => ({
+            displayName: peer.name,
+            spentToday: peer.spent
+          })),
+          totalSpentToday: collaboration.data.totalSpent
+        }
+      : null
+  }
 
   // 手动刷新函数
   const refresh = useCallback(async () => {

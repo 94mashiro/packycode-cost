@@ -32,10 +32,10 @@ export async function userLogout(): Promise<boolean> {
     await setActiveAccountData(StorageDomain.AUTH, null)
 
     // 清理用户信息
-    await setActiveAccountData(StorageDomain.USER_INFO, null)
+    await setActiveAccountData(StorageDomain.FINANCE, null)
 
     // 清理系统偏好
-    await setActiveAccountData(StorageDomain.SYSTEM_PREFERENCE, null)
+    await setActiveAccountData(StorageDomain.CAPABILITIES, null)
 
     return true
   } catch {

@@ -9,16 +9,7 @@
  * @since v3.0.0
  */
 
-import type {
-  AuthStorage,
-  NotificationStates,
-  PackyConfig,
-  PeerSpendingStorage,
-  SubscriptionApiResponse,
-  SystemPreferenceStorage,
-  TokenType,
-  UserInfo
-} from "./index"
+import type { TokenType, TokenValidationState } from "./index"
 
 /**
  * PackyCode 站点枚举
@@ -101,7 +92,7 @@ export interface AccountContext {
   readonly accountId: string
 
   /** 认证信息（用于 API 请求） */
-  readonly authData: AuthStorage
+  readonly authData: import("./index").AuthStorage
 
   /** 账号所属站点（用于 API URL 生成） */
   readonly site: PackySite
@@ -111,50 +102,23 @@ export interface AccountContext {
 }
 
 /**
- * 账号聚合数据 - 单个账号的所有数据
+ * 账号聚合数据 - 领域驱动设计
  *
  * 存储位置: account_{uuid}_info
  *
- * 设计目标：
- * - 将原本分散在多个键的数据聚合到单个对象
- * - 包含所有 API 获取的运行时数据
- * - 减少存储键数量，提升读写性能
- * - 保证数据原子性和一致性
+ * 五大核心领域：
+ * 1. Authentication - 身份与凭证
+ * 2. Finance - 预算与消费（计费模式语义隔离）
+ * 3. Capabilities - 系统能力
+ * 4. Subscription - 订阅服务
+ * 5. Collaboration - 团队协作
  */
 export interface AccountData {
-  // === API 获取的运行时数据 ===
-  /** 认证信息 */
-  auth: AuthStorage | null
-
-  // === 运行态校验结论（仅通过 USER_INFO 推导） ===
-  /** Token 可用性状态（不与过期时间重复存储） */
-  tokenValidation?: import("./index").TokenValidationState
-
-  /** 最后数据同步时间 */
-  lastSyncAt?: number
-
-  /** 通知状态 */
-  notificationStates: NotificationStates
-
-  /** 同行消费（仅拼车站） */
-  peerSpending?: null | PeerSpendingStorage
-
-  /** 购买配置 */
-  purchaseConfig: null | PackyConfig
-
-  
-
-  /** 订阅信息 */
-  subscriptionInfo: null | SubscriptionApiResponse
-
-  /** 系统偏好 */
-  systemPreference: null | SystemPreferenceStorage
-
-  /** JWT 过期时间（毫秒时间戳，API Key 无此字段） */
-  tokenExpiry?: number
-
-  /** 用户信息（包含 email 等） */
-  userInfo: null | UserInfo
+  auth: AuthDomain
+  capabilities: CapabilitiesDomain
+  collaboration?: CollaborationDomain
+  finance: FinanceDomain
+  subscription?: SubscriptionDomain
 }
 
 /**
@@ -191,8 +155,6 @@ export interface AccountRegistry {
   version: number
 }
 
- 
-
 /**
  * 账号创建配置
  * 用于 AccountManager.addAccount() 方法
@@ -217,6 +179,71 @@ export interface AddAccountConfig {
 }
 
 /**
+ * 认证领域 - 完整的身份与凭证上下文
+ *
+ * 合并了原有的 auth, tokenValidation, tokenExpiry
+ */
+export interface AuthDomain {
+  token: null | string
+  tokenExpiry?: number
+  tokenType: null | TokenType
+  validation?: TokenValidationState
+}
+
+/**
+ * 能力领域 - 系统功能可用性与限流控制
+ *
+ * 合并了原有的 systemPreference 和 purchaseConfig 的核心字段
+ */
+export interface CapabilitiesDomain {
+  opusEnabled?: boolean
+  purchaseDisabled?: boolean
+  rateLimitResetAt?: null | string
+}
+
+/**
+ * 协作领域 - 团队消费统计与排行
+ *
+ * 仅在 SHARED（滴滴车）模式下存在
+ */
+export interface CollaborationDomain {
+  averageSpent: number
+  peerCount: number
+  topPeers: Array<{
+    name: string
+    spent: number
+  }>
+  totalSpent: number
+}
+
+/**
+ * 财务领域 - 按量计费与周期计费可共存
+ *
+ * 设计原则：
+ * - payg 和 budget 语义独立，不互斥
+ * - WWW 主站主要使用 payg，但也可能有 budget 数据
+ * - SHARED/CODEX 主要使用 budget
+ * - 组件根据数据存在性决定展示内容
+ */
+export interface FinanceDomain {
+  budget?: {
+    daily: {
+      limit: number
+      spent: number
+    }
+    monthly: {
+      limit: number
+      spent: number
+    }
+  }
+  payg?: {
+    balance: string
+    dailySpent?: number
+    totalSpent?: string
+  }
+}
+
+/**
  * 迁移状态
  * 记录数据迁移的执行状态
  */
@@ -235,6 +262,19 @@ export interface MigrationStatus {
 
   /** 目标版本 */
   toVersion: string
+}
+
+/**
+ * 订阅领域 - 服务计划与周期管理
+ *
+ * 仅保留第一个订阅项的核心字段
+ */
+export interface SubscriptionDomain {
+  cancelAtPeriodEnd: boolean
+  currentPeriodEnd: string
+  planName: string
+  planPrice: string
+  status: string
 }
 
 /**

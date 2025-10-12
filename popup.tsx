@@ -38,11 +38,11 @@ function IndexPopup() {
   const tokenExpiration = authData?.token
     ? getTokenExpiration(authData.token)
     : null
-  const isTokenValid = !!(authData?.token && authData?.type)
+  const isTokenValid = !!(authData?.token && authData?.tokenType)
 
   // Token 时效性检查：API Key 永久有效，JWT 需要检查过期时间
   const isTokenEffective =
-    authData?.type === TokenType.API_KEY
+    authData?.tokenType === TokenType.API_KEY
       ? true // API Key 永久有效
       : !tokenExpiration?.isExpired // JWT 需检查过期
 
@@ -109,7 +109,7 @@ function IndexPopup() {
             expiry: null,
             isValid: isAuthenticated || false,
             token: authData?.token || null,
-            tokenType: authData?.type || null
+            tokenType: authData?.tokenType || null
           }}
           tokenExpiration={
             tokenExpiration || { exp: 0, formatted: "", isExpired: true }

@@ -83,7 +83,7 @@ export class BackgroundAccountService {
       )
 
       return {
-        expiry: accountData?.tokenExpiry,
+        expiry: accountData?.auth.tokenExpiry,
         token: account.token,
         type: account.tokenType
       }

@@ -24,7 +24,7 @@ export function ActionButtons() {
         const accountManager = new AccountManager(getStorageManager())
         const currentAccount = await accountManager.getCurrentAccount()
         const site = currentAccount?.site ?? PackySite.WWW
-        
+
         const url = apiUrls.getDashboardUrl(site)
         setDashboardUrl(url)
       } catch (error) {

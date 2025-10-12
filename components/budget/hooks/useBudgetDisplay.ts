@@ -1,5 +1,7 @@
-import { useUserInfo } from "~/hooks"
-import { useSystemPreference } from "~/hooks/infrastructure/useStorageHooks"
+import {
+  useCapabilities,
+  useFinance
+} from "~/hooks/infrastructure/useStorageHooks"
 import { useAccountManager } from "~/hooks/useAccountManager"
 import { PackySite } from "~/types/account"
 
@@ -49,8 +51,8 @@ export interface UseBudgetDisplayReturn {
  * 5. 账号站点判断（新增）
  */
 export function useBudgetDisplay(): UseBudgetDisplayReturn {
-  const { data: userInfo, error, loading } = useUserInfo()
-  const { data: systemPref } = useSystemPreference()
+  const { data: finance, error, loading } = useFinance()
+  const { data: capabilities } = useCapabilities()
   const { currentAccount } = useAccountManager() // 从当前账号读取
 
   // 从当前激活账号读取站点
@@ -58,21 +60,21 @@ export function useBudgetDisplay(): UseBudgetDisplayReturn {
 
   // WWW 公交车模式：提取余额数据
   const balanceData =
-    accountSite === PackySite.WWW && userInfo?.balance_usd
+    accountSite === PackySite.WWW && finance?.payg?.balance
       ? {
-          balance: userInfo.balance_usd
+          balance: finance.payg.balance
         }
       : null
 
   // 其他模式（SHARED 滴滴车、CODEX）：提取预算数据
   const budgetData =
-    accountSite !== PackySite.WWW && userInfo
+    accountSite !== PackySite.WWW && finance?.budget
       ? {
-          dailyBudget: userInfo.budgets.daily.limit,
-          dailySpent: userInfo.budgets.daily.spent,
-          monthlyBudget: userInfo.budgets.monthly.limit,
-          monthlySpent: userInfo.budgets.monthly.spent,
-          rateLimitResetAt: systemPref?.rate_limit_reset_at
+          dailyBudget: finance.budget.daily.limit,
+          dailySpent: finance.budget.daily.spent,
+          monthlyBudget: finance.budget.monthly.limit,
+          monthlySpent: finance.budget.monthly.spent,
+          rateLimitResetAt: capabilities?.rateLimitResetAt ?? null
         }
       : null
 

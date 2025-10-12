@@ -1,4 +1,4 @@
-import { useSubscriptionInfo } from "~/hooks"
+import { useSubscription } from "~/hooks/infrastructure/useStorageHooks"
 
 import { convertSubscriptionToPackageInfo, type PackageInfo } from "../mapper"
 
@@ -29,11 +29,11 @@ export interface UseSubscriptionDisplayReturn {
  * 3. 错误处理
  */
 export function useSubscriptionDisplay(): UseSubscriptionDisplayReturn {
-  const { data: subscriptionData, error, loading } = useSubscriptionInfo()
+  const { data: subscription, error, loading } = useSubscription()
 
   // 数据转换
-  const packageInfo = subscriptionData
-    ? convertSubscriptionToPackageInfo(subscriptionData)
+  const packageInfo = subscription
+    ? convertSubscriptionToPackageInfo(subscription)
     : null
 
   return {

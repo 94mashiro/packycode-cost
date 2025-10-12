@@ -123,6 +123,21 @@ export interface JWTPayload {
   sub?: string
 }
 
+/**
+ * 通知设置键类型
+ * 全局类型定义，确保类型安全
+ *
+ * 注意：Opus 通知仅支持主站 (WWW)
+ */
+export type NotificationKey =
+  | "opus_notification"
+  | "opus_notification_www"
+  | "purchase_notification"
+  | "purchase_notification_codex"
+  // 向后兼容旧字段
+  | "purchase_notification_shared"
+  | "purchase_notification_www"
+
 // ===== 通知状态 =====
 export interface NotificationStates {
   opus_enabled?: boolean
@@ -246,6 +261,8 @@ export interface SharedSpaceApiResponse {
   remaining_slots: number
 }
 
+// ===== 订阅系统类型定义 =====
+
 // ===== 认证相关 =====
 /**
  * 单个订阅项（完全匹配 API 返回）
@@ -284,8 +301,6 @@ export interface SubscriptionApiItem {
   /** 用户名（当前为 null） */
   user_name: null | string
 }
-
-// ===== 订阅系统类型定义 =====
 
 /**
  * 订阅 API 响应结构（基于真实 API）
@@ -334,19 +349,19 @@ export interface TokenExpiration {
 
 // ===== Token 可用性状态（运行态结论，依赖 USER_INFO 结果） =====
 export type TokenStatus =
-  | "unknown"
-  | "valid"
-  | "invalid"
   | "expired"
+  | "invalid"
   | "network_error"
   | "rate_limited"
+  | "unknown"
+  | "valid"
 
 export interface TokenValidationState {
-  status: TokenStatus
   checkedAt?: number
-  reason?: string
   httpStatus?: number
-  source?: "user_info" | "subscriptions" | "shared_space" | "jwt_expiry"
+  reason?: string
+  source?: "jwt_expiry" | "shared_space" | "subscriptions" | "user_info"
+  status: TokenStatus
 }
 
 /**
@@ -419,46 +434,31 @@ export interface UserInfoData {
   userInfo: null | UserInfo
 }
 
-/**
- * 通知设置键类型
- * 全局类型定义，确保类型安全
- *
- * 注意：Opus 通知仅支持主站 (WWW)
- */
-export type NotificationKey =
-  | "purchase_notification_www"
-  | "purchase_notification_shared"
-  | "purchase_notification_codex"
-  | "opus_notification_www"
-  // 向后兼容旧字段
-  | "purchase_notification"
-  | "opus_notification"
-
 // 用户偏好
 export interface UserPreferenceStorage {
-  // ===== 购买通知 - 站点级控制 =====
-  /** 购买开放通知 - 主站 (www.packycode.com) */
-  purchase_notification_www?: boolean
-  /** 购买开放通知 - 拼车站 (share.packycode.com) */
-  purchase_notification_shared?: boolean
-  /** 购买开放通知 - Codex站 (codex.packycode.com) */
-  purchase_notification_codex?: boolean
-
-  // ===== Opus 通知 - 站点级控制 =====
-  /** Opus 模型状态通知 - 仅主站 (www.packycode.com) */
-  opus_notification_www?: boolean
-
   // ===== 废弃字段（向后兼容） =====
   /**
    * @deprecated 使用站点特定字段 opus_notification_{site}
    * 保留用于数据迁移，新代码请使用站点级字段
    */
   opus_notification?: boolean
+  // ===== Opus 通知 - 站点级控制 =====
+  /** Opus 模型状态通知 - 仅主站 (www.packycode.com) */
+  opus_notification_www?: boolean
   /**
    * @deprecated 使用站点特定字段 purchase_notification_{site}
    * 保留用于数据迁移，新代码请使用站点级字段
    */
   purchase_notification?: boolean
+
+  /** 购买开放通知 - Codex站 (codex.packycode.com) */
+  purchase_notification_codex?: boolean
+
+  /** 购买开放通知 - 拼车站 (share.packycode.com) */
+  purchase_notification_shared?: boolean
+  // ===== 购买通知 - 站点级控制 =====
+  /** 购买开放通知 - 主站 (www.packycode.com) */
+  purchase_notification_www?: boolean
 }
 
 // ===== 多账号管理系统类型 =====
@@ -469,6 +469,11 @@ export type {
   AccountDetectionResult,
   AccountRegistry,
   AddAccountConfig,
+  AuthDomain,
+  CapabilitiesDomain,
+  CollaborationDomain,
+  FinanceDomain,
   MigrationStatus,
+  SubscriptionDomain,
   UpdateAccountConfig
 } from "./account"

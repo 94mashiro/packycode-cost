@@ -138,7 +138,7 @@ export async function removeActiveAccountData(domain: string): Promise<void> {
  *
  * @example
  * ```typescript
- * await setActiveAccountData(StorageDomain.USER_INFO, { name: "John" })
+ * await setActiveAccountData(StorageDomain.FINANCE, { name: "John" })
  * ```
  */
 export async function setActiveAccountData<T>(

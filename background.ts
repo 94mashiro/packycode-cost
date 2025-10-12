@@ -21,11 +21,11 @@ import {
 } from "~/modules/tasks"
 
 import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
-import { PackySite } from "./types/account"
 
 import { apiUrls } from "./api"
 import { getCookieDomain } from "./api/config"
 import { AccountManager } from "./lib/account/AccountManager"
+import { PackySite } from "./types/account"
 
 const logger = loggers.background
 
@@ -73,9 +73,7 @@ async function backgroundExecuteAllTasks() {
 
 async function updateBadge() {
   try {
-    const userInfo = await getActiveAccountData<UserInfo>(
-      StorageDomain.USER_INFO
-    )
+    const userInfo = await getActiveAccountData<UserInfo>(StorageDomain.FINANCE)
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(
@@ -217,7 +215,7 @@ async function setupStorageListening() {
 
     // 使用 MultiAccountStorageManager 的 watch API（需要显式传入 accountId）
     storageManager.watch(activeAccountId, {
-      [StorageDomain.USER_INFO]: () => {
+      [StorageDomain.FINANCE]: () => {
         logger.debug("User info changed, updating badge")
         updateBadge()
       }
@@ -317,7 +315,7 @@ async function setupDynamicWebRequestListener() {
           const authData = await getActiveAccountData<AuthStorage>(
             StorageDomain.AUTH
           )
-          
+
           // 重放请求获取响应内容 - 使用统一的HTTP客户端
           const data = await httpClient.get<ApiKeyResponse>(
             details.url,
@@ -405,7 +403,7 @@ browser.notifications.onClicked.addListener(async (notificationId) => {
     const accountManager = new AccountManager(getStorageManager())
     const currentAccount = await accountManager.getCurrentAccount()
     const site = currentAccount?.site ?? PackySite.WWW
-    
+
     // 打开购买页面
     const pricingUrl = apiUrls.getPricingUrl(site)
     await browser.tabs.create({ url: pricingUrl })

@@ -22,12 +22,16 @@ import {
   type AccountData,
   type AccountRegistry,
   AccountVersion,
+  type AuthDomain,
   type AuthStorage,
+  type CapabilitiesDomain,
+  type CollaborationDomain,
+  type FinanceDomain,
   type MigrationStatus,
-  type NotificationStates,
   type PackyConfig,
   type PeerSpendingStorage,
   type SubscriptionApiResponse,
+  type SubscriptionDomain,
   type SystemPreferenceStorage,
   TokenType,
   type UserInfo
@@ -117,7 +121,7 @@ export class DataMigrationManager {
         ))
         const hasUserInfo = !!(await storageManager.get(
           account.id,
-          StorageDomain.USER_INFO
+          StorageDomain.FINANCE
         ))
 
         accounts.push({
@@ -292,6 +296,124 @@ export class DataMigrationManager {
   }
 
   /**
+   * 构建认证领域
+   */
+  private buildAuthDomain(auth: AuthStorage | null): AuthDomain {
+    if (!auth) {
+      return {
+        token: null,
+        tokenType: null
+      }
+    }
+
+    return {
+      token: auth.token,
+      tokenExpiry:
+        auth.type === TokenType.JWT
+          ? this.extractTokenExpiry(auth.token)
+          : undefined,
+      tokenType: auth.type || TokenType.JWT,
+      validation: { status: "unknown" }
+    }
+  }
+
+  /**
+   * 构建能力领域（合并 systemPreference 和 purchaseConfig）
+   */
+  private buildCapabilitiesDomain(
+    systemPreference: null | SystemPreferenceStorage,
+    purchaseConfig: null | PackyConfig
+  ): CapabilitiesDomain {
+    return {
+      opusEnabled: systemPreference?.opus_enabled,
+      purchaseDisabled:
+        purchaseConfig?.purchaseDisabled ?? systemPreference?.purchase_disabled,
+      rateLimitResetAt: systemPreference?.rate_limit_reset_at
+    }
+  }
+
+  /**
+   * 构建协作领域（精简字段）
+   */
+  private buildCollaborationDomain(
+    peerSpending: null | PeerSpendingStorage
+  ): CollaborationDomain | undefined {
+    if (!peerSpending) {
+      return undefined
+    }
+
+    return {
+      averageSpent: peerSpending.averageSpentToday,
+      peerCount: peerSpending.peerCount,
+      topPeers: peerSpending.topPeers.map((peer) => ({
+        name: peer.displayName,
+        spent: peer.spentToday
+      })),
+      totalSpent: peerSpending.totalSpentToday
+    }
+  }
+
+  /**
+   * 构建财务领域（处理 payg/budget 分离）
+   */
+  private buildFinanceDomain(
+    userInfo: null | UserInfo,
+    site: PackySite
+  ): FinanceDomain {
+    const finance: FinanceDomain = {}
+
+    if (!userInfo) {
+      return finance
+    }
+
+    // WWW 站点：提取 payg 数据
+    if (site === PackySite.WWW && userInfo.balance_usd) {
+      finance.payg = {
+        balance: userInfo.balance_usd,
+        dailySpent: userInfo.budgets?.daily.spent,
+        totalSpent: (userInfo as any).total_spent_usd
+      }
+    }
+
+    // 所有站点：提取 budget 数据（如果存在）
+    if (userInfo.budgets) {
+      finance.budget = {
+        daily: {
+          limit: userInfo.budgets.daily.limit,
+          spent: userInfo.budgets.daily.spent
+        },
+        monthly: {
+          limit: userInfo.budgets.monthly.limit,
+          spent: userInfo.budgets.monthly.spent
+        }
+      }
+    }
+
+    return finance
+  }
+
+  /**
+   * 构建订阅领域（只提取第一个订阅项）
+   */
+  private buildSubscriptionDomain(
+    subscriptionInfo: null | SubscriptionApiResponse
+  ): SubscriptionDomain | undefined {
+    if (!subscriptionInfo?.data || subscriptionInfo.data.length === 0) {
+      return undefined
+    }
+
+    const firstSubscription = subscriptionInfo.data[0]
+
+    return {
+      cancelAtPeriodEnd: firstSubscription.cancel_at_period_end,
+      currentPeriodEnd: firstSubscription.current_period_end,
+      planName: firstSubscription.plan_name,
+      planPrice: firstSubscription.plan_price,
+      status: firstSubscription.status
+    }
+  }
+
+  /**
    * 提取 JWT Token 过期时间
    *
    * @param token JWT token 字符串
@@ -325,6 +447,18 @@ export class DataMigrationManager {
    */
   private getDefaultDisplayName(site: PackySite): string {
     return getSiteAccountName(site)
+  }
+
+  /**
+   * 记录迁移详情
+   */
+  private logMigrationDetails(accountData: AccountData): void {
+    logger.debug(`  - AUTH: ✓`)
+    if (accountData.finance.payg) logger.debug(`  - FINANCE.PAYG: ✓`)
+    if (accountData.finance.budget) logger.debug(`  - FINANCE.BUDGET: ✓`)
+    logger.debug(`  - CAPABILITIES: ✓`)
+    if (accountData.subscription) logger.debug(`  - SUBSCRIPTION: ✓`)
+    if (accountData.collaboration) logger.debug(`  - COLLABORATION: ✓`)
   }
 
   /**
@@ -364,7 +498,7 @@ export class DataMigrationManager {
   }
 
   /**
-   * 迁移单个账号类型的数据
+   * 迁移单个账号类型的数据（领域驱动结构）
    *
    * 数据结构重构：
    * - Account 只包含表单字段
@@ -389,8 +523,7 @@ export class DataMigrationManager {
       return false
     }
 
-    // 2. 创建账号实体（只包含表单字段）
-    // 映射 AccountVersion → PackySite
+    // 2. 映射到 PackySite
     const site = this.mapAccountTypeToSite(accountType)
 
     try {
@@ -417,9 +550,6 @@ export class DataMigrationManager {
       const purchaseConfig = await this.storage.get<PackyConfig>(
         `${versionKey}.purchase_config`
       )
-      const notificationStates = await this.storage.get<NotificationStates>(
-        `${versionKey}.notification.states`
-      )
 
       // 滴滴车模式特有数据
       const peerSpending =
@@ -429,28 +559,16 @@ export class DataMigrationManager {
             )
           : null
 
-      // 4. 聚合成 AccountData 对象（包含新增的 API 派生字段）
+      // 4. 构建领域驱动结构
       const accountData: AccountData = {
-        // === 原有 API 数据 ===
-        auth: {
-          token: auth.token,
-          type: auth.type || TokenType.JWT
-        },
-        // === 新增：运行态与时间 ===
-        tokenValidation: { status: "unknown" },
-        lastSyncAt: Date.now(),
-        notificationStates: notificationStates || {},
-        peerSpending: peerSpending || null,
-        purchaseConfig: purchaseConfig || null,
-        
-
-        subscriptionInfo: subscriptionInfo || null,
-        systemPreference: systemPreference || null,
-        tokenExpiry:
-          auth.type === TokenType.JWT
-            ? this.extractTokenExpiry(auth.token)
-            : undefined,
-        userInfo: userInfo || null
+        auth: this.buildAuthDomain(auth),
+        capabilities: this.buildCapabilitiesDomain(
+          systemPreference,
+          purchaseConfig
+        ),
+        collaboration: this.buildCollaborationDomain(peerSpending),
+        finance: this.buildFinanceDomain(userInfo, site),
+        subscription: this.buildSubscriptionDomain(subscriptionInfo)
       }
 
       // 5. 一次性写入聚合数据
@@ -458,17 +576,8 @@ export class DataMigrationManager {
       await this.storage.set(storageKey, accountData)
 
       // 6. 日志记录
-      logger.info(`✅ Migrated all data to: ${storageKey}`)
-      logger.debug(`  - AUTH: ✓`)
-      if (userInfo) logger.debug(`  - USER_INFO: ✓`)
-      if (subscriptionInfo) logger.debug(`  - SUBSCRIPTION_INFO: ✓`)
-      if (systemPreference) logger.debug(`  - SYSTEM_PREFERENCE: ✓`)
-      if (purchaseConfig) logger.debug(`  - PURCHASE_CONFIG: ✓`)
-      if (notificationStates) logger.debug(`  - NOTIFICATION_STATES: ✓`)
-      if (peerSpending) logger.debug(`  - PEER_SPENDING: ✓`)
-      logger.debug(
-        `  - API_DERIVED_FIELDS: ✓ (tokenValidation, tokenExpiry, lastSyncAt)`
-      )
+      logger.info(`✅ Migrated to domain structure: ${storageKey}`)
+      this.logMigrationDetails(accountData)
 
       return true
     } catch (error) {

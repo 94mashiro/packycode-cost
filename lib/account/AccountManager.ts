@@ -110,24 +110,19 @@ export class AccountManager {
     // 6. 保存注册表
     await this.saveRegistry(registry)
 
-    // 7. 创建初始 AccountData（包含 API 派生字段）
+    // 7. 创建初始 AccountData（领域驱动设计）
     const accountData: AccountData = {
       auth: {
         token: config.token,
-        type: config.tokenType
+        tokenExpiry:
+          config.tokenType === TokenType.JWT
+            ? this.extractTokenExpiry(config.token)
+            : undefined,
+        tokenType: config.tokenType,
+        validation: { status: "unknown" }
       },
-      tokenValidation: { status: "unknown" },
-      lastSyncAt: undefined,
-      notificationStates: {},
-      peerSpending: null,
-      purchaseConfig: null,
-      subscriptionInfo: null,
-      systemPreference: null,
-      tokenExpiry:
-        config.tokenType === TokenType.JWT
-          ? this.extractTokenExpiry(config.token)
-          : undefined,
-      userInfo: null
+      capabilities: {},
+      finance: {}
     }
 
     // 8. 保存 AccountData（直接使用底层 Storage）
@@ -249,6 +244,38 @@ export class AccountManager {
     await this.storageManager.clearAccountData(accountId)
 
     logger.info(`✅ Account removed successfully: ${accountId}`)
+  }
+
+  /**
+   * 设置 Token 可用性状态（使用 USER_INFO 的结果进行回写）
+   * - status 为 valid 时，会同时更新 lastSyncAt
+   */
+  async setTokenValidation(
+    accountId: string,
+    state: import("~/types").TokenValidationState
+  ): Promise<void> {
+    const registry = await this.getOrCreateRegistry()
+
+    const account = registry.accounts.find((acc) => acc.id === accountId)
+    if (!account) {
+      throw new Error(`Account not found: ${accountId}`)
+    }
+
+    const storage = this.storageManager.getUnderlyingStorage()
+    const accountData =
+      (await storage.get<AccountData>(`account_${accountId}_info`)) ||
+      this.createEmptyAccountData()
+
+    accountData.auth = {
+      ...accountData.auth,
+      token: accountData.auth?.token || null,
+      tokenType: accountData.auth?.tokenType || null,
+      validation: state
+    }
+
+    await storage.set(`account_${accountId}_info`, accountData)
+
+    logger.info(`Updated token validation: ${accountId} -> ${state.status}`)
   }
 
   /**
@@ -375,54 +402,18 @@ export class AccountManager {
       // 更新认证信息
       accountData.auth = {
         token: account.token,
-        type: account.tokenType
-      }
-
-      // 如果是 JWT，提取过期时间；否则移除过期时间
-      if (account.tokenType === TokenType.JWT) {
-        accountData.tokenExpiry = this.extractTokenExpiry(account.token)
-      } else {
-        delete accountData.tokenExpiry
+        tokenExpiry:
+          account.tokenType === TokenType.JWT
+            ? this.extractTokenExpiry(account.token)
+            : undefined,
+        tokenType: account.tokenType,
+        validation: accountData.auth?.validation || { status: "unknown" }
       }
 
       await storage.set(`account_${accountId}_info`, accountData)
     }
 
     logger.info(`✅ Account updated successfully: ${accountId}`)
-  }
-
-  
-
-  /**
-   * 设置 Token 可用性状态（使用 USER_INFO 的结果进行回写）
-   * - status 为 valid 时，会同时更新 lastSyncAt
-   */
-  async setTokenValidation(
-    accountId: string,
-    state: import("~/types").TokenValidationState
-  ): Promise<void> {
-    const registry = await this.getOrCreateRegistry()
-
-    const account = registry.accounts.find((acc) => acc.id === accountId)
-    if (!account) {
-      throw new Error(`Account not found: ${accountId}`)
-    }
-
-    const storage = this.storageManager.getUnderlyingStorage()
-    const accountData =
-      (await storage.get<AccountData>(`account_${accountId}_info`)) ||
-      this.createEmptyAccountData()
-
-    accountData.tokenValidation = state
-    if (state.status === "valid") {
-      accountData.lastSyncAt = state.checkedAt || Date.now()
-    }
-
-    await storage.set(`account_${accountId}_info`, accountData)
-
-    logger.info(
-      `Updated token validation: ${accountId} -> ${state.status}`
-    )
   }
 
   /**
@@ -432,16 +423,13 @@ export class AccountManager {
    */
   private createEmptyAccountData(): AccountData {
     return {
-      auth: null,
-      tokenValidation: { status: "unknown" },
-      lastSyncAt: undefined,
-      notificationStates: {},
-      peerSpending: null,
-      purchaseConfig: null,
-      subscriptionInfo: null,
-      systemPreference: null,
-      tokenExpiry: undefined,
-      userInfo: null
+      auth: {
+        token: null,
+        tokenType: null,
+        validation: { status: "unknown" }
+      },
+      capabilities: {},
+      finance: {}
     }
   }
 

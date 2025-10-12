@@ -308,7 +308,7 @@ export class MultiAccountStorageManager {
    * @example
    * ```typescript
    * manager.watch(accountId, {
-   *   [StorageDomain.USER_INFO]: (change) => {
+   *   [StorageDomain.FINANCE]: (change) => {
    *     console.log("User info changed:", change)
    *   },
    *   [StorageDomain.USER_PREFERENCE]: (change) => {
@@ -407,31 +407,17 @@ export class MultiAccountStorageManager {
   }
 
   /**
-   * 判断是否为全局域（私有方法）
-   *
-   * 全局域以 global. 开头，不属于任何特定账号
-   * 这些域直接存储在底层 Plasmo Storage，而不是账号聚合对象中
-   *
-   * @param domain 存储域
-   * @returns 是否为全局域
-   */
-  private isGlobalDomain(domain: string): boolean {
-    return domain.startsWith("global.")
-  }
-
-  /**
    * 创建空的账号数据对象（私有方法）
    */
   private createEmptyAccountData(): AccountData {
     return {
-      auth: null,
-      tokenValidation: { status: "unknown" },
-      notificationStates: {},
-      peerSpending: null,
-      purchaseConfig: null,
-      subscriptionInfo: null,
-      systemPreference: null,
-      userInfo: null
+      auth: {
+        token: null,
+        tokenType: null,
+        validation: { status: "unknown" }
+      },
+      capabilities: {},
+      finance: {}
     }
   }
 
@@ -461,6 +447,19 @@ export class MultiAccountStorageManager {
     }
 
     return data
+  }
+
+  /**
+   * 判断是否为全局域（私有方法）
+   *
+   * 全局域以 global. 开头，不属于任何特定账号
+   * 这些域直接存储在底层 Plasmo Storage，而不是账号聚合对象中
+   *
+   * @param domain 存储域
+   * @returns 是否为全局域
+   */
+  private isGlobalDomain(domain: string): boolean {
+    return domain.startsWith("global.")
   }
 
   /**

@@ -2,25 +2,28 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { type SubscriptionApiResponse } from "~/types"
+import { type SubscriptionApiResponse, type SubscriptionDomain } from "~/types"
 
 const logger = loggers.subscription
 
 export async function fetchSubscriptionInfo(
   context: import("~/types").AccountContext
-): Promise<null | SubscriptionApiResponse> {
+): Promise<null | SubscriptionDomain> {
   try {
     // 直接从 context 解构所需信息
     const { accountId, site } = context
     const storageManager = getStorageManager()
 
     // 使用统一的API客户端，传入完整上下文
-    const subscriptionData = await api.getSubscriptions(context)
+    const rawData = await api.getSubscriptions(context)
 
-    // 存储API响应数据
+    // 转换为订阅领域类型
+    const subscriptionData = transformToSubscriptionDomain(rawData)
+
+    // 存储订阅数据
     await storageManager.set(
       accountId,
-      StorageDomain.SUBSCRIPTION_INFO,
+      StorageDomain.SUBSCRIPTION,
       subscriptionData
     )
 
@@ -41,5 +44,25 @@ export async function fetchSubscriptionInfo(
       error instanceof Error ? error.message : "获取订阅信息失败"
     logger.error("Failed to fetch subscription info:", errorMessage)
     throw new Error(errorMessage)
+  }
+}
+
+/**
+ * 将 SubscriptionApiResponse 转换为 SubscriptionDomain
+ */
+function transformToSubscriptionDomain(
+  response: SubscriptionApiResponse
+): SubscriptionDomain | undefined {
+  if (!response.data || response.data.length === 0) {
+    return undefined
+  }
+
+  const firstSubscription = response.data[0]
+  return {
+    cancelAtPeriodEnd: firstSubscription.cancel_at_period_end,
+    currentPeriodEnd: firstSubscription.current_period_end,
+    planName: firstSubscription.plan_name,
+    planPrice: firstSubscription.plan_price,
+    status: firstSubscription.status
   }
 }

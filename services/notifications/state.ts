@@ -1,12 +1,9 @@
-import type { NotificationStates } from "~/types"
-
-import {
-  getActiveAccountData,
-  setActiveAccountData
-} from "~/lib/storage/activeAccountHelpers"
-import { StorageDomain } from "~/lib/storage/domains"
-
-export { type NotificationStates }
+/**
+ * 通知状态检查函数（简化版）
+ *
+ * 不再使用独立的 NOTIFICATION_STATES 存储域，
+ * 状态检查逻辑已内置在各模块的 API 函数中
+ */
 
 export function checkOpusNotification(
   previousState: boolean | undefined,
@@ -20,37 +17,4 @@ export function checkPurchaseNotification(
   currentDisabled: boolean
 ): boolean {
   return previousState === true && currentDisabled === false
-}
-
-export async function clearNotificationStates(): Promise<void> {
-  await setActiveAccountData(StorageDomain.NOTIFICATION_STATES, {}, true)
-}
-
-export async function getNotificationStates(): Promise<NotificationStates> {
-  const states = await getActiveAccountData<NotificationStates>(
-    StorageDomain.NOTIFICATION_STATES
-  )
-  return states || {}
-}
-
-export async function getOpusState(): Promise<boolean | undefined> {
-  const states = await getNotificationStates()
-  return states.opus_enabled
-}
-
-export async function getPurchaseState(): Promise<boolean | undefined> {
-  const states = await getNotificationStates()
-  return states.purchase_disabled
-}
-
-export async function setOpusState(enabled: boolean): Promise<void> {
-  await setActiveAccountData(StorageDomain.NOTIFICATION_STATES, {
-    opus_enabled: enabled
-  })
-}
-
-export async function setPurchaseState(disabled: boolean): Promise<void> {
-  await setActiveAccountData(StorageDomain.NOTIFICATION_STATES, {
-    purchase_disabled: disabled
-  })
 }

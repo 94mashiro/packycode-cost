@@ -38,7 +38,7 @@ export class AccountStorageKeyGenerator {
    * // => "account_uuid-1234.auth"
    *
    * // 生成用户信息的存储键
-   * const key = AccountStorageKeyGenerator.generateKey("uuid-5678", StorageDomain.USER_INFO)
+   * const key = AccountStorageKeyGenerator.generateKey("uuid-5678", StorageDomain.FINANCE)
    * // => "account_uuid-5678.user.info"
    * ```
    */

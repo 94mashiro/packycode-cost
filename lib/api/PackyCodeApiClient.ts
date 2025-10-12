@@ -47,7 +47,9 @@ export class PackyCodeApiClient {
    *
    * 架构原则：底层API必须明确要求所有依赖，不隐式查询当前账号
    */
-  async getConfig(site: import("~/types/account").PackySite): Promise<PackyConfig> {
+  async getConfig(
+    site: import("~/types/account").PackySite
+  ): Promise<PackyConfig> {
     const { ApiConfigManager } = await import("~/api/config")
     const configManager = new ApiConfigManager(site)
     const configUrl = configManager.getApiUrl(ApiEndpointType.CONFIG)

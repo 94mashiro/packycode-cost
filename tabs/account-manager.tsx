@@ -547,6 +547,7 @@ function AccountManagerPage() {
           onSubmit={async (config) => {
             await addAccount(config)
             setShowAddDialog(false)
+            handleRefresh()
           }}
         />
 
@@ -558,7 +559,10 @@ function AccountManagerPage() {
             setShowEditDialog(false)
             setSelectedAccount(null)
           }}
-          onSubmit={updateAccount}
+          onSubmit={async (accountId, updates) => {
+            await updateAccount(accountId, updates)
+            handleRefresh()
+          }}
         />
 
         {/* 删除确认对话框 */}

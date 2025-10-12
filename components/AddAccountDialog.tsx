@@ -19,8 +19,6 @@
 
 import { useState } from "react"
 
-import { TokenType } from "~/types"
-
 import { Button } from "@/components/shadcn/button"
 import {
   Dialog,
@@ -41,6 +39,7 @@ import {
   SelectValue
 } from "@/components/shadcn/select"
 import { Textarea } from "@/components/shadcn/textarea"
+import { TokenType } from "~/types"
 import { PackySite } from "~/types/account"
 
 interface AddAccountDialogProps {
@@ -165,7 +164,7 @@ export function AddAccountDialog({
                   htmlFor="site-shared">
                   {PackySite.SHARED}{" "}
                   <span className="text-muted-foreground text-xs">
-                    (共享站点)
+                    (拼车站)
                   </span>
                 </Label>
               </div>
@@ -229,7 +228,7 @@ export function AddAccountDialog({
               disabled={isSubmitting}
               id="displayName"
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="例如：我的公交车账号"
+              placeholder="例如：我的主站账号"
               type="text"
               value={displayName}
             />

@@ -25,12 +25,12 @@ import type {
  *
  * 三个可用站点：
  * - WWW: 主站 (www.packycode.com)
- * - SHARED: 共享站点 (shared.packycode.com)
- * - CODEX: Codex 站点 (codex.packycode.com)
+ * - SHARED: 拼车站 (share.packycode.com)
+ * - CODEX: Codex站 (codex.packycode.com)
  */
 export enum PackySite {
   CODEX = "codex.packycode.com",
-  SHARED = "shared.packycode.com",
+  SHARED = "share.packycode.com",
   WWW = "www.packycode.com"
 }
 
@@ -136,17 +136,13 @@ export interface AccountData {
   /** 通知状态 */
   notificationStates: NotificationStates
 
-  /** 同行消费（仅滴滴车模式） */
+  /** 同行消费（仅拼车站） */
   peerSpending?: null | PeerSpendingStorage
 
   /** 购买配置 */
   purchaseConfig: null | PackyConfig
 
-  /**
-   * 账号数据快照
-   * 在账号列表中显示关键信息，无需激活账号即可查看
-   */
-  snapshot?: AccountSnapshot
+  
 
   /** 订阅信息 */
   subscriptionInfo: null | SubscriptionApiResponse
@@ -195,25 +191,7 @@ export interface AccountRegistry {
   version: number
 }
 
-/**
- * 账号数据快照
- */
-export interface AccountSnapshot {
-  /** 账户余额（仅公交车模式） */
-  balanceUsd?: string
-
-  /** 日限额快照（美元） */
-  dailyLimit: number
-
-  /** 日消费快照（美元） */
-  dailySpent: number
-
-  /** 月消费快照（美元） */
-  monthlySpent: number
-
-  /** Opus 状态快照 */
-  opusEnabled: boolean
-}
+ 
 
 /**
  * 账号创建配置

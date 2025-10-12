@@ -4,8 +4,7 @@
  * 功能：
  * 1. 显示所有账号（跨类型）
  * 2. 支持快速切换账号
- * 3. 显示账号关键信息（名称、类型、消费）
- * 4. 切换成功通知
+ * 3. 显示账号关键信息（名称、类型）
  *
  * 设计原则 (四师协作):
  * 🐧 Linus: "简单直接的用户交互，不要复杂化"
@@ -18,27 +17,23 @@ import { useCallback, useEffect, useState } from "react"
 
 import { Label } from "@/components/shadcn/label"
 import { useAccountManager } from "@/hooks/useAccountManager"
+import { loggers } from "~/lib/logger"
 import { PackySite } from "~/types/account"
+import { getSiteName } from "~/utils/siteHelpers"
+
+const logger = loggers.ui
 
 interface AccountSwitcherProps {
   className?: string
   onAccountChanged?: () => void
-  showNotification?: boolean
 }
 
 export function AccountSwitcher({
   className = "",
-  onAccountChanged,
-  showNotification = true
+  onAccountChanged
 }: AccountSwitcherProps) {
-  const {
-    accountDataMap,
-    accounts,
-    currentAccount,
-    error,
-    loading,
-    switchAccount
-  } = useAccountManager() // 不传参数，获取所有账号
+  const { accounts, currentAccount, error, loading, switchAccount } =
+    useAccountManager() // 不传参数，获取所有账号
 
   const [isSwitching, setIsSwitching] = useState(false)
 
@@ -53,54 +48,23 @@ export function AccountSwitcher({
       try {
         await switchAccount(newAccountId)
 
-        const newAccount = accounts.find((acc) => acc.id === newAccountId)
-        if (showNotification && newAccount) {
-          chrome.notifications.create({
-            iconUrl:
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-            message: `已切换到账号：${formatAccountDisplay(
-              newAccount.displayName,
-              newAccount.site,
-              accountDataMap[newAccountId]?.snapshot
-            )}`,
-            title: "账号已切换",
-            type: "basic"
-          })
-        }
-
         // 触发数据刷新
         if (onAccountChanged) {
           onAccountChanged()
         }
       } catch (err) {
-        console.error("Failed to switch account:", err)
-        if (showNotification) {
-          chrome.notifications.create({
-            iconUrl:
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-            message: "账号切换失败，请重试",
-            title: "切换失败",
-            type: "basic"
-          })
-        }
+        logger.error("Failed to switch account:", err)
       } finally {
         setIsSwitching(false)
       }
     },
-    [
-      accountDataMap,
-      accounts,
-      currentAccountId,
-      onAccountChanged,
-      showNotification,
-      switchAccount
-    ]
+    [currentAccountId, onAccountChanged, switchAccount]
   )
 
   // 自动切换逻辑：如果有账号但没有激活账号，自动切换到第一个
   useEffect(() => {
     if (!loading && !currentAccount && accounts.length > 0 && !isSwitching) {
-      console.log(
+      logger.debug(
         "No active account found, auto-switching to first account:",
         accounts[0].id
       )
@@ -111,7 +75,7 @@ export function AccountSwitcher({
   // 错误提示
   useEffect(() => {
     if (error) {
-      console.error("AccountSwitcher error:", error)
+      logger.error("AccountSwitcher error:", error)
     }
   }, [error])
 
@@ -157,11 +121,7 @@ export function AccountSwitcher({
         ) : (
           accounts.map((account) => (
             <option key={account.id} value={account.id}>
-              {formatAccountDisplay(
-                account.displayName,
-                account.site,
-                accountDataMap[account.id]?.snapshot
-              )}
+              {formatAccountDisplay(account.displayName, account.site)}
             </option>
           ))
         )}
@@ -173,34 +133,8 @@ export function AccountSwitcher({
 /**
  * 格式化账号显示文本
  */
-function formatAccountDisplay(
-  displayName: string,
-  site: PackySite,
-  snapshot?: {
-    dailyLimit: number
-    dailySpent: number
-  }
-): string {
+function formatAccountDisplay(displayName: string, site: PackySite): string {
   const siteName = getSiteName(site)
   const baseText = `${displayName} (${siteName})`
-
-  if (snapshot) {
-    const spent = snapshot.dailySpent.toFixed(2)
-    const limit = snapshot.dailyLimit.toFixed(2)
-    return `${baseText} - $${spent}/$${limit}`
-  }
-
   return baseText
-}
-
-/**
- * 获取站点的友好显示名称
- */
-function getSiteName(site: PackySite): string {
-  const siteNames: Record<PackySite, string> = {
-    [PackySite.CODEX]: "Codex",
-    [PackySite.SHARED]: "滴滴车",
-    [PackySite.WWW]: "公交车"
-  }
-  return siteNames[site]
 }

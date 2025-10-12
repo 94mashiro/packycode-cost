@@ -93,8 +93,7 @@ export class DevToolsValidator {
     try {
       this.deps.logger.info("🔄 验证账号切换功能...")
 
-      // 简化验证，仅检查 URL 有效性
-      // TODO: 重构为基于 PackySite 的验证逻辑
+      // 验证 URL 有效性
       const currentBaseUrl = this.deps.apiConfigManager.getBaseUrl()
       const issues: ValidationIssue[] = []
 
@@ -161,9 +160,6 @@ export class DevToolsValidator {
           )
         )
       }
-
-      // 移除 AccountVersion 相关验证
-      // TODO: 重构为基于 PackySite 的验证逻辑
 
       const success =
         issues.filter((i) => i.level === ValidationLevel.ERROR).length === 0

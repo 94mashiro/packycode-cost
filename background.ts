@@ -2,12 +2,12 @@ import browser from "webextension-polyfill"
 
 import { loggers } from "~/lib/logger"
 import { httpClient } from "~/lib/request/AuthenticatedClient"
+import { getStorageManager } from "~/lib/storage"
 import {
   getActiveAccountData,
   getActiveAccountId,
   setActiveAccountData
 } from "~/lib/storage/activeAccountHelpers"
-import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { parseJWT } from "~/modules/auth"
 import { getBackgroundAccountService } from "~/modules/background"
@@ -67,7 +67,9 @@ async function backgroundExecuteAllTasks() {
 
 async function updateBadge() {
   try {
-    const userInfo = await getActiveAccountData<UserInfo>(StorageDomain.USER_INFO)
+    const userInfo = await getActiveAccountData<UserInfo>(
+      StorageDomain.USER_INFO
+    )
 
     if (userInfo && userInfo.budgets.daily.limit > 0) {
       const percentage = Math.round(
@@ -90,7 +92,9 @@ browser.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
     logger.debug("Tab updated, checking token:", tab.url)
     try {
       // 先检查是否已有token
-      const authData = await getActiveAccountData<AuthStorage>(StorageDomain.AUTH)
+      const authData = await getActiveAccountData<AuthStorage>(
+        StorageDomain.AUTH
+      )
 
       logger.debug("Current state:", {
         hasToken: !!authData?.token,
@@ -364,9 +368,7 @@ async function setupUserPreferenceWatcher() {
       }
     })
 
-    logger.info(
-      `✅ 用户偏好监听器设置完成 for account: ${activeAccountId}`
-    )
+    logger.info(`✅ 用户偏好监听器设置完成 for account: ${activeAccountId}`)
   } catch (error) {
     logger.error("❌ 用户偏好监听器设置失败:", error)
   }

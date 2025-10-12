@@ -516,7 +516,7 @@ const handleSiteChange = async (targetSite: PackySite) => {
 ❌ **无失效机制的永久缓存**
 - **问题**: 与 Chrome Storage 可能不同步
 - **风险**: UI 显示陈旧数据
-- **示例**: `accountDataCache: Map<string, AccountData>`
+ 
 
 #### 允许的缓存场景（需经过架构评审）
 

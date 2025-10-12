@@ -13,8 +13,8 @@
  *
  * 迁移说明：
  * - CODEX_SHARED → PackySite.CODEX (codex.packycode.com)
- * - PRIVATE → PackySite.SHARED (shared.packycode.com 滴滴车)
- * - SHARED → PackySite.WWW (www.packycode.com 公交车)
+ * - PRIVATE → PackySite.SHARED (share.packycode.com 拼车站)
+ * - SHARED → PackySite.WWW (www.packycode.com 主站)
  */
 export enum AccountVersion {
   CODEX_SHARED = "codex_shared",
@@ -32,7 +32,7 @@ export enum ApiEndpointType {
   API_KEYS_PATTERN = "apiKeysPattern",
   /** 配置 API */
   CONFIG = "config",
-  /** 同行消费数据 API (仅滴滴车模式) */
+  /** 同行消费数据 API (仅拼车站) */
   PEER_SPENDING_TODAY = "peerSpendingToday",
   /** 共享空间 API */
   SHARED_SPACE = "sharedSpace",
@@ -152,7 +152,7 @@ export interface PackyConfig {
 
 /**
  * Peer Spending API 响应结构
- * 仅在滴滴车模式下可用
+ * 仅在拼车站可用
  */
 export interface PeerSpendingApiResponse {
   /** 账号ID */
@@ -346,22 +346,22 @@ export interface TokenExpiration {
  *
  * 字段分类：
  * 1. 核心预算字段 - 所有账号类型都有
- * 2. 公交车模式扩展字段 - 仅 Shared 模式下返回
+ * 2. 主站扩展字段 - 仅主站模式下返回
  *
  * 注意：字段按字母顺序排列（项目 lint 规则要求）
  */
 export interface UserApiResponse {
-  /** API Key（公交车模式下返回） */
+  /** API Key（主站下返回） */
   api_key?: string
-  /** 账户余额（美元，字符串格式保留精度，公交车模式） */
+  /** 账户余额（美元，字符串格式保留精度，主站） */
   balance_usd?: string
-  /** 账户创建时间（ISO 8601 格式，公交车模式） */
+  /** 账户创建时间（ISO 8601 格式，主站） */
   created_at?: string
   /** 每日预算限额（美元），可能为 null */
   daily_budget_usd: null | number | string
   /** 每日已消费（美元） */
   daily_spent_usd: number | string
-  /** 用户邮箱（公交车模式） */
+  /** 用户邮箱（主站） */
   email?: string
   /** 每月预算限额（美元），可能为 null */
   monthly_budget_usd: null | number | string
@@ -369,29 +369,29 @@ export interface UserApiResponse {
   monthly_spent_usd: number | string
   /** 是否启用 Opus 模型 */
   opus_enabled: boolean
-  /** 订阅计划到期时间（ISO 8601 格式或 null，公交车模式） */
+  /** 订阅计划到期时间（ISO 8601 格式或 null，主站） */
   plan_expires_at?: null | string
-  /** 订阅计划类型（如 "payg" - 按量付费，公交车模式） */
+  /** 订阅计划类型（如 "payg" - 按量付费，主站） */
   plan_type?: string
-  /** 剩余配额（token 数量，可能为负数表示超额，公交车模式） */
+  /** 剩余配额（token 数量，可能为负数表示超额，主站） */
   remaining_quota?: number
-  /** 总配额（token 数量，公交车模式） */
+  /** 总配额（token 数量，主站） */
   total_quota?: number
-  /** 累计总消费（美元，字符串格式保留精度，公交车模式） */
+  /** 累计总消费（美元，字符串格式保留精度，主站） */
   total_spent_usd?: string
-  /** 已使用配额（token 数量，公交车模式） */
+  /** 已使用配额（token 数量，主站） */
   used_quota?: number
-  /** 用户 ID（UUID 格式，公交车模式） */
+  /** 用户 ID（UUID 格式，主站） */
   user_id?: string
-  /** 用户类型（如 "user", "admin"，公交车模式） */
+  /** 用户类型（如 "user", "admin"，主站） */
   user_type?: string
-  /** 用户名（公交车模式） */
+  /** 用户名（主站） */
   username?: string
 }
 
 // 用户信息
 export interface UserInfo {
-  /** 账户余额（美元，字符串格式保留精度，仅 Shared 公交车模式） */
+  /** 账户余额（美元，字符串格式保留精度，仅主站） */
   balance_usd?: string
   budgets: Budget
   createdAt?: string
@@ -408,16 +408,45 @@ export interface UserInfoData {
   userInfo: null | UserInfo
 }
 
+/**
+ * 通知设置键类型
+ * 全局类型定义，确保类型安全
+ *
+ * 注意：Opus 通知仅支持主站 (WWW)
+ */
+export type NotificationKey =
+  | "purchase_notification_www"
+  | "purchase_notification_shared"
+  | "purchase_notification_codex"
+  | "opus_notification_www"
+  // 向后兼容旧字段
+  | "purchase_notification"
+  | "opus_notification"
+
 // 用户偏好
 export interface UserPreferenceStorage {
+  // ===== 购买通知 - 站点级控制 =====
+  /** 购买开放通知 - 主站 (www.packycode.com) */
+  purchase_notification_www?: boolean
+  /** 购买开放通知 - 拼车站 (share.packycode.com) */
+  purchase_notification_shared?: boolean
+  /** 购买开放通知 - Codex站 (codex.packycode.com) */
+  purchase_notification_codex?: boolean
+
+  // ===== Opus 通知 - 站点级控制 =====
+  /** Opus 模型状态通知 - 仅主站 (www.packycode.com) */
+  opus_notification_www?: boolean
+
+  // ===== 废弃字段（向后兼容） =====
   /**
-   * @deprecated 废弃，仅用于向后兼容
-   * 业务逻辑请从 AccountManager.getCurrentAccount().site 读取
+   * @deprecated 使用站点特定字段 opus_notification_{site}
+   * 保留用于数据迁移，新代码请使用站点级字段
    */
-  account_version?: AccountVersion
-  /** Opus 模型状态通知设置 */
   opus_notification?: boolean
-  /** 购买开放通知设置 */
+  /**
+   * @deprecated 使用站点特定字段 purchase_notification_{site}
+   * 保留用于数据迁移，新代码请使用站点级字段
+   */
   purchase_notification?: boolean
 }
 
@@ -428,7 +457,6 @@ export type {
   AccountData,
   AccountDetectionResult,
   AccountRegistry,
-  AccountSnapshot,
   AddAccountConfig,
   MigrationStatus,
   UpdateAccountConfig

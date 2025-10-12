@@ -3,9 +3,12 @@ import { useEffect, useState } from "react"
 import { dynamicApiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
 import { AccountManager } from "../lib/account"
+import { loggers } from "../lib/logger"
 import { getStorageManager } from "../lib/storage"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
 import { PackySite } from "../types/account"
+
+const logger = loggers.ui
 
 interface CombinedStatusProps {
   tokenData: TokenData
@@ -34,7 +37,7 @@ export function CombinedStatus({
         const currentAccount = await accountManager.getCurrentAccount()
         setCurrentSite(currentAccount?.site ?? PackySite.WWW)
       } catch (error) {
-        console.error("Failed to load current account site:", error)
+        logger.error("Failed to load current account site:", error)
         setCurrentSite(PackySite.WWW)
       }
     }
@@ -52,7 +55,7 @@ export function CombinedStatus({
         setDashboardUrl(dashboard)
         setPricingUrl(pricing)
       } catch (error) {
-        console.error("Failed to load dynamic URLs:", error)
+        logger.error("Failed to load dynamic URLs:", error)
       }
     }
     loadUrls()

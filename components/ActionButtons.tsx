@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 
 import { dynamicApiUrls } from "../api"
+import { loggers } from "../lib/logger"
+
+const logger = loggers.ui
 
 // 硬编码的URL（不会因账号类型变化）
 const STATIC_URLS = {
@@ -17,7 +20,7 @@ export function ActionButtons() {
         const url = await dynamicApiUrls.getDashboardUrl()
         setDashboardUrl(url)
       } catch (error) {
-        console.error("Failed to load dashboard URL:", error)
+        logger.error("Failed to load dashboard URL:", error)
       }
     }
     loadUrl()

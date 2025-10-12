@@ -38,7 +38,7 @@ export class PackyCodeApiClient {
     endpoint: ApiEndpointType,
     context: import("~/types").AccountContext
   ): Promise<T> {
-    const url = this.getApiUrlForSite(endpoint, context.site)
+    const url = await this.getApiUrlForSite(endpoint, context.site)
     return httpClient.get<T>(url, {}, context.authData)
   }
 
@@ -65,7 +65,7 @@ export class PackyCodeApiClient {
   async getSharedSpace(
     context: import("~/types").AccountContext
   ): Promise<SharedSpaceApiResponse> {
-    const sharedSpaceUrl = this.getApiUrlForSite(
+    const sharedSpaceUrl = await this.getApiUrlForSite(
       ApiEndpointType.SHARED_SPACE,
       context.site
     )
@@ -84,7 +84,7 @@ export class PackyCodeApiClient {
   async getSubscriptions(
     context: import("~/types").AccountContext
   ): Promise<SubscriptionApiResponse> {
-    const subscriptionsUrl = this.getApiUrlForSite(
+    const subscriptionsUrl = await this.getApiUrlForSite(
       ApiEndpointType.SUBSCRIPTIONS,
       context.site
     )
@@ -103,7 +103,7 @@ export class PackyCodeApiClient {
   async getUserInfo(
     context: import("~/types").AccountContext
   ): Promise<UserApiResponse> {
-    const userInfoUrl = this.getApiUrlForSite(
+    const userInfoUrl = await this.getApiUrlForSite(
       ApiEndpointType.USER_INFO,
       context.site
     )
@@ -123,7 +123,7 @@ export class PackyCodeApiClient {
     if (!context) {
       throw new Error("AccountContext is required for POST requests")
     }
-    const url = this.getApiUrlForSite(endpoint, context.site)
+    const url = await this.getApiUrlForSite(endpoint, context.site)
     return httpClient.post<T>(url, data, {}, context.authData)
   }
 
@@ -138,11 +138,11 @@ export class PackyCodeApiClient {
    * @param site 目标站点
    * @returns 完整的 API URL
    */
-  private getApiUrlForSite(
+  private async getApiUrlForSite(
     endpoint: ApiEndpointType,
     site: import("~/types/account").PackySite
-  ): string {
-    const { ApiConfigManager } = require("~/api/config")
+  ): Promise<string> {
+    const { ApiConfigManager } = await import("~/api/config")
     const configManager = new ApiConfigManager(site)
     return configManager.getApiUrl(endpoint)
   }

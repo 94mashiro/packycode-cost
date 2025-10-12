@@ -33,6 +33,7 @@ import {
   type UserInfo
 } from "~/types"
 import { PackySite } from "~/types/account"
+import { getSiteAccountName } from "~/utils/siteHelpers"
 
 import {
   getStorageManager,
@@ -323,12 +324,7 @@ export class DataMigrationManager {
    * @version 3.0.0 - 改为基于 PackySite
    */
   private getDefaultDisplayName(site: PackySite): string {
-    const names: Record<PackySite, string> = {
-      [PackySite.CODEX]: "Codex 账号",
-      [PackySite.SHARED]: "滴滴车账号",
-      [PackySite.WWW]: "公交车账号"
-    }
-    return names[site]
+    return getSiteAccountName(site)
   }
 
   /**
@@ -447,7 +443,7 @@ export class DataMigrationManager {
         notificationStates: notificationStates || {},
         peerSpending: peerSpending || null,
         purchaseConfig: purchaseConfig || null,
-        snapshot: undefined, // 初始无快照
+        
 
         subscriptionInfo: subscriptionInfo || null,
         systemPreference: systemPreference || null,

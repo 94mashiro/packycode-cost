@@ -279,9 +279,10 @@ async function executeTasksForAccount(
   try {
     // 🔑 核心改进：在此处一次性构建完整的账号上下文
     const storageManager = getStorageManager()
-    const authData = await storageManager.get<
-      import("~/types").AuthStorage
-    >(account.id, StorageDomain.AUTH)
+    const authData = await storageManager.get<import("~/types").AuthStorage>(
+      account.id,
+      StorageDomain.AUTH
+    )
 
     if (!authData) {
       logger.warn(`⚠️ 账号 ${account.id} 无认证数据，跳过任务执行`)

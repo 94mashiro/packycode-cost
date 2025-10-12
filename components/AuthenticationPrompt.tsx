@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 
 import { dynamicApiUrls } from "../api"
+import { loggers } from "../lib/logger"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
+
+const logger = loggers.ui
 
 interface AuthenticationPromptProps {
   tokenData: TokenData
@@ -20,7 +23,7 @@ export function AuthenticationPrompt({
         const url = await dynamicApiUrls.getDashboardUrl()
         setDashboardUrl(url)
       } catch (error) {
-        console.error("Failed to load dashboard URL:", error)
+        logger.error("Failed to load dashboard URL:", error)
       }
     }
     loadUrl()

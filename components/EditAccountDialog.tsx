@@ -3,7 +3,7 @@
  *
  * 功能：
  * 1. 编辑账号所有字段（放开所有字段编辑）
- * 2. 支持修改站点、Token类型、Token、显示名称、邮箱
+ * 2. 支持修改站点、Token类型、Token、显示名称
  * 3. 表单验证和错误提示
  *
  * 设计原则 (四师协作):
@@ -148,7 +148,7 @@ export function EditAccountDialog({
         <DialogHeader>
           <DialogTitle>编辑账号</DialogTitle>
           <DialogDescription>
-            修改账号的所有信息（站点、Token、显示名称、邮箱）
+            修改账号的所有信息（站点、Token、显示名称）
           </DialogDescription>
         </DialogHeader>
 
@@ -179,7 +179,7 @@ export function EditAccountDialog({
                   htmlFor="edit-site-shared">
                   {PackySite.SHARED}{" "}
                   <span className="text-xs text-muted-foreground">
-                    (共享站点)
+                    (拼车站)
                   </span>
                 </Label>
               </div>
@@ -245,7 +245,7 @@ export function EditAccountDialog({
               disabled={isSubmitting}
               id="edit-displayName"
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="例如：我的公交车账号"
+              placeholder="例如：我的主站账号"
               required
               type="text"
               value={displayName}

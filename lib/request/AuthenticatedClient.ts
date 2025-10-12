@@ -9,7 +9,6 @@
  */
 
 import { loggers } from "~/lib/logger"
-import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { type ApiResponse, type AuthStorage, TokenType } from "~/types"
 
@@ -96,7 +95,6 @@ export class AuthenticatedClient {
     options: RequestInit,
     authData?: AuthStorage
   ): Promise<ApiResponse<T>> {
-    console.log("======= authData =======", authData)
     // 1. 获取认证信息（优先使用传入的，否则从 storage 读取）
     const auth = authData || (await this.getValidAuthData())
     if (!auth) {

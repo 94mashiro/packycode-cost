@@ -40,7 +40,7 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
     [PackySite.CODEX]: {
       baseUrl: "https://codex.packycode.com",
       cookieDomain: "https://codex.packycode.com",
-      description: "Codex公交车模式 - Codex服务的公交车版本",
+      description: "Codex站 - Codex服务",
       endpoints: {
         [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
         [ApiEndpointType.CONFIG]: "/api/config",
@@ -60,7 +60,7 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
     [PackySite.SHARED]: {
       baseUrl: "https://share.packycode.com",
       cookieDomain: "https://share.packycode.com",
-      description: "滴滴车模式 - 私有 API 环境",
+      description: "拼车站 - 私有 API 环境",
       endpoints: {
         [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
         [ApiEndpointType.CONFIG]: "/api/config",
@@ -80,7 +80,7 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
     [PackySite.WWW]: {
       baseUrl: "https://www.packycode.com",
       cookieDomain: "https://www.packycode.com",
-      description: "公交车模式 - 共享 API 环境",
+      description: "主站 - 共享 API 环境",
       endpoints: {
         [ApiEndpointType.API_KEYS_PATTERN]: "/api/backend/users/*/api-keys/*",
         [ApiEndpointType.CONFIG]: "/api/config",
@@ -266,7 +266,7 @@ export class ApiConfigManagerController {
       const accountManager = new AccountManager(storageManager)
       const currentAccount = await accountManager.getCurrentAccount()
 
-      // 默认使用主站（公交车模式）
+      // 默认使用主站
       return currentAccount?.site ?? PackySite.WWW
     } catch {
       // 出错时默认使用主站

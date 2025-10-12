@@ -16,12 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import type {
-  Account,
-  AccountData,
-  AddAccountConfig,
-  UpdateAccountConfig
-} from "~/types"
+import type { Account, AddAccountConfig, UpdateAccountConfig } from "~/types"
 
 import { loggers } from "~/lib/logger"
 import { PackySite } from "~/types/account"
@@ -48,9 +43,6 @@ const logger = loggers.ui
  */
 export function useAccountManager(site?: PackySite) {
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [accountDataMap, setAccountDataMap] = useState<
-    Record<string, AccountData>
-  >({})
   const [currentAccount, setCurrentAccount] = useState<Account | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<null | string>(null)
@@ -70,8 +62,6 @@ export function useAccountManager(site?: PackySite) {
       setError(null)
 
       const manager = getManager()
-      const storageManager = getStorageManager()
-      const storage = storageManager.getUnderlyingStorage()
 
       // 获取所有账号
       const allAccounts = await manager.getAllAccounts()
@@ -83,17 +73,7 @@ export function useAccountManager(site?: PackySite) {
 
       setAccounts(filteredAccounts)
 
-      // 加载每个账号的 AccountData
-      const dataMap: Record<string, AccountData> = {}
-      for (const account of filteredAccounts) {
-        const accountData = await storage.get<AccountData>(
-          `account_${account.id}_info`
-        )
-        if (accountData) {
-          dataMap[account.id] = accountData
-        }
-      }
-      setAccountDataMap(dataMap)
+      // 页面不再展示邮箱/预算等聚合数据
 
       // 获取当前激活账号
       if (site) {
@@ -109,7 +89,7 @@ export function useAccountManager(site?: PackySite) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error"
       setError(errorMessage)
-      console.error("Failed to load accounts:", err)
+      logger.error("Failed to load accounts:", err)
     } finally {
       setLoading(false)
     }
@@ -232,7 +212,6 @@ export function useAccountManager(site?: PackySite) {
 
   return {
     // 账号数据
-    accountDataMap,
     accounts,
     // 操作方法
     addAccount,

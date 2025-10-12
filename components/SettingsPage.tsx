@@ -39,10 +39,7 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
       {/* 设置内容 */}
       <div className="space-y-6">
         {/* 账号切换器 */}
-        <AccountSwitcher
-          onAccountChanged={onRefresh}
-          showNotification={false}
-        />
+        <AccountSwitcher onAccountChanged={onRefresh} />
 
         {/* 推送通知设置 */}
         <div className="border-t pt-6 dark:border-gray-700">

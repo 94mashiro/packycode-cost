@@ -1,11 +1,10 @@
-import browser from "webextension-polyfill"
-
 import type { PackyConfig, SystemPreferenceStorage } from "~/types"
 
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
+import { triggerPurchaseAvailableNotification } from "~/utils/notificationTriggers"
 import { checkPurchaseNotificationPermission } from "~/utils/notificationPermissions"
 
 const logger = loggers.purchase
@@ -57,11 +56,10 @@ export async function checkAndNotifyPurchaseStatus(
 
     // 2. 检查购买状态变化并决定是否通知
     const storageManager = getStorageManager()
-    const systemPref =
-      await storageManager.get<SystemPreferenceStorage>(
-        accountId,
-        StorageDomain.SYSTEM_PREFERENCE
-      )
+    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+      accountId,
+      StorageDomain.SYSTEM_PREFERENCE
+    )
     const previousPurchaseState = systemPref?.purchase_disabled
     const shouldNotify = checkPurchaseNotification(
       previousPurchaseState,
@@ -75,8 +73,8 @@ export async function checkAndNotifyPurchaseStatus(
     // 3. 触发通知（只在从禁用变为可用时，且用户开启了通知）
     let notificationTriggered = false
     if (shouldNotify) {
-      // 检查用户是否开启了购买通知
-      const notificationEnabled = await checkPurchaseNotificationPermission()
+      // 检查用户是否开启了购买通知（站点级控制）
+      const notificationEnabled = await checkPurchaseNotificationPermission(site)
 
       if (notificationEnabled) {
         logger.debug(
@@ -92,13 +90,9 @@ export async function checkAndNotifyPurchaseStatus(
     }
 
     // 4. 更新存储状态
-    await storageManager.set(
-      accountId,
-      StorageDomain.SYSTEM_PREFERENCE,
-      {
-        purchase_disabled: currentConfig.purchaseDisabled
-      }
-    )
+    await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
+      purchase_disabled: currentConfig.purchaseDisabled
+    })
     await storageManager.set(
       accountId,
       StorageDomain.PURCHASE_CONFIG,
@@ -130,7 +124,9 @@ export async function getCurrentPurchaseConfig(): Promise<null | PackyConfig> {
     const { getActiveAccountData } = await import(
       "~/lib/storage/activeAccountHelpers"
     )
-    return await getActiveAccountData<PackyConfig>(StorageDomain.PURCHASE_CONFIG)
+    return await getActiveAccountData<PackyConfig>(
+      StorageDomain.PURCHASE_CONFIG
+    )
   } catch (error) {
     logger.error("Failed to get current purchase config:", error)
     return null
@@ -163,24 +159,4 @@ function isValidPackyConfig(config: unknown): config is PackyConfig {
     typeof c.purchaseUrl === "string" &&
     typeof c.supportEmail === "string"
   )
-}
-
-/**
- * 触发购买可用通知
- */
-async function triggerPurchaseAvailableNotification(): Promise<void> {
-  const notificationId = `purchase-available-${Date.now()}`
-
-  try {
-    await browser.notifications.create(notificationId, {
-      iconUrl:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-      message: "购买功能现已开放，快冲！",
-      title: "PackyCode 购买开放",
-      type: "basic"
-    })
-    logger.debug("Purchase notification created:", notificationId)
-  } catch (error) {
-    logger.error("Error creating purchase notification:", error)
-  }
 }

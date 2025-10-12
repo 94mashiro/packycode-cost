@@ -49,7 +49,9 @@ export function useStorage<T extends keyof StorageDomainMap>(
       const currentAccount = await accountManager.getCurrentAccount()
 
       if (!currentAccount) {
-        logger.debug(`useStorage: No active account, returning null for ${domain}`)
+        logger.debug(
+          `useStorage: No active account, returning null for ${domain}`
+        )
         setData(null)
         setCurrentAccountId(null)
         setLoading(false)

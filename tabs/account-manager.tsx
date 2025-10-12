@@ -3,7 +3,7 @@
  *
  * 功能：
  * 1. 账号列表展示（表格形式，包含站点和 Token 信息）
- * 2. 账号编辑（修改名称、邮箱）
+ * 2. 账号编辑（修改名称）
  * 3. 账号删除（带确认对话框）
  * 4. 账号新增（支持所有类型和站点）
  * 5. Token 复制功能
@@ -51,15 +51,16 @@ import {
 import { AddAccountDialog } from "~/components/AddAccountDialog"
 import { EditAccountDialog } from "~/components/EditAccountDialog"
 import { useAccountManager } from "~/hooks/useAccountManager"
+import { loggers } from "~/lib/logger"
 import { type Account, TokenType } from "~/types"
 import { PackySite } from "~/types/account"
+import { getSiteName as getSiteDisplayName } from "~/utils/siteHelpers"
 
 /**
  * 账号管理主页面
  */
 function AccountManagerPage() {
   const {
-    accountDataMap,
     accounts,
     addAccount,
     error: managerError,
@@ -107,7 +108,7 @@ function AccountManagerPage() {
       setShowDeleteDialog(false)
       setSelectedAccount(null)
     } catch (err) {
-      console.error("Failed to delete account:", err)
+      loggers.ui.error("Failed to delete account:", err)
       // 错误已经在 Hook 中处理
     } finally {
       setIsDeleting(false)
@@ -119,12 +120,7 @@ function AccountManagerPage() {
    */
   const getSiteName = (site?: PackySite): string => {
     if (!site) return "-"
-    const siteNames: Record<PackySite, string> = {
-      [PackySite.CODEX]: "Codex",
-      [PackySite.SHARED]: "共享",
-      [PackySite.WWW]: "主站"
-    }
-    return siteNames[site]
+    return getSiteDisplayName(site)
   }
 
   /**
@@ -173,7 +169,7 @@ function AccountManagerPage() {
       setCopiedToken(accountId)
       setTimeout(() => setCopiedToken(null), 2000)
     } catch (err) {
-      console.error("Failed to copy token:", err)
+      loggers.ui.error("Failed to copy token:", err)
     }
   }
 
@@ -223,14 +219,10 @@ function AccountManagerPage() {
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
                 <div className="flex items-center space-x-4" key={i}>
-                  <Skeleton className="h-8 w-[80px]" />
                   <Skeleton className="h-8 w-[100px]" />
                   <Skeleton className="h-8 w-[150px]" />
-                  <Skeleton className="h-8 w-[100px]" />
                   <Skeleton className="h-8 w-[100px]" />
                   <Skeleton className="h-8 w-[180px]" />
-                  <Skeleton className="h-8 w-[150px]" />
-                  <Skeleton className="h-8 w-[120px]" />
                   <Skeleton className="h-8 w-[150px]" />
                 </div>
               ))}
@@ -262,8 +254,6 @@ function AccountManagerPage() {
                     <TableHead className="w-[150px]">显示名称</TableHead>
                     <TableHead className="w-[100px]">Token类型</TableHead>
                     <TableHead className="min-w-[180px]">Token</TableHead>
-                    <TableHead className="w-[150px]">邮箱</TableHead>
-                    <TableHead className="w-[120px]">预算使用</TableHead>
                     <TableHead className="w-[150px] text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -319,33 +309,6 @@ function AccountManagerPage() {
                             <p className="font-mono text-xs">{account.token}</p>
                           </TooltipContent>
                         </Tooltip>
-                      </TableCell>
-
-                      {/* 邮箱 */}
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {accountDataMap[account.id]?.userInfo?.email || "-"}
-                        </span>
-                      </TableCell>
-
-                      {/* 预算使用 */}
-                      <TableCell>
-                        {accountDataMap[account.id]?.snapshot ? (
-                          <span className="text-sm tabular-nums">
-                            $
-                            {accountDataMap[
-                              account.id
-                            ]?.snapshot?.dailySpent.toFixed(2)}{" "}
-                            / $
-                            {accountDataMap[
-                              account.id
-                            ]?.snapshot?.dailyLimit.toFixed(2)}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
-                        )}
                       </TableCell>
 
                       {/* 操作 */}

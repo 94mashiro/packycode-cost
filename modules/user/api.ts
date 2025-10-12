@@ -1,12 +1,12 @@
-import browser from "webextension-polyfill"
-
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { type SystemPreferenceStorage, type UserInfo } from "~/types"
 import { PackySite } from "~/types/account"
+import { triggerOpusStatusNotification } from "~/utils/notificationTriggers"
 import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
+import { getSiteName } from "~/utils/siteHelpers"
 
 const logger = loggers.auth
 
@@ -28,7 +28,7 @@ export async function fetchUserInfo(
     const monthlySpent = Number(rawData.monthly_spent_usd) || 0
 
     const userInfoStorage: UserInfo = {
-      balance_usd: rawData.balance_usd, // Shared 公交车模式下的账户余额
+      balance_usd: rawData.balance_usd, // 主站下的账户余额
       budgets: {
         daily: {
           limit: dailyLimit,
@@ -44,14 +44,13 @@ export async function fetchUserInfo(
       // 删除无用的 id 硬编码 - 该字段无实际用途
     }
 
-    // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX，因为没有 Opus 模型）
+    // 只在主站下处理 opus_enabled 状态变化（排除 CODEX，因为没有 Opus 模型）
     if (site === PackySite.WWW) {
       // 检查 opus_enabled 状态变化
-      const systemPref =
-        await storageManager.get<SystemPreferenceStorage>(
-          accountId,
-          StorageDomain.SYSTEM_PREFERENCE
-        )
+      const systemPref = await storageManager.get<SystemPreferenceStorage>(
+        accountId,
+        StorageDomain.SYSTEM_PREFERENCE
+      )
       const previousOpusState = systemPref?.opus_enabled
       const currentOpusState = Boolean(rawData.opus_enabled)
 
@@ -62,12 +61,12 @@ export async function fetchUserInfo(
       )
 
       if (shouldNotify) {
-        // 检查用户是否开启了 Opus 通知
-        const notificationEnabled = await checkOpusNotificationPermission()
+        // 检查用户是否开启了 Opus 通知（站点级控制）
+        const notificationEnabled = await checkOpusNotificationPermission(site)
 
         if (notificationEnabled) {
           logger.info(
-            `Opus status changed (公交车模式): ${previousOpusState} → ${currentOpusState}`
+            `Opus status changed (主站): ${previousOpusState} → ${currentOpusState}`
           )
           await triggerOpusStatusNotification(currentOpusState)
         } else {
@@ -76,22 +75,11 @@ export async function fetchUserInfo(
       }
 
       // 更新系统偏好
-      await storageManager.set(
-        accountId,
-        StorageDomain.SYSTEM_PREFERENCE,
-        {
-          opus_enabled: currentOpusState
-        }
-      )
+      await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
+        opus_enabled: currentOpusState
+      })
     } else {
-      // 站点名称映射
-      const siteNames: Record<PackySite, string> = {
-        [PackySite.CODEX]: "Codex",
-        [PackySite.SHARED]: "滴滴车",
-        [PackySite.WWW]: "公交车"
-      }
-
-      const siteName = siteNames[site]
+      const siteName = getSiteName(site)
       const siteNote =
         site === PackySite.SHARED
           ? "，由 SharedSpace API 负责管理"
@@ -135,27 +123,4 @@ function checkOpusNotification(
 ): boolean {
   // 仅在状态从其他值变为 true 时通知
   return previousState !== true && currentState === true
-}
-
-/**
- * 触发 Opus 模型状态变化通知
- */
-async function triggerOpusStatusNotification(enabled: boolean): Promise<void> {
-  const notificationId = `opus-status-${Date.now()}`
-
-  try {
-    await browser.notifications.create(notificationId, {
-      iconUrl:
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAACXBIWXMAABYlAAAWJQFJUiTwAAAAEXRFWHRTb2Z0d2FyZQBTbmlwYXN0ZV0Xzt0AAAAXSURBVCiRY7xZHs5ACmAiSfWohhGkAQDm0QG/dWCPgQAAAABJRU5ErkJggg==",
-      message: enabled ? "Claude Opus 模型已开启！" : "Claude Opus 模型已关闭",
-      title: "PackyCode Opus 状态",
-      type: "basic"
-    })
-    logger.debug(
-      "Opus status notification created successfully:",
-      notificationId
-    )
-  } catch (error) {
-    logger.error("Error creating opus status notification:", error)
-  }
 }

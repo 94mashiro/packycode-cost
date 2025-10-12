@@ -63,40 +63,32 @@ export async function getActiveAccountData<T>(
 }
 
 /**
- * 设置当前激活账号的数据（便捷方法）
+ * 获取当前激活账号的ID（便捷方法）
  *
  * 实现逻辑：
  * 1. 从 AccountManager 获取当前激活账号
- * 2. 调用 StorageManager.set(accountId, domain, value, override)
+ * 2. 返回账号ID
  *
- * @param domain 存储域
- * @param value 数据值
- * @param override 是否覆盖（默认深度合并）
- * @throws 如果没有激活账号
+ * @returns 当前激活账号ID，如果没有则返回 null
  *
  * @example
  * ```typescript
- * await setActiveAccountData(StorageDomain.USER_INFO, { name: "John" })
+ * const accountId = await getActiveAccountId()
+ * if (accountId) {
+ *   console.log("Current account:", accountId)
+ * }
  * ```
  */
-export async function setActiveAccountData<T>(
-  domain: string,
-  value: T,
-  override = false
-): Promise<void> {
+export async function getActiveAccountId(): Promise<null | string> {
   try {
     const storageManager = getStorageManager()
     const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
 
-    if (!currentAccount) {
-      throw new Error("No active account. Please add an account first.")
-    }
-
-    await storageManager.set(currentAccount.id, domain, value, override)
+    return currentAccount?.id ?? null
   } catch (error) {
-    logger.error(`setActiveAccountData error for domain ${domain}:`, error)
-    throw error
+    logger.error("getActiveAccountId error:", error)
+    return null
   }
 }
 
@@ -133,31 +125,39 @@ export async function removeActiveAccountData(domain: string): Promise<void> {
 }
 
 /**
- * 获取当前激活账号的ID（便捷方法）
+ * 设置当前激活账号的数据（便捷方法）
  *
  * 实现逻辑：
  * 1. 从 AccountManager 获取当前激活账号
- * 2. 返回账号ID
+ * 2. 调用 StorageManager.set(accountId, domain, value, override)
  *
- * @returns 当前激活账号ID，如果没有则返回 null
+ * @param domain 存储域
+ * @param value 数据值
+ * @param override 是否覆盖（默认深度合并）
+ * @throws 如果没有激活账号
  *
  * @example
  * ```typescript
- * const accountId = await getActiveAccountId()
- * if (accountId) {
- *   console.log("Current account:", accountId)
- * }
+ * await setActiveAccountData(StorageDomain.USER_INFO, { name: "John" })
  * ```
  */
-export async function getActiveAccountId(): Promise<null | string> {
+export async function setActiveAccountData<T>(
+  domain: string,
+  value: T,
+  override = false
+): Promise<void> {
   try {
     const storageManager = getStorageManager()
     const accountManager = new AccountManager(storageManager)
     const currentAccount = await accountManager.getCurrentAccount()
 
-    return currentAccount?.id ?? null
+    if (!currentAccount) {
+      throw new Error("No active account. Please add an account first.")
+    }
+
+    await storageManager.set(currentAccount.id, domain, value, override)
   } catch (error) {
-    logger.error("getActiveAccountId error:", error)
-    return null
+    logger.error(`setActiveAccountData error for domain ${domain}:`, error)
+    throw error
   }
 }

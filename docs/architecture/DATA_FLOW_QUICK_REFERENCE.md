@@ -239,7 +239,7 @@ interface AccountData {
   notificationStates: NotificationStates
   isValid: boolean
   tokenExpiry?: number
-  snapshot?: AccountSnapshot
+  
   lastSyncAt?: number
 }
 ```

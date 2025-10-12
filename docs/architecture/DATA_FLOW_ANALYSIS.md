@@ -352,7 +352,7 @@ HTTP 401 Unauthorized
   notificationStates: NotificationStates,
   isValid: boolean,
   tokenExpiry?: number,
-  snapshot?: AccountSnapshot,
+  
   lastSyncAt?: number
 }
 
@@ -415,7 +415,7 @@ async set<T>(domain: string, value: T, override = false): Promise<void> {
   await this.setAccountData(accountData, activeAccountId)
 
   // 4. 更新缓存
-  this.accountDataCache.set(activeAccountId, accountData)
+  
 }
 ```
 

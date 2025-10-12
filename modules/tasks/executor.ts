@@ -7,7 +7,11 @@
  * Dan: "简单的抽象是最好的抽象"
  */
 
+import { loggers } from "~/lib/logger"
+
 import { executeAllTasks } from "./registry"
+
+const logger = loggers.background
 
 /**
  * 执行所有数据获取任务
@@ -25,6 +29,6 @@ export async function fetchAllDataAsync(): Promise<void> {
   try {
     await executeAllTasks()
   } catch (error) {
-    console.error("💥 异步数据获取失败:", error)
+    logger.error("💥 异步数据获取失败:", error)
   }
 }

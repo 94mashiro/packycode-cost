@@ -19,7 +19,7 @@ import { VersionInfo } from "./components/VersionInfo"
 import { useAuth } from "./hooks"
 import { useAccountManager } from "./hooks/useAccountManager"
 import { useTaskExecution } from "./hooks/useTaskExecution"
-import { enablePopupLogging } from "./lib/logger"
+import { enablePopupLogging, loggers } from "./lib/logger"
 import { TokenType, ViewType } from "./types"
 import { PackySite } from "./types/account"
 
@@ -55,7 +55,7 @@ function IndexPopup() {
   const currentAccountSite = currentAccount?.site ?? PackySite.WWW
 
   const handleRefresh = async () => {
-    console.log("handleRefresh, isAuthenticated: ", isAuthenticated)
+    loggers.ui.debug("handleRefresh, isAuthenticated:", isAuthenticated)
 
     // 账号切换时先刷新认证状态和账号信息
     await Promise.all([refreshAuth(), refreshAccounts()])
@@ -66,12 +66,12 @@ function IndexPopup() {
   }
 
   useEffect(() => {
-    console.log(
-      "Popup updated, isAuthenticated: ",
+    loggers.ui.debug(
+      "Popup updated, isAuthenticated:",
       isAuthenticated,
-      " authData: ",
+      "authData:",
       authData,
-      " currentAccountSite: ",
+      "currentAccountSite:",
       currentAccountSite
     )
   }, [authData, currentAccountSite, isAuthenticated])

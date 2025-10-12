@@ -22,12 +22,12 @@ import {
   type AccountData,
   type AccountDetectionResult,
   type AccountRegistry,
-  type AccountSnapshot,
   type AddAccountConfig,
   TokenType,
   type UpdateAccountConfig
 } from "~/types"
 import { PackySite } from "~/types/account"
+import { getSiteAccountName } from "~/utils/siteHelpers"
 
 import { StorageDomain } from "../storage/domains"
 import { MultiAccountStorageManager } from "../storage/MultiAccountStorageManager"
@@ -121,7 +121,6 @@ export class AccountManager {
       notificationStates: {},
       peerSpending: null,
       purchaseConfig: null,
-      snapshot: undefined,
       subscriptionInfo: null,
       systemPreference: null,
       tokenExpiry:
@@ -392,48 +391,7 @@ export class AccountManager {
     logger.info(`✅ Account updated successfully: ${accountId}`)
   }
 
-  /**
-   * 更新账号快照数据
-   *
-   * 用途：缓存账号的关键信息，用于列表显示
-   * 快照数据存储在 AccountData 中
-   *
-   * @param accountId 账号ID
-   * @param snapshot 快照数据
-   *
-   * @example
-   * ```typescript
-   * await manager.updateAccountSnapshot("acc_123", {
-   *   dailySpent: 1.5,
-   *   dailyLimit: 10,
-   *   monthlySpent: 15,
-   *   opusEnabled: true
-   * })
-   * ```
-   */
-  async updateAccountSnapshot(
-    accountId: string,
-    snapshot: AccountSnapshot
-  ): Promise<void> {
-    const registry = await this.getOrCreateRegistry()
-
-    const account = registry.accounts.find((acc) => acc.id === accountId)
-    if (!account) {
-      throw new Error(`Account not found: ${accountId}`)
-    }
-
-    // 更新 AccountData 中的快照数据
-    const storage = this.storageManager.getUnderlyingStorage()
-    const accountData =
-      (await storage.get<AccountData>(`account_${accountId}_info`)) ||
-      this.createEmptyAccountData()
-
-    accountData.snapshot = snapshot
-    accountData.lastSyncAt = Date.now()
-
-    await storage.set(`account_${accountId}_info`, accountData)
-    logger.debug(`Updated snapshot for account: ${accountId}`)
-  }
+  
 
   /**
    * 更新账号有效性状态
@@ -479,7 +437,6 @@ export class AccountManager {
       notificationStates: {},
       peerSpending: null,
       purchaseConfig: null,
-      snapshot: undefined,
       subscriptionInfo: null,
       systemPreference: null,
       tokenExpiry: undefined,
@@ -517,12 +474,7 @@ export class AccountManager {
    * @version 3.0.0 - 改为基于 PackySite
    */
   private getDefaultDisplayName(site: PackySite): string {
-    const names: Record<PackySite, string> = {
-      [PackySite.CODEX]: "Codex 账号",
-      [PackySite.SHARED]: "滴滴车账号",
-      [PackySite.WWW]: "公交车账号"
-    }
-    return names[site]
+    return getSiteAccountName(site)
   }
 
   /**

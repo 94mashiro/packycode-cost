@@ -16,6 +16,7 @@ import {
   type SystemPreferenceStorage
 } from "~/types"
 import { PackySite } from "~/types/account"
+import { getSiteName } from "~/utils/siteHelpers"
 
 const logger = loggers.auth
 
@@ -39,14 +40,7 @@ export async function fetchPrivateOpusStatus(
 
     // 只在滴滴车模式 (SHARED) 下执行
     if (site !== PackySite.SHARED) {
-      // 站点名称映射
-      const siteNames: Record<PackySite, string> = {
-        [PackySite.CODEX]: "Codex",
-        [PackySite.SHARED]: "滴滴车",
-        [PackySite.WWW]: "公交车"
-      }
-
-      const siteName = siteNames[site]
+      const siteName = getSiteName(site)
       const siteNote = site === PackySite.CODEX ? "，没有 Opus 模型" : ""
 
       logger.debug(
@@ -84,11 +78,10 @@ export async function fetchPrivateOpusStatus(
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
     // 获取当前存储的状态
-    const systemPref =
-      await storageManager.get<SystemPreferenceStorage>(
-        accountId,
-        StorageDomain.SYSTEM_PREFERENCE
-      )
+    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+      accountId,
+      StorageDomain.SYSTEM_PREFERENCE
+    )
     const previousOpusState = systemPref?.opus_enabled
     const previousRateLimitResetAt = systemPref?.rate_limit_reset_at
 
@@ -102,6 +95,8 @@ export async function fetchPrivateOpusStatus(
         logger.info(
           `📝 Opus 状态变化 (滴滴车模式): ${previousOpusState} → ${opusEnabled}`
         )
+        // 注意：滴滴车模式下不触发 Opus 通知
+        // 原因：状态相对固定，且 Opus 通知仅限公交车模式
       }
 
       if (hasRateLimitChange) {
@@ -111,19 +106,10 @@ export async function fetchPrivateOpusStatus(
       }
 
       // 更新系统偏好，包含 opus_enabled 和 rate_limit_reset_at
-      await storageManager.set(
-        accountId,
-        StorageDomain.SYSTEM_PREFERENCE,
-        {
-          opus_enabled: opusEnabled,
-          rate_limit_reset_at: rateLimitResetAt
-        }
-      )
-
-      // 滴滴车模式下不触发通知 - Opus 状态相对固定，无需动态通知
-      logger.debug(
-        `⏭️ 滴滴车模式下跳过 Opus 开启通知 - 状态相对固定，无需动态提醒`
-      )
+      await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
+        opus_enabled: opusEnabled,
+        rate_limit_reset_at: rateLimitResetAt
+      })
     } else {
       logger.debug(`✅ Opus 状态和 Rate limit 时间均未变化`)
     }

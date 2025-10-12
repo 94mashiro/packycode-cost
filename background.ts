@@ -21,9 +21,11 @@ import {
 } from "~/modules/tasks"
 
 import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
+import { PackySite } from "./types/account"
 
-import { dynamicApiUrls } from "./api"
-import { getCurrentCookieDomain } from "./api/config"
+import { apiUrls } from "./api"
+import { getCookieDomain } from "./api/config"
+import { AccountManager } from "./lib/account/AccountManager"
 
 const logger = loggers.background
 
@@ -104,7 +106,13 @@ browser.tabs.onUpdated.addListener(async (_, changeInfo, tab) => {
 
       // 仅在没有token或token类型为jwt时，才尝试从cookie获取
       if (!authData?.token || authData?.type !== "api_key") {
-        const cookieDomain = await getCurrentCookieDomain()
+        // 获取当前账号的站点
+        const accountManager = new AccountManager(getStorageManager())
+        const currentAccount = await accountManager.getCurrentAccount()
+        const site = currentAccount?.site ?? PackySite.WWW
+
+        // 使用显式参数版本获取 Cookie 域名
+        const cookieDomain = getCookieDomain(site)
         const tokenCookie = await browser.cookies.get({
           name: "token",
           url: cookieDomain
@@ -281,7 +289,10 @@ async function setupDynamicWebRequestListener() {
     }
 
     // 获取当前账号类型对应的API Keys Pattern
-    const apiKeysPattern = await dynamicApiUrls.getApiKeysPattern()
+    const accountManager = new AccountManager(getStorageManager())
+    const currentAccount = await accountManager.getCurrentAccount()
+    const site = currentAccount?.site ?? PackySite.WWW
+    const apiKeysPattern = apiUrls.getApiKeysPattern(site)
 
     logger.info("🔗 设置webRequest监听器，模式:", apiKeysPattern)
 
@@ -298,8 +309,17 @@ async function setupDynamicWebRequestListener() {
         logger.info("🔑 检测到API Key请求:", details.url)
 
         try {
+          // 获取当前账号的 authData 用于HTTP请求
+          const authData = await getActiveAccountData<AuthStorage>(
+            StorageDomain.AUTH
+          )
+          
           // 重放请求获取响应内容 - 使用统一的HTTP客户端
-          const data = await httpClient.get<ApiKeyResponse>(details.url)
+          const data = await httpClient.get<ApiKeyResponse>(
+            details.url,
+            {},
+            authData
+          )
 
           if (data.api_key) {
             // 防御性检查：确保 API key 不是空值
@@ -377,8 +397,13 @@ async function setupUserPreferenceWatcher() {
 // 监听通知点击事件
 browser.notifications.onClicked.addListener(async (notificationId) => {
   if (notificationId.startsWith("purchase-available-")) {
+    // 获取当前账号站点
+    const accountManager = new AccountManager(getStorageManager())
+    const currentAccount = await accountManager.getCurrentAccount()
+    const site = currentAccount?.site ?? PackySite.WWW
+    
     // 打开购买页面
-    const pricingUrl = await dynamicApiUrls.getPricingUrl()
+    const pricingUrl = apiUrls.getPricingUrl(site)
     await browser.tabs.create({ url: pricingUrl })
     // 清除通知
     await browser.notifications.clear(notificationId)

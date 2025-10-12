@@ -6,10 +6,11 @@
  * ⚛️ Dan: "提供清晰的错误边界和状态管理"
  * ☕ Bloch: "设计易用的API，隐藏认证复杂性"
  * 🏛️ Fowler: "应用Interceptor模式处理横切关注点"
+ *
+ * 架构改进：强制要求 authData 参数，不隐式查询当前账号
  */
 
 import { loggers } from "~/lib/logger"
-import { StorageDomain } from "~/lib/storage/domains"
 import { type ApiResponse, type AuthStorage, TokenType } from "~/types"
 
 import { get as baseGet, post as basePost } from "./index"
@@ -38,15 +39,17 @@ export class AuthenticatedClient {
    * 执行认证感知的GET请求
    * @param endpoint API端点URL
    * @param options 请求选项
-   * @param authData 可选的认证数据，用于多账号场景
+   * @param authData 认证数据（必需）
    * @returns 请求结果数据
    * @throws AuthenticationError token相关错误
    * @throws ApiError 其他API错误
+   *
+   * 架构原则：底层HTTP客户端必须明确要求认证数据，不隐式查询当前账号
    */
   async get<T>(
     endpoint: string,
-    options: RequestInit = {},
-    authData?: AuthStorage
+    options: RequestInit,
+    authData: AuthStorage
   ): Promise<T> {
     const response = await this.executeWithAuth<T>(
       endpoint,
@@ -62,16 +65,18 @@ export class AuthenticatedClient {
    * @param endpoint API端点URL
    * @param data 请求体数据
    * @param options 请求选项
-   * @param authData 可选的认证数据，用于多账号场景
+   * @param authData 认证数据（必需）
    * @returns 请求结果数据
    * @throws AuthenticationError token相关错误
    * @throws ApiError 其他API错误
+   *
+   * 架构原则：底层HTTP客户端必须明确要求认证数据，不隐式查询当前账号
    */
   async post<T>(
     endpoint: string,
-    data?: unknown,
-    options: RequestInit = {},
-    authData?: AuthStorage
+    data: unknown,
+    options: RequestInit,
+    authData: AuthStorage
   ): Promise<T> {
     const response = await this.executeWithAuth<T>(
       endpoint,
@@ -87,18 +92,20 @@ export class AuthenticatedClient {
 
   /**
    * 核心认证逻辑 - 统一处理token验证和注入
-   * @param authData 可选的认证数据，如果提供则使用它而不是从 storage 读取
+   * @param authData 认证数据（必需）
+   *
+   * 架构改进：移除 authData 参数的可选性，强制要求调用方传递
    */
   private async executeWithAuth<T>(
     endpoint: string,
     method: string,
     options: RequestInit,
-    authData?: AuthStorage
+    authData: AuthStorage
   ): Promise<ApiResponse<T>> {
-    // 1. 获取认证信息（优先使用传入的，否则从 storage 读取）
-    const auth = authData || (await this.getValidAuthData())
-    if (!auth) {
-      throw new AuthenticationError("No valid authentication token found")
+    // 使用传入的认证数据
+    const auth = authData
+    if (!auth || !auth.token) {
+      throw new AuthenticationError("No valid authentication token provided")
     }
 
     // 🔍 调试日志：JSON 格式输出认证信息
@@ -222,46 +229,6 @@ export class AuthenticatedClient {
       throw new ApiError(response.error || "API response data is missing")
     }
     return response.data
-  }
-
-  /**
-   * 获取有效的认证数据
-   * 自动处理JWT过期检查
-   */
-  private async getValidAuthData(): Promise<AuthStorage | null> {
-    try {
-      const { getActiveAccountData } = await import(
-        "~/lib/storage/activeAccountHelpers"
-      )
-      const authData = await getActiveAccountData<AuthStorage>(
-        StorageDomain.AUTH
-      )
-
-      if (!authData?.token) {
-        logger.debug("No authentication token found")
-        return null
-      }
-
-      // JWT过期检查 - 只记录但不清理
-      // KISS 原则：让服务器决定 token 是否真的过期
-      if (
-        authData.type === TokenType.JWT &&
-        authData.expiry &&
-        authData.expiry < Date.now()
-      ) {
-        logger.warn(
-          "JWT token appears expired, but keeping it (server will decide)"
-        )
-        // 不删除，不标记，什么都不做
-        // 客户端时间可能不准，让服务器做最终判断
-      }
-
-      logger.debug(`Valid ${authData.type} token found`)
-      return authData
-    } catch (error) {
-      logger.error("Failed to get auth data:", error)
-      return null
-    }
   }
 
   /**

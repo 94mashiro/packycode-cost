@@ -333,7 +333,7 @@ export class MultiAccountStorageManager {
   private createEmptyAccountData(): AccountData {
     return {
       auth: null,
-      isValid: false,
+      tokenValidation: { status: "unknown" },
       notificationStates: {},
       peerSpending: null,
       purchaseConfig: null,

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react"
 
-import { dynamicApiUrls } from "../api"
+import { apiUrls } from "../api"
+import { AccountManager } from "../lib/account/AccountManager"
 import { loggers } from "../lib/logger"
+import { getStorageManager } from "../lib/storage"
 import { type TokenData, type TokenExpiration, TokenType } from "../types"
+import { PackySite } from "../types/account"
 
 const logger = loggers.ui
 
@@ -20,7 +23,12 @@ export function AuthenticationPrompt({
   useEffect(() => {
     const loadUrl = async () => {
       try {
-        const url = await dynamicApiUrls.getDashboardUrl()
+        // 获取当前账号的站点
+        const accountManager = new AccountManager(getStorageManager())
+        const currentAccount = await accountManager.getCurrentAccount()
+        const site = currentAccount?.site ?? PackySite.WWW
+        
+        const url = apiUrls.getDashboardUrl(site)
         setDashboardUrl(url)
       } catch (error) {
         logger.error("Failed to load dashboard URL:", error)

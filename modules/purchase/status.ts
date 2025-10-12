@@ -9,18 +9,14 @@ import { checkPurchaseNotificationPermission } from "~/utils/notificationPermiss
 
 const logger = loggers.purchase
 
-// 全局锁，防止并发调用
-let isCheckingPurchaseStatus = false
-
 export { type PackyConfig }
 
 /**
- * 统一的购买状态检查方法
+ * 统一的购买状态检查方法（支持多账号并发）
  * 1. 获取最新API数据
  * 2. 比较与上次状态的差异
  * 3. 触发通知（如果从禁用变为可用）
  * 4. 更新存储状态
- * 5. 释放锁
  * @param context 账号执行上下文
  */
 export async function checkAndNotifyPurchaseStatus(
@@ -30,23 +26,13 @@ export async function checkAndNotifyPurchaseStatus(
   success: boolean
   triggered: boolean
 }> {
-  // 检查锁，防止并发调用
-  if (isCheckingPurchaseStatus) {
-    logger.debug("[LOCK] Purchase status check already in progress, skipping")
-    return { success: false, triggered: false }
-  }
-
-  // 获取锁
-  isCheckingPurchaseStatus = true
-  logger.debug("[LOCK] Acquired purchase status check lock")
-
   try {
     // 直接从 context 解构所需信息
     const { accountId, site } = context
 
-    // 1. 获取最新的API数据 (getConfig 不需要认证)
-    logger.debug(`[API] Fetching latest purchase status for ${site}`)
-    const currentConfig = await api.getConfig()
+    // 1. 获取最新的API数据（使用账号的站点，确保站点和 token 匹配）
+    logger.debug(`[API] Fetching purchase config for ${site} (account: ${accountId})`)
+    const currentConfig = await api.getConfig(site)
 
     // 验证响应数据结构
     if (!isValidPackyConfig(currentConfig)) {
@@ -89,7 +75,7 @@ export async function checkAndNotifyPurchaseStatus(
       }
     }
 
-    // 4. 更新存储状态
+    // 4. 更新存储状态（多账号安全：Chrome Storage 原子性保证）
     await storageManager.set(accountId, StorageDomain.SYSTEM_PREFERENCE, {
       purchase_disabled: currentConfig.purchaseDisabled
     })
@@ -109,10 +95,6 @@ export async function checkAndNotifyPurchaseStatus(
   } catch (error) {
     logger.error("[ERROR] Purchase status check failed:", error)
     return { success: false, triggered: false }
-  } finally {
-    // 5. 释放锁
-    isCheckingPurchaseStatus = false
-    logger.debug("[LOCK] Released purchase status check lock")
   }
 }
 

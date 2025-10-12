@@ -1,63 +1,66 @@
 /**
  * PackyCode URL配置管理
  *
- * 职责: 动态URL获取和页面导航支持
+ * 职责: 提供显式参数版本的API配置访问
  * 注意: API数据请求请使用 ~/lib/api/PackyCodeApiClient
+ *
+ * 架构原则：所有函数必须明确要求站点参数，不隐式查询当前账号
  */
 
 import { ApiEndpointType, PageUrlType } from "~/types"
+import { PackySite } from "~/types/account"
 
-import { getCurrentApiUrl, getCurrentPageUrl } from "./config"
+import { getApiUrl, getBaseUrl, getCookieDomain, getPageUrl } from "./config"
 
 /**
- * 动态API URL获取器
- * 基于当前账号类型提供所有相关URL
+ * 显式参数版本的API URL获取器
+ * 所有函数都要求明确传递站点参数
  */
-export const dynamicApiUrls = {
+export const apiUrls = {
   /**
-   * 获取API Keys监听模式URL
+   * 获取指定站点的API Keys监听模式URL
    */
-  async getApiKeysPattern(): Promise<string> {
-    return getCurrentApiUrl(ApiEndpointType.API_KEYS_PATTERN)
+  getApiKeysPattern(site: PackySite): string {
+    return getApiUrl(site, ApiEndpointType.API_KEYS_PATTERN)
   },
 
   /**
-   * 获取配置API URL
+   * 获取指定站点的配置API URL
    */
-  async getConfigUrl(): Promise<string> {
-    return getCurrentApiUrl(ApiEndpointType.CONFIG)
+  getConfigUrl(site: PackySite): string {
+    return getApiUrl(site, ApiEndpointType.CONFIG)
   },
 
   /**
-   * 获取仪表板页面URL
+   * 获取指定站点的仪表板页面URL
    */
-  async getDashboardUrl(): Promise<string> {
-    return getCurrentPageUrl(PageUrlType.DASHBOARD)
+  getDashboardUrl(site: PackySite): string {
+    return getPageUrl(site, PageUrlType.DASHBOARD)
   },
 
   /**
-   * 获取定价页面URL
+   * 获取指定站点的定价页面URL
    */
-  async getPricingUrl(): Promise<string> {
-    return getCurrentPageUrl(PageUrlType.PRICING)
+  getPricingUrl(site: PackySite): string {
+    return getPageUrl(site, PageUrlType.PRICING)
   },
 
   /**
-   * 获取订阅信息API URL
+   * 获取指定站点的订阅信息API URL
    */
-  async getSubscriptionsUrl(): Promise<string> {
-    return getCurrentApiUrl(ApiEndpointType.SUBSCRIPTIONS)
+  getSubscriptionsUrl(site: PackySite): string {
+    return getApiUrl(site, ApiEndpointType.SUBSCRIPTIONS)
   },
 
   /**
-   * 获取用户信息API URL
+   * 获取指定站点的用户信息API URL
    */
-  async getUserInfoUrl(): Promise<string> {
-    return getCurrentApiUrl(ApiEndpointType.USER_INFO)
+  getUserInfoUrl(site: PackySite): string {
+    return getApiUrl(site, ApiEndpointType.USER_INFO)
   }
 }
 
 /**
- * 重新导出配置管理函数，方便其他模块使用
+ * 重新导出配置管理函数，供其他模块使用
  */
-export { getCurrentApiUrl, getCurrentPageUrl } from "./config"
+export { getApiUrl, getBaseUrl, getCookieDomain, getPageUrl } from "./config"

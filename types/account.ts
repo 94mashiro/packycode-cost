@@ -126,9 +126,9 @@ export interface AccountData {
   /** 认证信息 */
   auth: AuthStorage | null
 
-  // === API 派生字段（从 Account 迁移） ===
-  /** Token 是否有效（服务器验证结果） */
-  isValid: boolean
+  // === 运行态校验结论（仅通过 USER_INFO 推导） ===
+  /** Token 可用性状态（不与过期时间重复存储） */
+  tokenValidation?: import("./index").TokenValidationState
 
   /** 最后数据同步时间 */
   lastSyncAt?: number

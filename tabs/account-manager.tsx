@@ -18,7 +18,7 @@
 import "~/reset.css"
 
 import { Check, Copy, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/shadcn/alert"
 import {
@@ -48,11 +48,16 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/shadcn/tooltip"
+import { toast, Toaster } from "sonner"
 import { AddAccountDialog } from "~/components/AddAccountDialog"
 import { EditAccountDialog } from "~/components/EditAccountDialog"
 import { useAccountManager } from "~/hooks/useAccountManager"
 import { loggers } from "~/lib/logger"
-import { type Account, TokenType } from "~/types"
+import { getStorageManager } from "~/lib/storage"
+import { StorageDomain } from "~/lib/storage/domains"
+import { getTokenExpiration } from "~/modules/auth/jwt"
+import { fetchAllDataAsync } from "~/modules/tasks"
+import { type Account, TokenType, type TokenValidationState } from "~/types"
 import { PackySite } from "~/types/account"
 import { getSiteName as getSiteDisplayName } from "~/utils/siteHelpers"
 
@@ -78,7 +83,107 @@ function AccountManagerPage() {
 
   // 操作状态
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [copiedToken, setCopiedToken] = useState<null | string>(null)
+  const [statusMap, setStatusMap] = useState<
+    Record<string, TokenValidationState | undefined>
+  >({})
+
+  // 当账号列表变化时，拉取每个账号的 tokenValidation 状态
+  useEffect(() => {
+    const loadStatuses = async () => {
+      try {
+        const storage = getStorageManager()
+        const result: Record<string, TokenValidationState | undefined> = {}
+        await Promise.all(
+          accounts.map(async (acc) => {
+            const st = await storage.get<TokenValidationState>(
+              acc.id,
+              StorageDomain.TOKEN_VALIDATION
+            )
+            result[acc.id] = st || { status: "unknown" }
+          })
+        )
+        setStatusMap(result)
+      } catch (e) {
+        loggers.ui.debug("Failed to load tokenValidation statuses:", e)
+      }
+    }
+    if (accounts.length > 0) {
+      loadStatuses()
+    } else {
+      setStatusMap({})
+    }
+  }, [accounts])
+
+  type DisplayStatus = "checking" | "invalid" | "valid"
+
+  const getDisplayStatus = (
+    status: TokenValidationState["status"]
+  ): DisplayStatus => {
+    if (status === "valid") return "valid"
+    if (status === "unknown") return "checking"
+    return "invalid"
+  }
+
+  const getDisplayLabel = (displayStatus: DisplayStatus): string => {
+    switch (displayStatus) {
+      case "checking":
+        return "检测中"
+      case "invalid":
+        return "无效"
+      case "valid":
+        return "有效"
+    }
+  }
+
+  const getStatusColor = (status: TokenValidationState["status"]): string => {
+    switch (status) {
+      case "expired":
+        return "bg-red-500"
+      case "invalid":
+        return "bg-red-500"
+      case "network_error":
+        return "bg-yellow-500"
+      case "rate_limited":
+        return "bg-yellow-500"
+      case "unknown":
+        return "bg-gray-400"
+      case "valid":
+        return "bg-green-500"
+      default:
+        return "bg-gray-400"
+    }
+  }
+
+  const getDetailedMessage = (
+    status: TokenValidationState["status"],
+    state?: TokenValidationState
+  ): string => {
+    const baseMessages: Record<string, string> = {
+      expired: "Token 已过期：请重新登录或更新 Token",
+      invalid: "鉴权失败：Token 无效或已被撤销",
+      network_error: "网络通信失败：请检查网络连接或 API 服务状态",
+      rate_limited: "请求频率受限：请稍后重试",
+      unknown: "正在验证 Token...",
+      valid: "Token 验证通过"
+    }
+
+    let message = baseMessages[status] || "状态未知"
+
+    if (state?.reason) {
+      message += `\n详情：${state.reason}`
+    }
+    if (state?.httpStatus) {
+      message += ` (HTTP ${state.httpStatus})`
+    }
+    if (state?.checkedAt) {
+      const checkedTime = new Date(state.checkedAt).toLocaleString()
+      message += `\n检测时间：${checkedTime}`
+    }
+
+    return message
+  }
 
   /**
    * 处理编辑账号
@@ -173,8 +278,35 @@ function AccountManagerPage() {
     }
   }
 
+  /**
+   * 刷新账号列表
+   */
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      // 批量检查（复用任务执行）
+      await fetchAllDataAsync()
+      await refreshAccounts()
+
+      // 成功提示
+      toast.success("刷新成功", {
+        description: "账号列表已更新"
+      })
+    } catch (e) {
+      loggers.ui.error("Refresh failed:", e)
+
+      // 错误提示
+      toast.error("刷新失败", {
+        description: "请检查网络连接后重试"
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   return (
     <TooltipProvider>
+      <Toaster position="top-center" />
       <div className="space-y-6 bg-background p-8">
         {/* 头部 */}
         <div className="flex items-center justify-between">
@@ -188,14 +320,17 @@ function AccountManagerPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={() => refreshAccounts()}
+                  disabled={isRefreshing}
+                  onClick={handleRefresh}
                   size="icon"
                   variant="outline">
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw
+                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>刷新账号列表</p>
+                <p>{isRefreshing ? "刷新中..." : "刷新账号列表"}</p>
               </TooltipContent>
             </Tooltip>
             <Button onClick={() => setShowAddDialog(true)}>
@@ -250,11 +385,12 @@ function AccountManagerPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[100px]">站点</TableHead>
-                    <TableHead className="w-[150px]">显示名称</TableHead>
-                    <TableHead className="w-[100px]">Token类型</TableHead>
-                    <TableHead className="min-w-[180px]">Token</TableHead>
-                    <TableHead className="w-[150px] text-right">操作</TableHead>
+                    <TableHead className="w-[120px]">站点</TableHead>
+                    <TableHead className="w-[300px]">显示名称</TableHead>
+                    <TableHead className="w-[200px]">Token类型</TableHead>
+                    <TableHead className="w-[100px]">状态</TableHead>
+                    <TableHead className="min-w-[300px]">Token</TableHead>
+                    <TableHead className="w-[120px] text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -281,9 +417,59 @@ function AccountManagerPage() {
 
                       {/* Token 类型 */}
                       <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {getTokenTypeName(account.tokenType)}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm text-muted-foreground">
+                            {getTokenTypeName(account.tokenType)}
+                          </span>
+                          {account.tokenType === TokenType.JWT &&
+                            (() => {
+                              const expInfo = getTokenExpiration(account.token)
+                              return (
+                                <span
+                                  className={`text-xs ${
+                                    expInfo.isExpired
+                                      ? "font-medium text-red-500"
+                                      : "text-muted-foreground"
+                                  }`}>
+                                  ({expInfo.formatted})
+                                </span>
+                              )
+                            })()}
+                        </div>
+                      </TableCell>
+
+                      {/* 状态 */}
+                      <TableCell>
+                        {(() => {
+                          const st = statusMap[account.id]?.status || "unknown"
+                          const displayStatus = getDisplayStatus(st)
+                          const color = getStatusColor(st)
+                          const label = getDisplayLabel(displayStatus)
+                          const detailedMessage = getDetailedMessage(
+                            st,
+                            statusMap[account.id]
+                          )
+
+                          return (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-2 cursor-help">
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${color}`}
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    {label}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="whitespace-pre-line text-sm">
+                                  {detailedMessage}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )
+                        })()}
                       </TableCell>
 
                       {/* Token - 可复制 */}

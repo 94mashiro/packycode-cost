@@ -116,7 +116,7 @@ export class AccountManager {
         token: config.token,
         type: config.tokenType
       },
-      isValid: true, // 默认有效，后续由验证流程更新
+      tokenValidation: { status: "unknown" },
       lastSyncAt: undefined,
       notificationStates: {},
       peerSpending: null,
@@ -394,16 +394,12 @@ export class AccountManager {
   
 
   /**
-   * 更新账号有效性状态
-   *
-   * 有效性状态存储在 AccountData 中
-   *
-   * @param accountId 账号ID
-   * @param isValid 是否有效
+   * 设置 Token 可用性状态（使用 USER_INFO 的结果进行回写）
+   * - status 为 valid 时，会同时更新 lastSyncAt
    */
-  async updateAccountValidity(
+  async setTokenValidation(
     accountId: string,
-    isValid: boolean
+    state: import("~/types").TokenValidationState
   ): Promise<void> {
     const registry = await this.getOrCreateRegistry()
 
@@ -412,16 +408,21 @@ export class AccountManager {
       throw new Error(`Account not found: ${accountId}`)
     }
 
-    // 更新 AccountData 中的有效性状态
     const storage = this.storageManager.getUnderlyingStorage()
     const accountData =
       (await storage.get<AccountData>(`account_${accountId}_info`)) ||
       this.createEmptyAccountData()
 
-    accountData.isValid = isValid
+    accountData.tokenValidation = state
+    if (state.status === "valid") {
+      accountData.lastSyncAt = state.checkedAt || Date.now()
+    }
+
     await storage.set(`account_${accountId}_info`, accountData)
 
-    logger.info(`Updated account validity: ${accountId} -> ${isValid}`)
+    logger.info(
+      `Updated token validation: ${accountId} -> ${state.status}`
+    )
   }
 
   /**
@@ -432,7 +433,7 @@ export class AccountManager {
   private createEmptyAccountData(): AccountData {
     return {
       auth: null,
-      isValid: false,
+      tokenValidation: { status: "unknown" },
       lastSyncAt: undefined,
       notificationStates: {},
       peerSpending: null,

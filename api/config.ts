@@ -179,143 +179,59 @@ export class ApiConfigManager {
 }
 
 /**
- * API 配置管理器的管理器
- * 基于存储的用户偏好动态获取 API 配置
+ * 显式参数版本的配置获取函数
+ * 架构原则：底层工具必须明确要求所有依赖，不隐式查询全局状态
  *
- * 架构清理：移除缓存，每次重新创建 ApiConfigManager
- * - ApiConfigManager 实例本身是轻量的
- * - 配置数据是静态的，无需缓存
- *
- * @version 3.0.0 - 改为基于 PackySite
+ * 🐧 Linus: "显式优于隐式，全局状态是万恶之源"
+ * ⚛️ Dan: "函数签名应该清楚表达所有依赖"
+ * ☕ Bloch: "让错误用法难以发生"
+ * 🏛️ Fowler: "UI层可以有'当前用户'，但底层工具不应该"
  */
-export class ApiConfigManagerController {
-  /**
-   * 获取当前站点的API URL (类型安全版本)
-   */
-  async getCurrentApiUrl(endpoint: ApiEndpointType): Promise<string> {
-    const adapter = await this.getCurrentConfigManager()
-    return adapter.getApiUrl(endpoint)
-  }
 
-  /**
-   * 获取当前站点的基础URL
-   */
-  async getCurrentBaseUrl(): Promise<string> {
-    const adapter = await this.getCurrentConfigManager()
-    return adapter.getBaseUrl()
-  }
-
-  /**
-   * 获取当前 API 配置管理器
-   * 自动从存储读取当前激活账号的站点
-   *
-   * 每次重新创建，无缓存（ApiConfigManager 实例轻量）
-   */
-  async getCurrentConfigManager(): Promise<ApiConfigManager> {
-    const currentSite = await this.getCurrentSite()
-
-    // 创建新的管理器（无缓存）
-    return new ApiConfigManager(currentSite)
-  }
-
-  /**
-   * 获取当前站点的Cookie域名
-   */
-  async getCurrentCookieDomain(): Promise<string> {
-    const adapter = await this.getCurrentConfigManager()
-    return adapter.getCookieDomain()
-  }
-
-  /**
-   * 获取当前站点的页面URL (类型安全版本)
-   */
-  async getCurrentPageUrl(page: PageUrlType): Promise<string> {
-    const adapter = await this.getCurrentConfigManager()
-    return adapter.getPageUrl(page)
-  }
-
-  /**
-   * 检查URL是否属于当前站点
-   */
-  async isUrlBelongsToCurrentAccount(url: string): Promise<boolean> {
-    const adapter = await this.getCurrentConfigManager()
-    return adapter.isUrlBelongsToEnvironment(url)
-  }
-
-  /**
-   * 强制刷新适配器缓存
-   * 在用户切换账号后调用
-   *
-   * 现在只是为了保持 API 兼容性，实际无操作
-   */
-  async refreshConfigManager(): Promise<ApiConfigManager> {
-    return this.getCurrentConfigManager()
-  }
-
-  /**
-   * 获取当前激活账号的站点（重构）
-   *
-   * 从当前激活账号读取 site 字段
-   */
-  private async getCurrentSite(): Promise<PackySite> {
-    try {
-      const { AccountManager } = await import("~/lib/account")
-      const { getStorageManager } = await import("~/lib/storage")
-
-      const storageManager = getStorageManager()
-      const accountManager = new AccountManager(storageManager)
-      const currentAccount = await accountManager.getCurrentAccount()
-
-      // 默认使用主站
-      return currentAccount?.site ?? PackySite.WWW
-    } catch {
-      // 出错时默认使用主站
-      return PackySite.WWW
-    }
-  }
+/**
+ * 获取指定站点的 API URL
+ * @param site 目标站点
+ * @param endpoint API端点类型
+ */
+export function getApiUrl(site: PackySite, endpoint: ApiEndpointType): string {
+  const configManager = new ApiConfigManager(site)
+  return configManager.getApiUrl(endpoint)
 }
 
 /**
- * 全局 API 配置管理器实例
- * 单例模式，整个应用共享一个实例
+ * 获取指定站点的基础 URL
+ * @param site 目标站点
  */
-export const apiConfigManagerController = new ApiConfigManagerController()
-
-/**
- * 便捷函数：获取当前 API 配置管理器
- */
-export async function getCurrentApiConfigManager(): Promise<ApiConfigManager> {
-  return apiConfigManagerController.getCurrentConfigManager()
+export function getBaseUrl(site: PackySite): string {
+  const configManager = new ApiConfigManager(site)
+  return configManager.getBaseUrl()
 }
 
 /**
- * 便捷函数：获取当前API URL (类型安全版本)
- * Joshua Bloch: "简洁的接口胜过复杂的重载"
+ * 获取指定站点的 Cookie 域名
+ * @param site 目标站点
  */
-export async function getCurrentApiUrl(
-  endpoint: ApiEndpointType
-): Promise<string> {
-  return apiConfigManagerController.getCurrentApiUrl(endpoint)
+export function getCookieDomain(site: PackySite): string {
+  const configManager = new ApiConfigManager(site)
+  return configManager.getCookieDomain()
 }
 
 /**
- * 便捷函数：获取当前基础URL
+ * 获取指定站点的页面 URL
+ * @param site 目标站点
+ * @param page 页面类型
  */
-export async function getCurrentBaseUrl(): Promise<string> {
-  return apiConfigManagerController.getCurrentBaseUrl()
+export function getPageUrl(site: PackySite, page: PageUrlType): string {
+  const configManager = new ApiConfigManager(site)
+  return configManager.getPageUrl(page)
 }
 
 /**
- * 便捷函数：获取当前Cookie域名
+ * 检查 URL 是否属于指定站点
+ * @param site 目标站点
+ * @param url 要检查的 URL
  */
-export async function getCurrentCookieDomain(): Promise<string> {
-  return apiConfigManagerController.getCurrentCookieDomain()
-}
-
-/**
- * 便捷函数：获取当前页面URL (类型安全版本)
- * Martin Fowler: "明确的类型约束让代码意图更清晰"
- */
-export async function getCurrentPageUrl(page: PageUrlType): Promise<string> {
-  return apiConfigManagerController.getCurrentPageUrl(page)
+export function isUrlBelongsToSite(site: PackySite, url: string): boolean {
+  const configManager = new ApiConfigManager(site)
+  return configManager.isUrlBelongsToEnvironment(url)
 }

@@ -434,11 +434,10 @@ export class DataMigrationManager {
         // === 原有 API 数据 ===
         auth: {
           token: auth.token,
-          type: auth.type || TokenType.JWT,
-          ...(auth.expiry && { expiry: auth.expiry })
+          type: auth.type || TokenType.JWT
         },
-        // === 新增：API 派生字段 ===
-        isValid: true, // 新创建的账号默认有效
+        // === 新增：运行态与时间 ===
+        tokenValidation: { status: "unknown" },
         lastSyncAt: Date.now(),
         notificationStates: notificationStates || {},
         peerSpending: peerSpending || null,
@@ -468,7 +467,7 @@ export class DataMigrationManager {
       if (notificationStates) logger.debug(`  - NOTIFICATION_STATES: ✓`)
       if (peerSpending) logger.debug(`  - PEER_SPENDING: ✓`)
       logger.debug(
-        `  - API_DERIVED_FIELDS: ✓ (isValid, tokenExpiry, lastSyncAt)`
+        `  - API_DERIVED_FIELDS: ✓ (tokenValidation, tokenExpiry, lastSyncAt)`
       )
 
       return true

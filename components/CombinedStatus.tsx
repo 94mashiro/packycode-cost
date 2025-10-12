@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { dynamicApiUrls } from "../api"
+import { apiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
 import { AccountManager } from "../lib/account"
 import { loggers } from "../lib/logger"
@@ -49,8 +49,8 @@ export function CombinedStatus({
     const loadUrls = async () => {
       try {
         const [dashboard, pricing] = await Promise.all([
-          dynamicApiUrls.getDashboardUrl(),
-          dynamicApiUrls.getPricingUrl()
+          Promise.resolve(apiUrls.getDashboardUrl(currentSite)),
+          Promise.resolve(apiUrls.getPricingUrl(currentSite))
         ])
         setDashboardUrl(dashboard)
         setPricingUrl(pricing)
@@ -59,7 +59,7 @@ export function CombinedStatus({
       }
     }
     loadUrls()
-  }, [])
+  }, [currentSite])
 
   const isApiKey = tokenData.tokenType === TokenType.API_KEY
   const isAuthenticated =

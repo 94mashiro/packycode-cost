@@ -80,3 +80,12 @@ export const usePeerSpendingStorage = () =>
  * const { data } = useStorage(StorageDomain.CUSTOM_DOMAIN)
  */
 export { useStorage }
+
+/**
+ * Token 可用性 Hook（当前激活账号）
+ *
+ * 注意：此 Hook 基于当前激活账号，如果需要在列表页渲染所有账号的状态，
+ * 请使用 getStorageManager().get(accountId, StorageDomain.TOKEN_VALIDATION) 逐个读取。
+ */
+export const useTokenValidation = () =>
+  useStorage(StorageDomain.TOKEN_VALIDATION)

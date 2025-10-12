@@ -274,7 +274,9 @@ export function isDataTaskAction(action: string): action is DataTaskAction {
 async function executeTasksForAccount(
   account: import("~/types").Account
 ): Promise<{ error?: string; success: boolean; taskCount: number }> {
-  logger.info(`📍 账号 ${account.id} (${account.site}) 开始执行任务`)
+  logger.info(
+    `📍 账号 ${account.id} (${account.site}) 开始执行任务 [displayName: ${account.displayName}]`
+  )
 
   try {
     // 🔑 核心改进：在此处一次性构建完整的账号上下文
@@ -285,7 +287,9 @@ async function executeTasksForAccount(
     )
 
     if (!authData) {
-      logger.warn(`⚠️ 账号 ${account.id} 无认证数据，跳过任务执行`)
+      logger.warn(
+        `⚠️ 账号 ${account.id} (${account.site}, ${account.displayName}) 无认证数据，跳过任务执行`
+      )
       return { error: "No authentication data", success: false, taskCount: 0 }
     }
 
@@ -297,14 +301,18 @@ async function executeTasksForAccount(
       timestamp: Date.now()
     }
 
-    logger.debug(`✅ 账号上下文已构建: ${account.id} @ ${account.site}`)
+    logger.debug(
+      `✅ 账号上下文已构建: ${account.id} @ ${account.site} (token: ${authData.token.substring(0, 8)}...)`
+    )
 
     // 1. 根据站点过滤适用的任务
     const applicableTasks = Object.values(DataTaskType).filter((taskType) => {
       return TASK_REGISTRY[taskType].applicableSites.includes(account.site)
     })
 
-    logger.info(`  🎯 适用任务: ${applicableTasks.length} 个`)
+    logger.info(
+      `  🎯 适用任务: ${applicableTasks.length} 个 [${applicableTasks.join(", ")}]`
+    )
 
     if (applicableTasks.length === 0) {
       logger.info(`  ⏭️  账号 ${account.id} 无适用任务，跳过`)
@@ -337,7 +345,7 @@ async function executeTasksForAccount(
       .filter((e) => e !== null)
 
     logger.info(
-      `  ${allSuccess ? "✅" : "⚠️"} 账号 ${account.id}: ${successCount}/${applicableTasks.length} 成功`
+      `  ${allSuccess ? "✅" : "⚠️"} 账号 ${account.id} (${account.displayName}): ${successCount}/${applicableTasks.length} 成功${errors.length > 0 ? `, 错误: ${errors.join("; ")}` : ""}`
     )
 
     return {

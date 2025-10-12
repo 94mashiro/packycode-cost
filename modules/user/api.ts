@@ -1,4 +1,5 @@
 import { api } from "~/lib/api/PackyCodeApiClient"
+import { AccountManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
@@ -97,12 +98,38 @@ export async function fetchUserInfo(
       userInfoStorage
     )
 
+    // 回写 token 可用性：成功即有效
+    try {
+      const accountManager = new AccountManager(storageManager)
+      await accountManager.setTokenValidation(accountId, {
+        status: "valid",
+        checkedAt: Date.now(),
+        source: "user_info"
+      })
+    } catch (e) {
+      logger.debug("Failed to set tokenValidation (success path):", e)
+    }
+
     return userInfoStorage
   } catch (error) {
     // 统一API客户端已经处理了认证错误和token清理
     // 这里只需要处理业务逻辑错误
     if (error instanceof Error && error.name === "AuthenticationError") {
       logger.debug("Authentication failed, returning null")
+      // 回写 token 可用性：认证失败
+      try {
+        const storageManager = getStorageManager()
+        const accountManager = new AccountManager(storageManager)
+        await accountManager.setTokenValidation(context.accountId, {
+          status: "invalid",
+          checkedAt: Date.now(),
+          httpStatus: 401,
+          reason: error.message,
+          source: "user_info"
+        })
+      } catch (e) {
+        logger.debug("Failed to set tokenValidation (auth error):", e)
+      }
       return null
     }
 
@@ -110,6 +137,20 @@ export async function fetchUserInfo(
     const errorMessage =
       error instanceof Error ? error.message : "获取用户信息失败"
     logger.error("Failed to fetch user info:", errorMessage)
+
+    // 回写 token 可用性：网络类错误（不改变 lastSyncAt）
+    try {
+      const storageManager = getStorageManager()
+      const accountManager = new AccountManager(storageManager)
+      await accountManager.setTokenValidation(context.accountId, {
+        status: "network_error",
+        checkedAt: Date.now(),
+        reason: errorMessage,
+        source: "user_info"
+      })
+    } catch (e) {
+      logger.debug("Failed to set tokenValidation (network error):", e)
+    }
     throw new Error(errorMessage)
   }
 }

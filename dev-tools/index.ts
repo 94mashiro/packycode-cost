@@ -4,9 +4,11 @@
  * 遵循四师共识：去除全局污染，统一接口
  */
 
-import { getCurrentApiConfigManager } from "~/api/config"
+import { ApiConfigManager } from "~/api/config"
+import { AccountManager } from "~/lib/account/AccountManager"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
+import { PackySite } from "~/types/account"
 
 import { type DevToolsDependencies, DevToolsValidator } from "./validator"
 
@@ -14,7 +16,13 @@ import { type DevToolsDependencies, DevToolsValidator } from "./validator"
  * 创建开发工具验证器实例
  */
 async function createDevToolsValidator(): Promise<DevToolsValidator> {
-  const apiConfigManager = await getCurrentApiConfigManager()
+  // 获取当前账号的站点
+  const accountManager = new AccountManager(getStorageManager())
+  const currentAccount = await accountManager.getCurrentAccount()
+  const site = currentAccount?.site ?? PackySite.WWW
+  
+  // 创建API配置管理器
+  const apiConfigManager = new ApiConfigManager(site)
   const storage = getStorageManager()
 
   const dependencies: DevToolsDependencies = {

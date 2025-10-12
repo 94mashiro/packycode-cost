@@ -27,6 +27,7 @@ export enum StorageDomain {
   ACCOUNT_REGISTRY = "global.account.registry",
   // === 账号特定域（多账号架构） ===
   AUTH = "auth",
+  TOKEN_VALIDATION = "token.validation",
   NOTIFICATION_STATES = "notification.states",
   PEER_SPENDING = "peer.spending",
   PURCHASE_CONFIG = "purchase_config",
@@ -58,6 +59,7 @@ export type StorageDataType<T extends keyof StorageDomainMap> =
 export interface StorageDomainMap {
   [StorageDomain.ACCOUNT_REGISTRY]: AccountRegistry
   [StorageDomain.AUTH]: AuthStorage
+  [StorageDomain.TOKEN_VALIDATION]: import("~/types").TokenValidationState
   [StorageDomain.NOTIFICATION_STATES]: NotificationStates
   [StorageDomain.PEER_SPENDING]: PeerSpendingStorage
   [StorageDomain.PURCHASE_CONFIG]: PackyConfig
@@ -77,6 +79,7 @@ export const DOMAIN_TO_FIELD_MAP: Record<
   keyof import("~/types").AccountData
 > = {
   [StorageDomain.AUTH]: "auth",
+  [StorageDomain.TOKEN_VALIDATION]: "tokenValidation",
   [StorageDomain.NOTIFICATION_STATES]: "notificationStates",
   [StorageDomain.PEER_SPENDING]: "peerSpending",
   [StorageDomain.PURCHASE_CONFIG]: "purchaseConfig",

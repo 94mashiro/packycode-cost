@@ -8,7 +8,6 @@
  * 🏛️ Fowler: "合并重复的抽象层，保持架构清晰"
  */
 
-import { getCurrentApiUrl } from "~/api/config"
 import { get } from "~/lib/request"
 import { httpClient } from "~/lib/request/AuthenticatedClient"
 import {
@@ -43,11 +42,16 @@ export class PackyCodeApiClient {
   }
 
   /**
-   * 获取购买配置信息
-   * 不需要认证，使用匿名访问
+   * 获取购买配置信息（显式参数版本）
+   * @param site 目标站点（必需）
+   *
+   * 架构原则：底层API必须明确要求所有依赖，不隐式查询当前账号
    */
-  async getConfig(): Promise<PackyConfig> {
-    const configUrl = await getCurrentApiUrl(ApiEndpointType.CONFIG)
+  async getConfig(site: import("~/types/account").PackySite): Promise<PackyConfig> {
+    const { ApiConfigManager } = await import("~/api/config")
+    const configManager = new ApiConfigManager(site)
+    const configUrl = configManager.getApiUrl(ApiEndpointType.CONFIG)
+
     const response = await get<PackyConfig>(configUrl)
 
     if (!response.success || !response.data) {
@@ -170,9 +174,10 @@ export const api = {
   ) => packyCodeApi.get<T>(endpoint, context),
 
   /**
-   * 获取配置信息
+   * 获取配置信息（显式参数版本）
    */
-  getConfig: () => packyCodeApi.getConfig(),
+  getConfig: (site: import("~/types/account").PackySite) =>
+    packyCodeApi.getConfig(site),
 
   /**
    * 获取共享空间信息

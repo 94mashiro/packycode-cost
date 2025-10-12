@@ -338,6 +338,23 @@ export interface TokenExpiration {
   isExpired: boolean
 }
 
+// ===== Token 可用性状态（运行态结论，依赖 USER_INFO 结果） =====
+export type TokenStatus =
+  | "unknown"
+  | "valid"
+  | "invalid"
+  | "expired"
+  | "network_error"
+  | "rate_limited"
+
+export interface TokenValidationState {
+  status: TokenStatus
+  checkedAt?: number
+  reason?: string
+  httpStatus?: number
+  source?: "user_info" | "subscriptions" | "shared_space" | "jwt_expiry"
+}
+
 /**
  * 用户信息 API 响应
  *

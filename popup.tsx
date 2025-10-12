@@ -14,13 +14,12 @@ import { CombinedStatus } from "./components/CombinedStatus"
 import { PeerSpendingChart } from "./components/PeerSpendingChart"
 import { RefreshButton } from "./components/RefreshButton"
 import { SettingsButton } from "./components/SettingsButton"
-import { SettingsPage } from "./components/SettingsPage"
 import { VersionInfo } from "./components/VersionInfo"
 import { useAuth } from "./hooks"
 import { useAccountManager } from "./hooks/useAccountManager"
 import { useTaskExecution } from "./hooks/useTaskExecution"
 import { enablePopupLogging, loggers } from "./lib/logger"
-import { TokenType, ViewType } from "./types"
+import { TokenType } from "./types"
 import { PackySite } from "./types/account"
 
 // 启用 Popup 日志接收
@@ -32,7 +31,6 @@ if (process.env.NODE_ENV === "development") {
 }
 
 function IndexPopup() {
-  const [currentView, setCurrentView] = useState<ViewType>(ViewType.MAIN)
   const { data: authData, refresh: refreshAuth } = useAuth()
   const { currentAccount, refreshAccounts } = useAccountManager() // 从当前账号读取
   const { executeAll, loading: taskLoading } = useTaskExecution()
@@ -81,18 +79,6 @@ function IndexPopup() {
     fetchAllDataAsync()
   }, [])
 
-  // 设置页面
-  if (currentView === ViewType.SETTINGS) {
-    return (
-      <div className="w-[460px] bg-white dark:bg-gray-900">
-        <SettingsPage
-          onBack={() => setCurrentView(ViewType.MAIN)}
-          onRefresh={handleRefresh}
-        />
-      </div>
-    )
-  }
-
   // 主页面
   return (
     <div className="w-[460px] bg-white dark:bg-gray-900">
@@ -102,7 +88,9 @@ function IndexPopup() {
             <h2 className="text-xl font-semibold tracking-tight">主面板</h2>
             <div className="flex items-center space-x-2">
               <SettingsButton
-                onClick={() => setCurrentView(ViewType.SETTINGS)}
+                onClick={() =>
+                  chrome.tabs.create({ url: "tabs/account-manager.html" })
+                }
               />
               <RefreshButton
                 isVisible={isAuthenticated}

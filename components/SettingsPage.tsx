@@ -1,7 +1,6 @@
 import { AccountSwitcher } from "./AccountSwitcher"
 import { DeveloperPanel } from "./DeveloperPanel"
 import { LogoutSection } from "./LogoutSection"
-import { NotificationSettings } from "./NotificationSettings"
 
 interface SettingsPageProps {
   onBack: () => void
@@ -9,12 +8,10 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
-  // 检查是否为开发环境
   const isDevelopment = process.env.NODE_ENV === "development"
 
   return (
     <div className="flex flex-col space-y-6 p-6">
-      {/* 头部 */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold tracking-tight">设置</h2>
         <button
@@ -36,22 +33,13 @@ export function SettingsPage({ onBack, onRefresh }: SettingsPageProps) {
         </button>
       </div>
 
-      {/* 设置内容 */}
       <div className="space-y-6">
-        {/* 账号切换器 */}
         <AccountSwitcher onAccountChanged={onRefresh} />
 
-        {/* 推送通知设置 */}
-        <div className="border-t pt-6 dark:border-gray-700">
-          <NotificationSettings />
-        </div>
-
-        {/* 登出功能 */}
         <div className="border-t pt-6 dark:border-gray-700">
           <LogoutSection onLogout={onRefresh} />
         </div>
 
-        {/* 开发者工具 - 仅在开发环境或特殊条件下显示 */}
         {(isDevelopment || window.location.search.includes("dev=true")) && (
           <>
             <DeveloperPanel />

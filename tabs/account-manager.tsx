@@ -51,6 +51,7 @@ import {
 import { toast, Toaster } from "sonner"
 import { AddAccountDialog } from "~/components/AddAccountDialog"
 import { EditAccountDialog } from "~/components/EditAccountDialog"
+import { NotificationSettingsSection } from "~/components/NotificationSettingsSection"
 import { useAccountManager } from "~/hooks/useAccountManager"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
@@ -535,6 +536,9 @@ function AccountManagerPage() {
             </div>
           )}
         </div>
+
+        {/* 推送通知设置 */}
+        <NotificationSettingsSection />
 
         {/* 添加账号对话框 */}
         <AddAccountDialog

@@ -41,9 +41,13 @@ async function initializeMultiAccountSystem() {
     const accountService = getBackgroundAccountService()
     await accountService.initialize()
     logger.info("✅ 多账号管理系统初始化完成")
+
+    const { migrateNotificationPreferences } = await import(
+      "~/services/notifications"
+    )
+    await migrateNotificationPreferences()
   } catch (error) {
     logger.error("❌ 多账号管理系统初始化失败:", error)
-    // 不抛出错误，允许扩展继续运行（降级到旧系统）
   }
 }
 

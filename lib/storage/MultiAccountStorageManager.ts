@@ -66,17 +66,33 @@ export class MultiAccountStorageManager {
    * - 从聚合键 `account_{id}_info` 读取并提取指定字段
    * - 统一了旧的 get() 和 getForAccount() 两个方法
    *
-   * @param accountId 账号ID（必须显式传入）
+   * 全局域支持：
+   * - 以 `global.` 开头的域会直接从底层存储读取
+   * - accountId 参数会被忽略，但仍需传入以保持 API 一致性
+   *
+   * @param accountId 账号ID（全局域会忽略此参数，可传入当前账号ID）
    * @param domain 存储域
    * @returns 数据或 null
    *
    * @example
    * ```typescript
    * const auth = await manager.get(accountId, StorageDomain.AUTH)
+   * const prefs = await manager.get(accountId, StorageDomain.USER_PREFERENCE) // 全局域
    * ```
    */
   async get<T>(accountId: string, domain: string): Promise<null | T> {
     try {
+      // 全局域：直接从底层存储读取
+      if (this.isGlobalDomain(domain)) {
+        const result = await this._storage.get<T>(domain)
+        logger.debug(
+          `Storage get (global): ${domain} ->`,
+          result ? "found" : "null"
+        )
+        return result ?? null
+      }
+
+      // 账号域：从聚合对象读取
       const accountData = await this.getAccountData(accountId)
 
       if (!accountData) {
@@ -146,11 +162,23 @@ export class MultiAccountStorageManager {
    * - 设置字段为 null（保留数据结构）
    * - RMW模式更新聚合对象
    *
-   * @param accountId 账号ID（必须显式传入）
+   * 全局域支持：
+   * - 以 `global.` 开头的域会直接从底层存储删除
+   * - accountId 参数会被忽略
+   *
+   * @param accountId 账号ID（全局域会忽略此参数）
    * @param domain 存储域
    */
   async remove(accountId: string, domain: string): Promise<void> {
     try {
+      // 全局域：直接从底层存储删除
+      if (this.isGlobalDomain(domain)) {
+        await this._storage.remove(domain)
+        logger.debug(`Storage remove (global): ${domain}`)
+        return
+      }
+
+      // 账号域：从聚合对象中删除
       const accountData = await this.getAccountData(accountId)
 
       if (!accountData) {
@@ -178,7 +206,11 @@ export class MultiAccountStorageManager {
    * - 支持深度合并（默认）或强制覆盖
    * - 统一了旧的 set() 和 setForAccount() 两个方法
    *
-   * @param accountId 账号ID（必须显式传入）
+   * 全局域支持：
+   * - 以 `global.` 开头的域会直接写入底层存储
+   * - accountId 参数会被忽略，但仍需传入以保持 API 一致性
+   *
+   * @param accountId 账号ID（全局域会忽略此参数，可传入当前账号ID）
    * @param domain 存储域
    * @param value 数据值
    * @param override 是否覆盖（默认深度合并）
@@ -190,6 +222,14 @@ export class MultiAccountStorageManager {
     override = false
   ): Promise<void> {
     try {
+      // 全局域：直接写入底层存储
+      if (this.isGlobalDomain(domain)) {
+        await this._storage.set(domain, value)
+        logger.debug(`Storage set (global): ${domain}`)
+        return
+      }
+
+      // 账号域：RMW 模式更新聚合对象
       // 1. Read: 读取完整账号数据
       let accountData = await this.getAccountData(accountId)
 
@@ -258,7 +298,11 @@ export class MultiAccountStorageManager {
    * - 监听聚合键 `account_{id}_info` 的变化
    * - 通过字段比较触发对应回调
    *
-   * @param accountId 账号ID（必须显式传入）
+   * 全局域支持：
+   * - 以 `global.` 开头的域会直接监听全局键
+   * - accountId 参数会被忽略
+   *
+   * @param accountId 账号ID（全局域会忽略此参数，直接监听全局键）
    * @param watchConfig 监听配置（domain → callback）
    *
    * @example
@@ -266,6 +310,9 @@ export class MultiAccountStorageManager {
    * manager.watch(accountId, {
    *   [StorageDomain.USER_INFO]: (change) => {
    *     console.log("User info changed:", change)
+   *   },
+   *   [StorageDomain.USER_PREFERENCE]: (change) => {
+   *     console.log("Global preference changed:", change)
    *   }
    * })
    * ```
@@ -277,54 +324,99 @@ export class MultiAccountStorageManager {
       (change?: { newValue?: unknown; oldValue?: unknown }) => void
     >
   ): void {
-    const aggregateKey = `account_${accountId}_info`
+    // 分离全局域和账号域
+    const globalDomains: Record<
+      string,
+      (change?: { newValue?: unknown; oldValue?: unknown }) => void
+    > = {}
+    const accountDomains: Record<
+      string,
+      (change?: { newValue?: unknown; oldValue?: unknown }) => void
+    > = {}
 
-    logger.info(
-      `🔧 [watch] Setting up watch for account ${accountId}, key: ${aggregateKey}`
-    )
-
-    this._storage.watch({
-      [aggregateKey]: (change) => {
-        const oldData = change?.oldValue as AccountData | undefined
-        const newData = change?.newValue as AccountData | undefined
-
-        logger.debug(`📝 [watch] Aggregate key changed: ${aggregateKey}`, {
-          hasNew: !!newData,
-          hasOld: !!oldData
-        })
-
-        // 对于每个监听的 domain，检查对应字段是否变化
-        Object.entries(watchConfig).forEach(([domain, callback]) => {
-          try {
-            const field = this.domainToField(domain)
-            const oldValue = oldData?.[field]
-            const newValue = newData?.[field]
-
-            // 检查字段是否实际变化（使用引用比较）
-            if (oldValue !== newValue) {
-              logger.debug(
-                `🔔 [watch] Field changed, triggering callback: ${domain}`,
-                {
-                  hasNewValue: newValue !== null && newValue !== undefined,
-                  hasOldValue: oldValue !== null && oldValue !== undefined
-                }
-              )
-
-              callback({ newValue, oldValue })
-            }
-          } catch (error) {
-            logger.error(
-              `[watch] Error processing change for domain ${domain}:`,
-              error
-            )
-          }
-        })
+    Object.entries(watchConfig).forEach(([domain, callback]) => {
+      if (this.isGlobalDomain(domain)) {
+        globalDomains[domain] = callback
+      } else {
+        accountDomains[domain] = callback
       }
     })
 
-    logger.info(
-      `✅ [watch] Registered ${Object.keys(watchConfig).length} domain watchers for account ${accountId}`
-    )
+    // 全局域：直接监听全局键
+    if (Object.keys(globalDomains).length > 0) {
+      logger.info(
+        `🔧 [watch] Setting up global domain watches: ${Object.keys(globalDomains).join(", ")}`
+      )
+      this._storage.watch(globalDomains)
+      logger.info(
+        `✅ [watch] Registered ${Object.keys(globalDomains).length} global domain watchers`
+      )
+    }
+
+    // 账号域：监听聚合键
+    if (Object.keys(accountDomains).length > 0) {
+      const aggregateKey = `account_${accountId}_info`
+
+      logger.info(
+        `🔧 [watch] Setting up watch for account ${accountId}, key: ${aggregateKey}`
+      )
+
+      this._storage.watch({
+        [aggregateKey]: (change) => {
+          const oldData = change?.oldValue as AccountData | undefined
+          const newData = change?.newValue as AccountData | undefined
+
+          logger.debug(`📝 [watch] Aggregate key changed: ${aggregateKey}`, {
+            hasNew: !!newData,
+            hasOld: !!oldData
+          })
+
+          // 对于每个监听的 domain，检查对应字段是否变化
+          Object.entries(accountDomains).forEach(([domain, callback]) => {
+            try {
+              const field = this.domainToField(domain)
+              const oldValue = oldData?.[field]
+              const newValue = newData?.[field]
+
+              // 检查字段是否实际变化（使用引用比较）
+              if (oldValue !== newValue) {
+                logger.debug(
+                  `🔔 [watch] Field changed, triggering callback: ${domain}`,
+                  {
+                    hasNewValue: newValue !== null && newValue !== undefined,
+                    hasOldValue: oldValue !== null && oldValue !== undefined
+                  }
+                )
+
+                callback({ newValue, oldValue })
+              }
+            } catch (error) {
+              logger.error(
+                `[watch] Error processing change for domain ${domain}:`,
+                error
+              )
+            }
+          })
+        }
+      })
+
+      logger.info(
+        `✅ [watch] Registered ${Object.keys(accountDomains).length} account domain watchers for account ${accountId}`
+      )
+    }
+  }
+
+  /**
+   * 判断是否为全局域（私有方法）
+   *
+   * 全局域以 global. 开头，不属于任何特定账号
+   * 这些域直接存储在底层 Plasmo Storage，而不是账号聚合对象中
+   *
+   * @param domain 存储域
+   * @returns 是否为全局域
+   */
+  private isGlobalDomain(domain: string): boolean {
+    return domain.startsWith("global.")
   }
 
   /**

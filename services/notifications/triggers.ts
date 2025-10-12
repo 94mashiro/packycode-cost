@@ -1,21 +1,9 @@
-/**
- * 通知触发器模块
- *
- * 统一管理所有通知的触发逻辑，供多个模块复用
- * Joshua Bloch: "消除代码重复，提取公共逻辑"
- * Martin Fowler: "单一职责原则 - 通知触发与业务逻辑分离"
- */
-
 import browser from "webextension-polyfill"
 
 import { loggers } from "~/lib/logger"
 
 const logger = loggers.notification
 
-/**
- * 触发购买功能可用通知
- * 当 purchaseDisabled 从 true 变为 false 时调用
- */
 export async function triggerPurchaseAvailableNotification(): Promise<void> {
   const notificationId = `purchase-available-${Date.now()}`
 
@@ -33,12 +21,6 @@ export async function triggerPurchaseAvailableNotification(): Promise<void> {
   }
 }
 
-/**
- * 触发 Opus 模型状态变化通知
- * 当 opus_enabled 状态发生变化时调用
- *
- * @param enabled 当前 Opus 状态（true=已开启，false=已关闭）
- */
 export async function triggerOpusStatusNotification(
   enabled: boolean
 ): Promise<void> {

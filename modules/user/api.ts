@@ -3,10 +3,12 @@ import { AccountManager } from "~/lib/account"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
+import {
+  checkOpusNotificationPermission,
+  triggerOpusStatusNotification
+} from "~/services/notifications"
 import { type SystemPreferenceStorage, type UserInfo } from "~/types"
 import { PackySite } from "~/types/account"
-import { triggerOpusStatusNotification } from "~/utils/notificationTriggers"
-import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
 import { getSiteName } from "~/utils/siteHelpers"
 
 const logger = loggers.auth

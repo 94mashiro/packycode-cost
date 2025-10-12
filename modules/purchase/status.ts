@@ -4,8 +4,10 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { triggerPurchaseAvailableNotification } from "~/utils/notificationTriggers"
-import { checkPurchaseNotificationPermission } from "~/utils/notificationPermissions"
+import {
+  checkPurchaseNotificationPermission,
+  triggerPurchaseAvailableNotification
+} from "~/services/notifications"
 
 const logger = loggers.purchase
 

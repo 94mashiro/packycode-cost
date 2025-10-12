@@ -68,12 +68,6 @@ export enum TokenType {
   JWT = "jwt"
 }
 
-// 界面视图类型
-export enum ViewType {
-  MAIN = "main",
-  SETTINGS = "settings"
-}
-
 // ===== API Key响应 =====
 export interface ApiKeyResponse {
   [key: string]: unknown

@@ -28,17 +28,18 @@ const logger = loggers.auth
  * 2. 从 my-assignments 接口获取第一个账号的 opus_enabled 状态
  * 3. 将状态存储到 SystemPreference，与现有机制保持一致
  * 4. 不创建独立的存储域，避免数据冗余
+ * @param context 账号执行上下文
  */
-export async function fetchPrivateOpusStatus(): Promise<void> {
+export async function fetchPrivateOpusStatus(
+  context: import("~/types").AccountContext
+): Promise<void> {
   try {
-    // 获取当前账号站点
+    // 直接从 context 解构所需信息
+    const { accountId, site } = context
     const storageManager = getStorageManager()
-    const accountManager = new AccountManager(storageManager)
-    const currentAccount = await accountManager.getCurrentAccount()
-    const currentSite = currentAccount?.site
 
     // 只在滴滴车模式 (SHARED) 下执行
-    if (currentSite !== PackySite.SHARED) {
+    if (site !== PackySite.SHARED) {
       // 站点名称映射
       const siteNames: Record<PackySite, string> = {
         [PackySite.CODEX]: "Codex",
@@ -46,8 +47,8 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
         [PackySite.WWW]: "公交车"
       }
 
-      const siteName = siteNames[currentSite ?? PackySite.WWW]
-      const siteNote = currentSite === PackySite.CODEX ? "，没有 Opus 模型" : ""
+      const siteName = siteNames[site]
+      const siteNote = site === PackySite.CODEX ? "，没有 Opus 模型" : ""
 
       logger.debug(
         `⏭️ 跳过私有 Opus 状态获取：当前为${siteName}模式${siteNote}`
@@ -57,9 +58,10 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
 
     logger.info("🔍 获取滴滴车模式 Opus 状态...")
 
-    // 使用统一的API客户端获取数据
+    // 使用统一的API客户端获取数据，传入完整上下文
     const rawData = await api.get<SharedSpaceApiResponse>(
-      ApiEndpointType.SHARED_SPACE
+      ApiEndpointType.SHARED_SPACE,
+      context
     )
 
     // 检查是否有有效的数据返回
@@ -82,8 +84,9 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
     const opusEnabled = firstAssignment.opus_enabled
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
 
-    // 获取当前存储的状态（复用第 35 行的 storageManager）
-    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+    // 获取当前存储的状态
+    const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
+      accountId,
       StorageDomain.SYSTEM_PREFERENCE
     )
     const previousOpusState = systemPref?.opus_enabled
@@ -108,10 +111,14 @@ export async function fetchPrivateOpusStatus(): Promise<void> {
       }
 
       // 更新系统偏好，包含 opus_enabled 和 rate_limit_reset_at
-      await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-        opus_enabled: opusEnabled,
-        rate_limit_reset_at: rateLimitResetAt
-      })
+      await storageManager.setForAccount(
+        accountId,
+        StorageDomain.SYSTEM_PREFERENCE,
+        {
+          opus_enabled: opusEnabled,
+          rate_limit_reset_at: rateLimitResetAt
+        }
+      )
 
       // 滴滴车模式下不触发通知 - Opus 状态相对固定，无需动态通知
       logger.debug(

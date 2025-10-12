@@ -16,7 +16,7 @@
 import { Storage } from "@plasmohq/storage"
 import { merge } from "lodash"
 
-import type { AccountData } from "~/types"
+import type { AccountData, AccountRegistry } from "~/types"
 
 import { loggers } from "~/lib/logger"
 
@@ -36,8 +36,13 @@ const logger = loggers.storage
 export class MultiAccountStorageManager {
   private _storage: Storage
   private accountDataCache: Map<string, AccountData> = new Map() // v3.1.0+ 缓存层
-  private currentAccountId: null | string = null
+  private currentAccountId: null | string = null // @deprecated v3.6.0+ 不再使用，保留用于向后兼容
   private initPromise: Promise<void> // 初始化 Promise，确保账号恢复完成
+
+  // v3.6.0+ 激活账号ID缓存（Single Source of Truth 优化）
+  private activeAccountIdCache: null | string = null
+  private activeAccountIdCacheTime: number = 0
+  private readonly activeAccountIdCacheTTL = 100 // 100ms 短期缓存
 
   constructor(storage: Storage) {
     this._storage = storage
@@ -82,13 +87,13 @@ export class MultiAccountStorageManager {
 
   /**
    * 获取当前账号的数据
-   * 自动使用 currentAccountId 生成存储键
    *
    * v3.1.0+ 优化：从聚合对象中提取字段
+   * v3.6.0+ 架构改进：从 registry 实时读取 activeAccountId（Single Source of Truth）
    *
    * @param domain 存储域
    * @returns 数据或 null
-   * @throws 如果未设置当前账号
+   * @throws 如果没有激活账号
    *
    * @example
    * ```typescript
@@ -97,19 +102,22 @@ export class MultiAccountStorageManager {
    * ```
    */
   async get<T>(domain: string): Promise<null | T> {
-    // 等待初始化完成
+    // 等待初始化完成（v3.6.0+: 仍需要等待，确保 registry 已加载）
     await this.initPromise
 
-    if (!this.currentAccountId) {
-      throw new Error("No active account set. Call setCurrentAccount() first.")
+    // v3.6.0+ 改进：从 registry 实时读取 activeAccountId
+    const activeAccountId = await this.getActiveAccountId()
+
+    if (!activeAccountId) {
+      throw new Error("No active account. Please add an account first.")
     }
 
     try {
-      // 读取完整账号数据
-      const accountData = await this.getAccountData()
+      // 读取完整账号数据（使用从 registry 获取的 activeAccountId）
+      const accountData = await this.getAccountData(activeAccountId)
 
       if (!accountData) {
-        logger.debug(`No account data found for: ${this.currentAccountId}`)
+        logger.debug(`No account data found for: ${activeAccountId}`)
         return null
       }
 
@@ -160,7 +168,10 @@ export class MultiAccountStorageManager {
   /**
    * 获取当前激活账号ID
    *
+   * @deprecated v3.6.0+ 此方法返回内存缓存的 currentAccountId，不再是 Single Source of Truth
    * @returns 当前账号ID，如果未设置则返回 null
+   *
+   * 建议：内部使用 getActiveAccountId() 私有方法从 registry 读取最新值
    */
   getCurrentAccountId(): null | string {
     return this.currentAccountId
@@ -227,24 +238,28 @@ export class MultiAccountStorageManager {
    * 删除当前账号的数据
    *
    * v3.1.0+ 优化：设置字段为 null（保留数据结构）
+   * v3.6.0+ 架构改进：从 registry 实时读取 activeAccountId（Single Source of Truth）
    *
    * @param domain 存储域
-   * @throws 如果未设置当前账号
+   * @throws 如果没有激活账号
    */
   async remove(domain: string): Promise<void> {
     // 等待初始化完成
     await this.initPromise
 
-    if (!this.currentAccountId) {
-      throw new Error("No active account set. Call setCurrentAccount() first.")
+    // v3.6.0+ 改进：从 registry 实时读取 activeAccountId
+    const activeAccountId = await this.getActiveAccountId()
+
+    if (!activeAccountId) {
+      throw new Error("No active account. Please add an account first.")
     }
 
     try {
       // 读取完整账号数据
-      const accountData = await this.getAccountData()
+      const accountData = await this.getAccountData(activeAccountId)
 
       if (!accountData) {
-        logger.debug(`No account data to remove for: ${this.currentAccountId}`)
+        logger.debug(`No account data to remove for: ${activeAccountId}`)
         return
       }
 
@@ -253,7 +268,7 @@ export class MultiAccountStorageManager {
       this.setAccountDataField(accountData, field, null)
 
       // 写回
-      await this.setAccountData(accountData)
+      await this.setAccountData(accountData, activeAccountId)
       logger.debug(`Storage remove: ${domain}`)
     } catch (error) {
       logger.error(`Storage remove error for domain ${domain}:`, error)
@@ -266,23 +281,27 @@ export class MultiAccountStorageManager {
    *
    * v3.1.0+ 优化：RMW 模式更新聚合对象
    * v3.5.1+ 修复：统一参数顺序为 (domain, value, override)
+   * v3.6.0+ 架构改进：从 registry 实时读取 activeAccountId（Single Source of Truth）
    *
    * @param domain 存储域
    * @param value 数据值
    * @param override 是否覆盖（默认深度合并）
-   * @throws 如果未设置当前账号
+   * @throws 如果没有激活账号
    */
   async set<T>(domain: string, value: T, override = false): Promise<void> {
     // 等待初始化完成
     await this.initPromise
 
-    if (!this.currentAccountId) {
-      throw new Error("No active account set. Call setCurrentAccount() first.")
+    // v3.6.0+ 改进：从 registry 实时读取 activeAccountId
+    const activeAccountId = await this.getActiveAccountId()
+
+    if (!activeAccountId) {
+      throw new Error("No active account. Please add an account first.")
     }
 
     try {
       // 1. 读取完整账号数据（Read）
-      let accountData = await this.getAccountData()
+      let accountData = await this.getAccountData(activeAccountId)
 
       if (!accountData) {
         accountData = this.createEmptyAccountData()
@@ -334,7 +353,7 @@ export class MultiAccountStorageManager {
       }
 
       // 3. 写回完整数据（Write）
-      await this.setAccountData(accountData)
+      await this.setAccountData(accountData, activeAccountId)
     } catch (error) {
       logger.error(`Storage set error for domain ${domain}:`, error)
       throw error
@@ -343,16 +362,23 @@ export class MultiAccountStorageManager {
 
   /**
    * 设置当前激活账号
-   * 所有后续的 get/set 操作都基于此账号
+   *
+   * v3.6.0+ 架构变更：
+   * - 此方法主要用于向后兼容，仍会更新内存中的 currentAccountId
+   * - 但 get/set/remove 方法已改为从 registry 实时读取 activeAccountId
+   * - 实际的账号激活由 AccountManager.switchAccount() 通过更新 registry 管理
    *
    * @param accountId 账号ID
+   * @deprecated v3.6.0+ 推荐通过 AccountManager.switchAccount() 切换账号
    *
    * @example
    * ```typescript
-   * const manager = new MultiAccountStorageManager(storage)
+   * // 旧方式（仍然有效但不推荐）
    * await manager.setCurrentAccount("uuid-1234")
-   * // 之后的所有操作都针对这个账号
-   * const auth = await manager.get(StorageDomain.AUTH)
+   *
+   * // 新方式（推荐）
+   * const accountManager = new AccountManager(storageManager)
+   * await accountManager.switchAccount("uuid-1234")
    * ```
    */
   async setCurrentAccount(accountId: string): Promise<void> {
@@ -360,43 +386,14 @@ export class MultiAccountStorageManager {
       throw new Error(`Invalid account ID: ${accountId}`)
     }
 
+    // v3.6.0+: 仍然更新内存状态，用于向后兼容
+    // 但 get/set/remove 方法会从 registry 读取最新值
     this.currentAccountId = accountId
-    logger.info(`📌 Current account set to: ${accountId}`)
-  }
 
-  /**
-   * 从存储中恢复上次激活的账号
-   *
-   * 在构造时自动调用，确保 currentAccountId 始终有效。
-   * 这避免了 popup 和 background 初始化竞态条件的问题。
-   *
-   * 恢复策略：
-   * 1. 优先使用 ACCOUNT_REGISTRY.activeAccountId
-   * 2. 如果没有 activeAccountId，激活第一个账号
-   * 3. 如果没有任何账号，保持 currentAccountId 为 null
-   *
-   * @private
-   */
-  private async restoreCurrentAccount(): Promise<void> {
-    try {
-      const registry = await this._storage.get<{
-        activeAccountId?: string
-        accounts: Array<{ id: string; isActive?: boolean }>
-      }>(StorageDomain.ACCOUNT_REGISTRY)
+    // 清空 activeAccountId 缓存，强制下次从 registry 读取
+    this.activeAccountIdCache = null
 
-      if (registry?.activeAccountId) {
-        this.currentAccountId = registry.activeAccountId
-        logger.info(`✅ Auto-restored current account: ${this.currentAccountId}`)
-      } else if (registry?.accounts && registry.accounts.length > 0) {
-        // 如果没有 activeAccountId，但有账号列表，激活第一个
-        this.currentAccountId = registry.accounts[0].id
-        logger.info(`✅ Auto-activated first account: ${this.currentAccountId}`)
-      } else {
-        logger.warn("⚠️ No accounts found in registry")
-      }
-    } catch (error) {
-      logger.error("❌ Failed to restore current account:", error)
-    }
+    logger.info(`📌 Current account set to: ${accountId} (backward compatibility)`)
   }
 
   /**
@@ -443,11 +440,18 @@ export class MultiAccountStorageManager {
   }
 
   /**
-   * 版本感知的数据监听
+   * 聚合键感知的数据监听（v3.6.1+ 修复）
    *
-   * 自动处理账号切换时的监听器更新
+   * 核心修复：
+   * - 监听聚合键 `account_{id}_info` 而不是分散键
+   * - 通过比较字段变化触发对应回调
+   * - 支持账号切换时自动重新设置监听器
    *
-   * @param watchConfig 监听配置
+   * Bug 说明：
+   * v3.1.0 改为聚合存储后，watch 仍监听旧的分散键，导致监听器永远不触发。
+   * 这是 popup UI 无法响应 storage 更新的根本原因。
+   *
+   * @param watchConfig 监听配置（domain → callback）
    *
    * @example
    * ```typescript
@@ -466,46 +470,158 @@ export class MultiAccountStorageManager {
   ): void {
     // 存储原始的监听配置
     const originalConfig = { ...watchConfig }
+    let currentWatchedAccountId: null | string = null
 
     // 设置监听器的函数（异步）
     const setupWatchers = async () => {
       // 等待初始化完成
       await this.initPromise
 
-      if (!this.currentAccountId) {
+      // v3.6.1+: 从 registry 读取激活账号（Single Source of Truth）
+      const activeAccountId = await this.getActiveAccountId()
+
+      if (!activeAccountId) {
         logger.warn("Cannot setup watchers: no active account")
         return
       }
 
-      const accountWatchConfig: Record<
-        string,
-        (change?: { newValue?: unknown; oldValue?: unknown }) => void
-      > = {}
+      // 记录当前监听的账号
+      currentWatchedAccountId = activeAccountId
 
-      Object.entries(originalConfig).forEach(([domain, callback]) => {
-        // 安全检查：确保有当前账号
-        if (!this.currentAccountId) {
-          logger.warn("No current account, skipping watch setup for:", domain)
-          return
+      // v3.6.1+ 修复：监听聚合键 `account_{id}_info`
+      const aggregateKey = `account_${activeAccountId}_info`
+
+      logger.info(
+        `🔧 [watch] Setting up watch for aggregate key: ${aggregateKey}`
+      )
+
+      // 监听聚合键的变化
+      this._storage.watch({
+        [aggregateKey]: (change) => {
+          const oldData = change?.oldValue as AccountData | undefined
+          const newData = change?.newValue as AccountData | undefined
+
+          logger.debug(
+            `📝 [watch] Aggregate key changed: ${aggregateKey}`,
+            {
+              hasOld: !!oldData,
+              hasNew: !!newData
+            }
+          )
+
+          // 对于每个监听的 domain，检查对应字段是否变化
+          Object.entries(originalConfig).forEach(([domain, callback]) => {
+            try {
+              const field = this.domainToField(domain)
+              const oldValue = oldData?.[field]
+              const newValue = newData?.[field]
+
+              // 检查字段是否实际变化（深度比较会太昂贵，使用引用比较）
+              if (oldValue !== newValue) {
+                logger.debug(
+                  `🔔 [watch] Field changed, triggering callback: ${domain}`,
+                  {
+                    hasOldValue: oldValue !== null && oldValue !== undefined,
+                    hasNewValue: newValue !== null && newValue !== undefined
+                  }
+                )
+
+                // 触发回调
+                callback({ newValue, oldValue })
+              }
+            } catch (error) {
+              logger.error(
+                `[watch] Error processing change for domain ${domain}:`,
+                error
+              )
+            }
+          })
         }
-
-        const key = AccountStorageKeyGenerator.generateKey(
-          this.currentAccountId,
-          domain
-        )
-        accountWatchConfig[key] = callback
-        logger.debug(`Setup watch: ${domain} -> ${key}`)
       })
 
-      this._storage.watch(accountWatchConfig)
+      logger.info(
+        `✅ [watch] Registered ${Object.keys(watchConfig).length} domain watchers on ${aggregateKey}`
+      )
+    }
+
+    // 监听账号切换（v3.6.1+ 新增）
+    // 当激活账号变化时，重新设置监听器到新账号的聚合键
+    const setupAccountSwitchWatch = async () => {
+      await this.initPromise
+
+      this._storage.watch({
+        [StorageDomain.ACCOUNT_REGISTRY]: async (change) => {
+          const oldRegistry = change?.oldValue as AccountRegistry | undefined
+          const newRegistry = change?.newValue as AccountRegistry | undefined
+
+          const oldActiveId = oldRegistry?.activeAccountId
+          const newActiveId = newRegistry?.activeAccountId
+
+          // 账号切换检测
+          if (oldActiveId !== newActiveId && newActiveId) {
+            logger.info(
+              `🔄 [watch] Active account changed: ${oldActiveId} → ${newActiveId}`
+            )
+
+            // 如果监听的账号发生了变化，重新设置监听器
+            if (currentWatchedAccountId !== newActiveId) {
+              logger.info(
+                `🔄 [watch] Re-setting up watchers for new account: ${newActiveId}`
+              )
+              await setupWatchers()
+            }
+          }
+        }
+      })
+
+      logger.info("✅ [watch] Account switch watcher registered")
     }
 
     // 启动异步设置
     setupWatchers()
+    setupAccountSwitchWatch()
 
     logger.debug(
-      `Registered ${Object.keys(watchConfig).length} watch listeners (pending init)`
+      `[watch] Initiated watch setup for ${Object.keys(watchConfig).length} domains`
     )
+  }
+
+  /**
+   * 获取当前激活账号ID（v3.6.0+ Single Source of Truth）
+   *
+   * 设计原则：
+   * - 从 registry.activeAccountId 读取，而不是使用 this.currentAccountId
+   * - 确保跨实例一致性（不同 popup/context 读取同一数据源）
+   * - 添加短期缓存（100ms）优化性能，避免同一调用栈中的重复读取
+   *
+   * @returns 当前激活账号ID，如果没有则返回 null
+   * @private
+   */
+  private async getActiveAccountId(): Promise<null | string> {
+    // 检查短期缓存（避免同一调用栈中的重复读取）
+    const now = Date.now()
+    if (
+      this.activeAccountIdCache &&
+      now - this.activeAccountIdCacheTime < this.activeAccountIdCacheTTL
+    ) {
+      logger.debug(`Active account ID cache hit: ${this.activeAccountIdCache}`)
+      return this.activeAccountIdCache
+    }
+
+    // 从 registry 读取最新值（Single Source of Truth）
+    logger.debug("Active account ID cache miss, reading from registry")
+    const registry = await this._storage.get<AccountRegistry>(
+      StorageDomain.ACCOUNT_REGISTRY
+    )
+
+    const activeAccountId = registry?.activeAccountId ?? null
+
+    // 更新缓存
+    this.activeAccountIdCache = activeAccountId
+    this.activeAccountIdCacheTime = now
+
+    logger.debug(`Active account ID from registry: ${activeAccountId}`)
+    return activeAccountId
   }
 
   /**
@@ -514,6 +630,7 @@ export class MultiAccountStorageManager {
   private createEmptyAccountData(): AccountData {
     return {
       auth: null,
+      isValid: false, // 初始状态为 false，等待服务器验证
       notificationStates: {},
       peerSpending: null,
       purchaseConfig: null,
@@ -567,6 +684,43 @@ export class MultiAccountStorageManager {
     }
 
     return data
+  }
+
+  /**
+   * 从存储中恢复上次激活的账号
+   *
+   * 在构造时自动调用，确保 currentAccountId 始终有效。
+   * 这避免了 popup 和 background 初始化竞态条件的问题。
+   *
+   * 恢复策略：
+   * 1. 优先使用 ACCOUNT_REGISTRY.activeAccountId
+   * 2. 如果没有 activeAccountId，激活第一个账号
+   * 3. 如果没有任何账号，保持 currentAccountId 为 null
+   *
+   * @private
+   */
+  private async restoreCurrentAccount(): Promise<void> {
+    try {
+      const registry = await this._storage.get<{
+        accounts: Array<{ id: string; isActive?: boolean }>
+        activeAccountId?: string
+      }>(StorageDomain.ACCOUNT_REGISTRY)
+
+      if (registry?.activeAccountId) {
+        this.currentAccountId = registry.activeAccountId
+        logger.info(
+          `✅ Auto-restored current account: ${this.currentAccountId}`
+        )
+      } else if (registry?.accounts && registry.accounts.length > 0) {
+        // 如果没有 activeAccountId，但有账号列表，激活第一个
+        this.currentAccountId = registry.accounts[0].id
+        logger.info(`✅ Auto-activated first account: ${this.currentAccountId}`)
+      } else {
+        logger.warn("⚠️ No accounts found in registry")
+      }
+    } catch (error) {
+      logger.error("❌ Failed to restore current account:", error)
+    }
   }
 
   /**

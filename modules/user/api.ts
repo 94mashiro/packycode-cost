@@ -5,16 +5,26 @@ import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
-import { type SystemPreferenceStorage, type UserInfo } from "~/types"
+import {
+  type AuthStorage,
+  type SystemPreferenceStorage,
+  type UserInfo
+} from "~/types"
 import { PackySite } from "~/types/account"
 import { checkOpusNotificationPermission } from "~/utils/notificationPermissions"
 
 const logger = loggers.auth
 
-export async function fetchUserInfo(): Promise<null | UserInfo> {
+export async function fetchUserInfo(
+  context: import("~/types").AccountContext
+): Promise<null | UserInfo> {
   try {
-    // 使用统一的API客户端，自动处理URL适配、认证和错误处理
-    const rawData = await api.getUserInfo()
+    // 直接从 context 解构所需信息，无需查询
+    const { accountId, site } = context
+    const storageManager = getStorageManager()
+
+    // 使用统一的API客户端，传递完整上下文
+    const rawData = await api.getUserInfo(context)
 
     // 转换为新的存储格式
     const dailyLimit = Number(rawData.daily_budget_usd) || 0
@@ -39,17 +49,11 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       // 删除无用的 id 硬编码 - 该字段无实际用途
     }
 
-    const storageManager = getStorageManager()
-
-    // 获取当前账号站点，检查是否为公交车模式
-    const accountManager = new AccountManager(storageManager)
-    const currentAccount = await accountManager.getCurrentAccount()
-    const currentSite = currentAccount?.site ?? PackySite.WWW
-
     // 只在公交车模式下处理 opus_enabled 状态变化（排除 CODEX，因为没有 Opus 模型）
-    if (currentSite === PackySite.WWW) {
+    if (site === PackySite.WWW) {
       // 检查 opus_enabled 状态变化
-      const systemPref = await storageManager.get<SystemPreferenceStorage>(
+      const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
+        accountId,
         StorageDomain.SYSTEM_PREFERENCE
       )
       const previousOpusState = systemPref?.opus_enabled
@@ -76,9 +80,13 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
       }
 
       // 更新系统偏好
-      await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-        opus_enabled: currentOpusState
-      })
+      await storageManager.setForAccount(
+        accountId,
+        StorageDomain.SYSTEM_PREFERENCE,
+        {
+          opus_enabled: currentOpusState
+        }
+      )
     } else {
       // 站点名称映射
       const siteNames: Record<PackySite, string> = {
@@ -87,11 +95,11 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
         [PackySite.WWW]: "公交车"
       }
 
-      const siteName = siteNames[currentSite]
+      const siteName = siteNames[site]
       const siteNote =
-        currentSite === PackySite.SHARED
+        site === PackySite.SHARED
           ? "，由 SharedSpace API 负责管理"
-          : currentSite === PackySite.CODEX
+          : site === PackySite.CODEX
             ? "，没有 Opus 模型"
             : ""
 
@@ -99,7 +107,11 @@ export async function fetchUserInfo(): Promise<null | UserInfo> {
     }
 
     // 存储用户信息
-    await storageManager.set(StorageDomain.USER_INFO, userInfoStorage, true)
+    await storageManager.setForAccount(
+      accountId,
+      StorageDomain.USER_INFO,
+      userInfoStorage
+    )
 
     return userInfoStorage
   } catch (error) {

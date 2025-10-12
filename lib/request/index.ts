@@ -63,6 +63,32 @@ export async function request<T>(
     try {
       logger.debug(`${method} ${url} (attempt ${attempt}/${maxRetries})`)
 
+      // 🔍 调试日志：JSON 格式显示实际发送的请求信息
+      const requestInfo = {
+        attempt,
+        bodyLength: body?.length || 0,
+        hasBody: !!body,
+        headers: Object.entries(headers).map(([key, value]) => {
+          if (
+            key.toLowerCase() === "authorization" ||
+            key.toLowerCase() === "cookie"
+          ) {
+            return {
+              key,
+              // 🔐 完整值（仅用于调试）
+              valueFull: value,
+              valueLength: value.length,
+              valuePreview: value.substring(0, 30) + "..."
+            }
+          }
+          return { key, value }
+        }),
+        maxRetries,
+        method,
+        url
+      }
+      logger.info("[REQUEST] 请求信息:", JSON.stringify(requestInfo, null, 2))
+
       const response = await fetch(url, {
         body,
         headers,
@@ -77,6 +103,16 @@ export async function request<T>(
       const data = await response.json()
       logger.debug(`${method} ${url} succeeded`)
 
+      // 🔍 调试日志：成功响应
+      const successInfo = {
+        method,
+        status: response.status,
+        statusText: response.statusText,
+        success: true,
+        url
+      }
+      logger.info("[REQUEST] 响应结果:", JSON.stringify(successInfo, null, 2))
+
       return {
         data,
         success: true
@@ -85,6 +121,17 @@ export async function request<T>(
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error"
       logger.error(`${method} ${url} attempt ${attempt} failed:`, errorMessage)
+
+      // 🔍 调试日志：失败响应
+      const errorInfo = {
+        attempt,
+        error: errorMessage,
+        maxRetries,
+        method,
+        success: false,
+        url
+      }
+      logger.error("[REQUEST] 错误信息:", JSON.stringify(errorInfo, null, 2))
 
       // 如果是最后一次尝试，返回失败
       if (attempt === maxRetries) {

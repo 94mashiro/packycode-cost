@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
-import { type StorageDomainMap } from "~/lib/storage/domains"
+import { StorageDomain, type StorageDomainMap } from "~/lib/storage/domains"
 
 const logger = loggers.ui
 
@@ -97,7 +97,7 @@ export function useStorage<T extends keyof StorageDomainMap>(
           )
 
           // ✅ 使用 StorageManager 的版本感知 watch
-          // StorageManager 会自动处理版本切换，无需业务层额外监听
+          // 1. 监听目标域数据变化
           storage.watch({
             [domain]: () => {
               if (mounted) {
@@ -109,7 +109,20 @@ export function useStorage<T extends keyof StorageDomainMap>(
             }
           })
 
-          const watchDescription = domain
+          // 2. 监听账号切换事件（v3.5.2+ 新增）
+          // 当账号切换时，自动刷新数据以获取新账号的数据
+          storage.getUnderlyingStorage().watch({
+            [StorageDomain.ACCOUNT_REGISTRY]: () => {
+              if (mounted) {
+                logger.debug(
+                  `🔄 [useStorage] Account switched, refreshing: ${domain}`
+                )
+                refresh()
+              }
+            }
+          })
+
+          const watchDescription = `${domain} + ACCOUNT_REGISTRY`
 
           logger.debug(
             `🔗 useStorage watch registered for: ${watchDescription}`

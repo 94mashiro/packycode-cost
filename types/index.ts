@@ -424,6 +424,7 @@ export interface UserPreferenceStorage {
 // ===== 多账号管理系统类型 (v3.0.0+) =====
 export type {
   Account,
+  AccountContext,
   AccountData,
   AccountDetectionResult,
   AccountRegistry,

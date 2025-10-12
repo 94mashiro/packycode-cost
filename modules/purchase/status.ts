@@ -22,8 +22,11 @@ export { type PackyConfig }
  * 3. 触发通知（如果从禁用变为可用）
  * 4. 更新存储状态
  * 5. 释放锁
+ * @param context 账号执行上下文
  */
-export async function checkAndNotifyPurchaseStatus(): Promise<{
+export async function checkAndNotifyPurchaseStatus(
+  context: import("~/types").AccountContext
+): Promise<{
   config?: PackyConfig
   success: boolean
   triggered: boolean
@@ -39,8 +42,11 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
   logger.debug("[LOCK] Acquired purchase status check lock")
 
   try {
-    // 1. 获取最新的API数据
-    logger.debug("[API] Fetching latest purchase status")
+    // 直接从 context 解构所需信息
+    const { accountId, site } = context
+
+    // 1. 获取最新的API数据 (getConfig 不需要认证)
+    logger.debug(`[API] Fetching latest purchase status for ${site}`)
     const currentConfig = await api.getConfig()
 
     // 验证响应数据结构
@@ -51,7 +57,8 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
 
     // 2. 检查购买状态变化并决定是否通知
     const storageManager = getStorageManager()
-    const systemPref = await storageManager.get<SystemPreferenceStorage>(
+    const systemPref = await storageManager.getForAccount<SystemPreferenceStorage>(
+      accountId,
       StorageDomain.SYSTEM_PREFERENCE
     )
     const previousPurchaseState = systemPref?.purchase_disabled
@@ -84,10 +91,18 @@ export async function checkAndNotifyPurchaseStatus(): Promise<{
     }
 
     // 4. 更新存储状态
-    await storageManager.set(StorageDomain.SYSTEM_PREFERENCE, {
-      purchase_disabled: currentConfig.purchaseDisabled
-    })
-    await storageManager.set(StorageDomain.PURCHASE_CONFIG, currentConfig, true)
+    await storageManager.setForAccount(
+      accountId,
+      StorageDomain.SYSTEM_PREFERENCE,
+      {
+        purchase_disabled: currentConfig.purchaseDisabled
+      }
+    )
+    await storageManager.setForAccount(
+      accountId,
+      StorageDomain.PURCHASE_CONFIG,
+      currentConfig
+    )
 
     logger.debug("[STORAGE] Purchase status updated in storage")
 

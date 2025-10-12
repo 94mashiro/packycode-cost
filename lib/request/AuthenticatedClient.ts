@@ -39,12 +39,22 @@ export class AuthenticatedClient {
    * 执行认证感知的GET请求
    * @param endpoint API端点URL
    * @param options 请求选项
+   * @param authData 可选的认证数据，用于多账号场景
    * @returns 请求结果数据
    * @throws AuthenticationError token相关错误
    * @throws ApiError 其他API错误
    */
-  async get<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await this.executeWithAuth<T>(endpoint, "GET", options)
+  async get<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    authData?: AuthStorage
+  ): Promise<T> {
+    const response = await this.executeWithAuth<T>(
+      endpoint,
+      "GET",
+      options,
+      authData
+    )
     return this.extractData(response)
   }
 
@@ -53,6 +63,7 @@ export class AuthenticatedClient {
    * @param endpoint API端点URL
    * @param data 请求体数据
    * @param options 请求选项
+   * @param authData 可选的认证数据，用于多账号场景
    * @returns 请求结果数据
    * @throws AuthenticationError token相关错误
    * @throws ApiError 其他API错误
@@ -60,35 +71,134 @@ export class AuthenticatedClient {
   async post<T>(
     endpoint: string,
     data?: unknown,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    authData?: AuthStorage
   ): Promise<T> {
-    const response = await this.executeWithAuth<T>(endpoint, "POST", {
-      ...options,
-      body: data ? JSON.stringify(data) : undefined
-    })
+    const response = await this.executeWithAuth<T>(
+      endpoint,
+      "POST",
+      {
+        ...options,
+        body: data ? JSON.stringify(data) : undefined
+      },
+      authData
+    )
     return this.extractData(response)
   }
 
   /**
    * 核心认证逻辑 - 统一处理token验证和注入
+   * @param authData 可选的认证数据，如果提供则使用它而不是从 storage 读取
    */
   private async executeWithAuth<T>(
     endpoint: string,
     method: string,
-    options: RequestInit
+    options: RequestInit,
+    authData?: AuthStorage
   ): Promise<ApiResponse<T>> {
-    // 1. 获取认证信息
-    const authData = await this.getValidAuthData()
-    if (!authData) {
+    console.log("======= authData =======", authData)
+    // 1. 获取认证信息（优先使用传入的，否则从 storage 读取）
+    const auth = authData || (await this.getValidAuthData())
+    if (!auth) {
       throw new AuthenticationError("No valid authentication token found")
     }
 
-    // 2. 注入认证头
-    const authHeaders = {
-      Authorization: `Bearer ${authData.token}`,
-      "Content-Type": "application/json",
-      ...options.headers
+    // 🔍 调试日志：JSON 格式输出认证信息
+    const authInfo = {
+      endpoint,
+      isExpired: auth.expiry ? auth.expiry < Date.now() : false,
+      method,
+      tokenExpiry: auth.expiry ? new Date(auth.expiry).toISOString() : null,
+      // 🔐 完整 token（仅用于调试，生产环境应删除）
+      tokenFull: auth.token,
+      tokenLength: auth.token?.length || 0,
+      tokenPreview: auth.token?.substring(0, 20) + "...",
+      tokenType: auth.type
     }
+    logger.info("[AUTH] 认证信息:", JSON.stringify(authInfo, null, 2))
+
+    // 2. 根据 token 类型注入不同的认证方式
+    let authHeaders: Record<string, string>
+    const baseHeaders: Record<string, string> = {
+      "Content-Type": "application/json"
+    }
+
+    // 合并已有的 headers（如果存在）
+    if (options.headers) {
+      const existingHeaders = options.headers as Record<string, string>
+      Object.assign(baseHeaders, existingHeaders)
+    }
+
+    if (auth.type === TokenType.JWT) {
+      // JWT 模式：放在 Cookie 中，key 为 "token"
+      authHeaders = {
+        ...baseHeaders,
+        Authorization: `Bearer ${auth.token}`,
+        Cookie: `token=${auth.token}`
+      }
+      logger.info(
+        "[AUTH] 认证模式:",
+        JSON.stringify(
+          {
+            cookieKey: "token",
+            // 🔐 完整 Cookie 值（仅用于调试）
+            cookieValueFull: `token=${auth.token}`,
+            cookieValueLength: auth.token?.length || 0,
+            cookieValuePreview: auth.token?.substring(0, 20) + "...",
+            method: "Cookie",
+            mode: "JWT"
+          },
+          null,
+          2
+        )
+      )
+    } else {
+      // API Key 模式：放在 Authorization header 中
+      authHeaders = {
+        ...baseHeaders,
+        Authorization: `Bearer ${auth.token}`
+      }
+      logger.info(
+        "[AUTH] 认证模式:",
+        JSON.stringify(
+          {
+            headerKey: "Authorization",
+            // 🔐 完整 Authorization 值（仅用于调试）
+            headerValueFull: `Bearer ${auth.token}`,
+            headerValuePreview: `Bearer ${auth.token?.substring(0, 20)}...`,
+            method: "Bearer",
+            mode: "API_KEY",
+            tokenLength: auth.token?.length || 0
+          },
+          null,
+          2
+        )
+      )
+    }
+
+    // 🔍 调试日志：显示最终的 headers
+    const headersSummary = Object.entries(authHeaders).map(([key, value]) => {
+      if (
+        key.toLowerCase() === "authorization" ||
+        key.toLowerCase() === "cookie"
+      ) {
+        return {
+          key,
+          // 🔐 完整值（仅用于调试）
+          valueFull: value,
+          valueLength: value.length,
+          valuePreview: value.substring(0, 30) + "..."
+        }
+      }
+      return {
+        key,
+        value
+      }
+    })
+    logger.info(
+      "[AUTH] 最终请求 Headers:",
+      JSON.stringify(headersSummary, null, 2)
+    )
 
     // 3. 执行HTTP请求
     const requestFunction = method === "GET" ? baseGet : basePost

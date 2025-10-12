@@ -66,6 +66,17 @@ function IndexPopup() {
   }
 
   useEffect(() => {
+    console.log(
+      "Popup updated, isAuthenticated: ",
+      isAuthenticated,
+      " authData: ",
+      authData,
+      " currentAccountSite: ",
+      currentAccountSite
+    )
+  }, [authData, currentAccountSite, isAuthenticated])
+
+  useEffect(() => {
     // popup打开时立即触发所有数据获取任务
     fetchAllDataAsync()
   }, [])

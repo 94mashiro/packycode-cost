@@ -25,10 +25,14 @@ import type {
   UpdateAccountConfig
 } from "~/types"
 
+import { loggers } from "~/lib/logger"
 import { PackySite } from "~/types/account"
 
 import { AccountManager } from "../lib/account"
 import { getStorageManager } from "../lib/storage"
+import { StorageDomain } from "../lib/storage/domains"
+
+const logger = loggers.ui
 
 /**
  * 账号管理 Hook
@@ -209,6 +213,23 @@ export function useAccountManager(site?: PackySite) {
   // 初始加载
   useEffect(() => {
     loadAccounts()
+  }, [loadAccounts])
+
+  // 监听账号注册表变化（v3.5.2+ 新增）
+  // 当其他组件切换账号时，自动重新加载账号列表
+  useEffect(() => {
+    const storage = getStorageManager().getUnderlyingStorage()
+
+    storage.watch({
+      [StorageDomain.ACCOUNT_REGISTRY]: () => {
+        logger.debug(
+          "🔄 [useAccountManager] Account registry changed, reloading accounts"
+        )
+        loadAccounts()
+      }
+    })
+
+    logger.debug("🔗 [useAccountManager] Watch registered for ACCOUNT_REGISTRY")
   }, [loadAccounts])
 
   return {

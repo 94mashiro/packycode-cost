@@ -187,6 +187,45 @@ Uses Plasmo Storage API with these key data:
 - `packy_config`: Purchase status from API
 - `cached_user_info`: Budget and usage data
 
+#### ⚠️ Storage Watch Mechanism (v3.6.1+ Critical Fix)
+
+**Architecture Decision**: Aggregate Key Storage with Field-Level Change Detection
+
+**Core Design**:
+- **Storage Format**: All account data aggregated in single key `account_{id}_info` (v3.1.0+)
+- **Watch Mechanism**: `MultiAccountStorageManager.watch()` monitors the aggregate key and detects field-level changes (v3.6.1+ fix)
+- **Change Propagation**: When aggregate key updates, compares old/new `AccountData` fields and triggers corresponding domain callbacks
+
+**Historical Bug (v3.1.0 - v3.6.0)**:
+```
+❌ Broken: watch() monitored scattered keys (account_{id}.user.info)
+✅ Fixed: watch() now monitors aggregate key (account_{id}_info)
+```
+
+**Impact**: This bug caused ALL UI components to fail updating after storage changes. Popup would show stale data until manually closed and reopened.
+
+**Key Implementation Details**:
+1. **Aggregate Key Watch**: Single `account_{id}_info` listener per account
+2. **Field Change Detection**: Compare `AccountData` fields using reference equality
+3. **Account Switch Support**: Automatically re-setup watchers when active account changes
+4. **Registry Integration**: Monitors `ACCOUNT_REGISTRY` for account switching events
+
+**Files Modified**:
+- `lib/storage/MultiAccountStorageManager.ts` - Complete rewrite of `watch()` method
+
+**Testing Checklist**:
+- [ ] Open popup → Click refresh → Verify UI auto-updates (without closing popup)
+- [ ] BudgetDisplay shows latest budget data immediately
+- [ ] Badge percentage updates automatically
+- [ ] SubscriptionDisplay reflects latest subscription status
+- [ ] Switch accounts → Verify watch switches to new account's data
+
+**Design Principles Applied**:
+- 🐧 **Linus**: Direct monitoring of actual storage keys, eliminate conversion layers
+- ⚛️ **Dan**: Preserve API compatibility, business code unaffected
+- ☕ **Bloch**: Clear field change detection logic, easy to test
+- 🏛️ **Fowler**: Fix technical debt, restore architectural consistency
+
 ### Multi-Account Architecture (v3.5.0+)
 
 **核心架构决策**: PackySite as Single Source of Truth

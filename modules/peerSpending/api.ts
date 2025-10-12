@@ -25,36 +25,38 @@ const logger = loggers.api
 /**
  * 获取同行消费数据
  * 仅在滴滴车模式下执行
+ * @param context 账号执行上下文
  */
-export async function fetchPeerSpendingToday(): Promise<null | PeerSpendingStorage> {
+export async function fetchPeerSpendingToday(
+  context: import("~/types").AccountContext
+): Promise<null | PeerSpendingStorage> {
   try {
-    // 1. 检查当前账号站点
+    // 直接从 context 解构所需信息
+    const { accountId, site } = context
     const storageManager = getStorageManager()
-    const accountManager = new AccountManager(storageManager)
-    const currentAccount = await accountManager.getCurrentAccount()
-    const currentSite = currentAccount?.site
 
-    // 2. 仅在滴滴车模式 (SHARED) 下执行
-    if (currentSite !== PackySite.SHARED) {
+    // 仅在滴滴车模式 (SHARED) 下执行
+    if (site !== PackySite.SHARED) {
       logger.debug("跳过同行消费数据获取：当前不是滴滴车模式")
       return null
     }
 
     logger.info("🚗 获取滴滴车模式同行消费数据...")
 
-    // 3. 调用 API
+    // 调用 API，传入完整上下文
     const rawData = await api.get<PeerSpendingApiResponse>(
-      ApiEndpointType.PEER_SPENDING_TODAY
+      ApiEndpointType.PEER_SPENDING_TODAY,
+      context
     )
 
-    // 4. 数据转换和计算
+    // 数据转换和计算
     const peerSpendingData = transformPeerSpendingData(rawData)
 
-    // 5. 存储数据（复用第 32 行的 storageManager）
-    await storageManager.set(
+    // 存储数据
+    await storageManager.setForAccount(
+      accountId,
       StorageDomain.PEER_SPENDING,
-      peerSpendingData,
-      true
+      peerSpendingData
     )
 
     logger.info(`✅ 同行消费数据获取成功：${peerSpendingData.peerCount} 位同行`)

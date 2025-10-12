@@ -6,20 +6,25 @@ import { type SubscriptionApiResponse } from "~/types"
 
 const logger = loggers.subscription
 
-export async function fetchSubscriptionInfo(): Promise<null | SubscriptionApiResponse> {
+export async function fetchSubscriptionInfo(
+  context: import("~/types").AccountContext
+): Promise<null | SubscriptionApiResponse> {
   try {
-    // 使用统一的API客户端，自动处理URL适配、认证和错误处理
-    const subscriptionData = await api.getSubscriptions()
+    // 直接从 context 解构所需信息
+    const { accountId, site } = context
+    const storageManager = getStorageManager()
+
+    // 使用统一的API客户端，传入完整上下文
+    const subscriptionData = await api.getSubscriptions(context)
 
     // 存储API响应数据
-    const storageManager = getStorageManager()
-    await storageManager.set(
+    await storageManager.setForAccount(
+      accountId,
       StorageDomain.SUBSCRIPTION_INFO,
-      subscriptionData,
-      true
+      subscriptionData
     )
 
-    logger.debug("Subscription info fetched and stored successfully")
+    logger.debug(`Subscription info fetched and stored successfully for ${site}`)
     return subscriptionData
   } catch (error) {
     // 统一API客户端已经处理了认证错误和token清理

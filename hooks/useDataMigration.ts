@@ -19,10 +19,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { AccountManager, DataMigrationManager } from "../lib/account"
-import {
-  createDefaultStorageAdapter,
-  getStorageManager
-} from "../lib/storage"
+import { createDefaultStorageAdapter, getStorageManager } from "../lib/storage"
 
 interface MigrationState {
   error: null | string

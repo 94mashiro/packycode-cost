@@ -13,9 +13,11 @@
 interface AccountBalanceProps {
   /** 账户余额（美元字符串格式） */
   balance: string
+  /** 今日消费金额（可选） */
+  dailySpent?: number
 }
 
-export function AccountBalance({ balance }: AccountBalanceProps) {
+export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
   // 格式化余额：确保显示为数字格式
   const safeBalance = Number(balance) || 0
   const formattedBalance = safeBalance.toFixed(2)
@@ -76,6 +78,23 @@ export function AccountBalance({ balance }: AccountBalanceProps) {
 
           {/* 分隔线 */}
           <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
+
+          {/* 今日消费统计 */}
+          {dailySpent !== undefined && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                今日消费
+              </div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                ${dailySpent.toFixed(2)}
+              </div>
+            </div>
+          )}
+
+          {/* 分隔线（仅在有今日消费数据时显示） */}
+          {dailySpent !== undefined && (
+            <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
+          )}
 
           {/* 信息提示区域 */}
           <div className="space-y-1.5">

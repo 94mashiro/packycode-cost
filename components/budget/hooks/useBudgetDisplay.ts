@@ -25,6 +25,7 @@ export interface UseBudgetDisplayReturn {
   /** 余额信息（仅 WWW 公交车模式） */
   balanceData: null | {
     balance: string
+    dailySpent?: number
   }
   /** 用户预算信息（SHARED 滴滴车 和 CODEX 模式） */
   budgetData: null | {
@@ -62,7 +63,8 @@ export function useBudgetDisplay(): UseBudgetDisplayReturn {
   const balanceData =
     accountSite === PackySite.WWW && finance?.payg?.balance
       ? {
-          balance: finance.payg.balance
+          balance: finance.payg.balance,
+          dailySpent: finance.payg.dailySpent
         }
       : null
 

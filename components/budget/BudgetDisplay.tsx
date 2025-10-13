@@ -44,7 +44,12 @@ export function BudgetDisplay() {
 
   // WWW 公交车模式 - 显示账户余额
   if (accountSite === PackySite.WWW && balanceData) {
-    return <AccountBalance balance={balanceData.balance} />
+    return (
+      <AccountBalance
+        balance={balanceData.balance}
+        dailySpent={balanceData.dailySpent}
+      />
+    )
   }
 
   // 其他模式 (SHARED 滴滴车, CODEX) - 显示预算信息

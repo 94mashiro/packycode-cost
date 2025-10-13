@@ -10,7 +10,7 @@
 import { ApiEndpointType, PageUrlType } from "~/types"
 import { PackySite } from "~/types/account"
 
-import { getApiUrl, getBaseUrl, getCookieDomain, getPageUrl } from "./config"
+import { getApiUrl, getPageUrl } from "./config"
 
 /**
  * 显式参数版本的API URL获取器
@@ -63,4 +63,4 @@ export const apiUrls = {
 /**
  * 重新导出配置管理函数，供其他模块使用
  */
-export { getApiUrl, getBaseUrl, getCookieDomain, getPageUrl } from "./config"
+export { apiUrls }

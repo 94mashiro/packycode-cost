@@ -75,6 +75,15 @@ const config = tseslint.config([
           ]
         }
       ],
+      // 禁止动态导入：Chrome Extension Service Worker 不支持 importScripts
+      "no-restricted-syntax": [
+        "error",
+        {
+          message:
+            "动态导入在 Chrome Extension Service Worker 中会失败。请使用静态导入（import ... from ...）",
+          selector: "ImportExpression"
+        }
+      ],
       "no-var": "error",
 
       "prefer-const": "error",

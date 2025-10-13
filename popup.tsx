@@ -1,7 +1,7 @@
 import "./reset.css"
 
 import eruda from "eruda"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 import { SubscriptionDisplay } from "~/modules/subscription"
 import { fetchAllDataAsync } from "~/modules/tasks"
@@ -36,7 +36,7 @@ function IndexPopup() {
 
   // 使用统一的认证状态判断函数
   const authStatus = getAuthenticationStatus(authData)
-  const isAuthenticated = authStatus.isAuthenticated
+  const { isAuthenticated } = authStatus
 
   // 从当前激活账号读取站点
   const currentAccountSite = currentAccount?.site ?? PackySite.WWW

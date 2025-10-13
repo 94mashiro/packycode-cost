@@ -19,6 +19,7 @@ import {
   isBackgroundAction,
   isDataTaskAction
 } from "~/modules/tasks"
+import { migrateNotificationPreferences } from "~/services/notifications"
 
 import type { ApiKeyResponse, AuthStorage, TokenType, UserInfo } from "./types"
 
@@ -42,9 +43,6 @@ async function initializeMultiAccountSystem() {
     await accountService.initialize()
     logger.info("✅ 多账号管理系统初始化完成")
 
-    const { migrateNotificationPreferences } = await import(
-      "~/services/notifications"
-    )
     await migrateNotificationPreferences()
   } catch (error) {
     logger.error("❌ 多账号管理系统初始化失败:", error)

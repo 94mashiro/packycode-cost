@@ -8,6 +8,7 @@
  * 🏛️ Fowler: "合并重复的抽象层，保持架构清晰"
  */
 
+import { ApiConfigManager } from "~/api/config"
 import { get } from "~/lib/request"
 import { httpClient } from "~/lib/request/AuthenticatedClient"
 import {
@@ -50,7 +51,6 @@ export class PackyCodeApiClient {
   async getConfig(
     site: import("~/types/account").PackySite
   ): Promise<PackyConfig> {
-    const { ApiConfigManager } = await import("~/api/config")
     const configManager = new ApiConfigManager(site)
     const configUrl = configManager.getApiUrl(ApiEndpointType.CONFIG)
 
@@ -148,7 +148,6 @@ export class PackyCodeApiClient {
     endpoint: ApiEndpointType,
     site: import("~/types/account").PackySite
   ): Promise<string> {
-    const { ApiConfigManager } = await import("~/api/config")
     const configManager = new ApiConfigManager(site)
     return configManager.getApiUrl(endpoint)
   }

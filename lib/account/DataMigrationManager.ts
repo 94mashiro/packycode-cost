@@ -402,7 +402,7 @@ export class DataMigrationManager {
       return undefined
     }
 
-    const firstSubscription = subscriptionInfo.data[0]
+    const [firstSubscription] = subscriptionInfo.data
 
     return {
       cancelAtPeriodEnd: firstSubscription.cancel_at_period_end,

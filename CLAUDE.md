@@ -470,11 +470,80 @@ const handleSiteChange = async (targetSite: PackySite) => {
 
 ## Technical Constraints
 
+### 🚫 Dynamic Import Policy (Critical)
+
+**Chrome Extension Service Worker 限制**：动态导入 (`await import()`) 会导致 Service Worker 失败。
+
+#### 问题根源
+
+1. **构建工具行为**：动态导入触发代码分割，生成独立 chunk 文件
+2. **Service Worker 加载**：独立 chunk 需要通过 `importScripts()` 加载
+3. **加载失败**：`importScripts()` 在 MV3 Service Worker 中不可靠
+
+#### 强制约束
+
+❌ **禁止使用**：
+```typescript
+// ❌ 动态导入
+const { func } = await import("./module")
+const module = await import("~/utils/helper")
+
+// ❌ 条件导入
+if (condition) {
+  const { helper } = await import("./helper")
+}
+```
+
+✅ **必须使用**：
+```typescript
+// ✅ 静态导入（文件顶部）
+import { func } from "./module"
+import { helper } from "~/utils/helper"
+
+// ✅ 条件逻辑在函数内
+import { helperA, helperB } from "./helpers"
+if (condition) {
+  helperA()
+} else {
+  helperB()
+}
+```
+
+#### 自动化保障
+
+**ESLint 规则**（已配置）：
+```javascript
+"no-restricted-syntax": [
+  "error",
+  {
+    "selector": "ImportExpression",
+    "message": "动态导入在 Chrome Extension Service Worker 中会失败。请使用静态导入"
+  }
+]
+```
+
+**执行时机**：
+- 开发时：`pnpm lint` 实时检测
+- 提交前：pre-commit hook 自动运行
+- CI/CD：构建流程强制检查
+
+#### 四师共识
+
+**🐧 Linus**：
+> "Service Worker 就该用静态导入，简单直接。动态导入是过度工程化，增加了复杂度却没有实际收益。"
+
+**⚛️ Dan**：
+> "可预测的模块加载让开发者理解代码行为。动态导入隐藏了依赖关系，增加了心智负担。"
+
+**☕ Bloch**：
+> "技术约束应该由类型系统和 linter 强制执行。自动化保障比开发者记忆更可靠。"
+
+**🏛️ Fowler**：
+> "明确的架构决策需要文档化并通过工具强制执行。这是技术治理的最佳实践。"
+
 ### Critical Rules
 
-- **NO DYNAMIC IMPORTS**: Chrome Extension service workers fail with dynamic imports
-  - ❌ `const { func } = await import("./module")`
-  - ✅ `import { func } from "./module"`
+- **NO DYNAMIC IMPORTS**: Chrome Extension service workers fail with dynamic imports (see above for details)
 - **Static Imports Only**: All module imports must be at file top level
 
 ### Chrome Extension Specifics

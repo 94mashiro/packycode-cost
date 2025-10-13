@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { apiUrls } from "../api"
-import { usePurchaseStatus, useOpusStatus } from "../hooks"
+import { useOpusStatus, usePurchaseStatus } from "../hooks"
 import { AccountManager } from "../lib/account"
 import { loggers } from "../lib/logger"
 import { getStorageManager } from "../lib/storage"
@@ -20,7 +20,7 @@ export function CombinedStatus({ authStatus }: CombinedStatusProps) {
   const { enabled: opusEnabled, loading: opusLoading } = useOpusStatus()
 
   // 从 authStatus 获取认证状态
-  const isAuthenticated = authStatus.isAuthenticated
+  const { isAuthenticated } = authStatus
 
   // 动态获取URL状态
   const [dashboardUrl, setDashboardUrl] = useState<string>("")

@@ -3,6 +3,7 @@ import type { CapabilitiesDomain, PackyConfig } from "~/types"
 import { api } from "~/lib/api/PackyCodeApiClient"
 import { loggers } from "~/lib/logger"
 import { getStorageManager } from "~/lib/storage"
+import { getActiveAccountData } from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 import {
   checkPurchaseNotificationPermission,
@@ -102,9 +103,6 @@ export async function checkAndNotifyPurchaseStatus(
  */
 export async function getCurrentPurchaseDisabled(): Promise<boolean> {
   try {
-    const { getActiveAccountData } = await import(
-      "~/lib/storage/activeAccountHelpers"
-    )
     const capabilities = await getActiveAccountData<CapabilitiesDomain>(
       StorageDomain.CAPABILITIES
     )

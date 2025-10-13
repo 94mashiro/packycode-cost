@@ -58,13 +58,12 @@ import { getStorageManager } from "~/lib/storage"
 import { StorageDomain } from "~/lib/storage/domains"
 import { getTokenExpiration } from "~/modules/auth/jwt"
 import { fetchAllDataAsync } from "~/modules/tasks"
-import {
-  type Account,
-  type AuthDomain,
-  TokenType
-} from "~/types"
+import { type Account, type AuthDomain, TokenType } from "~/types"
 import { PackySite } from "~/types/account"
-import { type AuthenticationResult, getAuthenticationStatus } from "~/utils/authStatus"
+import {
+  type AuthenticationResult,
+  getAuthenticationStatus
+} from "~/utils/authStatus"
 import { getSiteName as getSiteDisplayName } from "~/utils/siteHelpers"
 
 /**

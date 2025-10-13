@@ -1,6 +1,9 @@
 import type { AuthStorage } from "~/types"
 
-import { getActiveAccountData } from "~/lib/storage/activeAccountHelpers"
+import {
+  getActiveAccountData,
+  setActiveAccountData
+} from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
 
 /**
@@ -24,10 +27,6 @@ export async function getStoredToken(): Promise<null | string> {
  */
 export async function userLogout(): Promise<boolean> {
   try {
-    const { setActiveAccountData } = await import(
-      "~/lib/storage/activeAccountHelpers"
-    )
-
     // 清理认证信息
     await setActiveAccountData(StorageDomain.AUTH, null)
 

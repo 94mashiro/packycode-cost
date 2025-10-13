@@ -86,15 +86,15 @@ export function getAuthenticationStatus(
   const validationStatus = authData.validation?.status
 
   switch (validationStatus) {
-    case "valid":
+    case "expired":
       return {
         checkedAt: authData.validation?.checkedAt,
-        displayColor: "bg-green-500",
-        displayLabel: "有效",
+        displayColor: "bg-red-500",
+        displayLabel: "已过期",
         httpStatus: authData.validation?.httpStatus,
-        isAuthenticated: true,
-        reason: authData.validation?.reason,
-        status: AuthStatus.AUTHENTICATED
+        isAuthenticated: false,
+        reason: authData.validation?.reason || "Token 已过期，请重新登录",
+        status: AuthStatus.EXPIRED
       }
 
     case "invalid":
@@ -109,15 +109,17 @@ export function getAuthenticationStatus(
         status: AuthStatus.INVALID
       }
 
-    case "expired":
+    case "network_error":
       return {
         checkedAt: authData.validation?.checkedAt,
-        displayColor: "bg-red-500",
-        displayLabel: "已过期",
+        displayColor: "bg-yellow-500",
+        displayLabel: "网络错误",
         httpStatus: authData.validation?.httpStatus,
         isAuthenticated: false,
-        reason: authData.validation?.reason || "Token 已过期，请重新登录",
-        status: AuthStatus.EXPIRED
+        reason:
+          authData.validation?.reason ||
+          "网络通信失败，请检查网络连接或 API 服务状态",
+        status: AuthStatus.NETWORK_ERROR
       }
 
     case "rate_limited":
@@ -131,17 +133,15 @@ export function getAuthenticationStatus(
         status: AuthStatus.RATE_LIMITED
       }
 
-    case "network_error":
+    case "valid":
       return {
         checkedAt: authData.validation?.checkedAt,
-        displayColor: "bg-yellow-500",
-        displayLabel: "网络错误",
+        displayColor: "bg-green-500",
+        displayLabel: "有效",
         httpStatus: authData.validation?.httpStatus,
-        isAuthenticated: false,
-        reason:
-          authData.validation?.reason ||
-          "网络通信失败，请检查网络连接或 API 服务状态",
-        status: AuthStatus.NETWORK_ERROR
+        isAuthenticated: true,
+        reason: authData.validation?.reason,
+        status: AuthStatus.AUTHENTICATED
       }
 
     case "unknown":

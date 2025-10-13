@@ -57,7 +57,7 @@ function transformToSubscriptionDomain(
     return undefined
   }
 
-  const firstSubscription = response.data[0]
+  const [firstSubscription] = response.data
   return {
     cancelAtPeriodEnd: firstSubscription.cancel_at_period_end,
     currentPeriodEnd: firstSubscription.current_period_end,

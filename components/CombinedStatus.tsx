@@ -2,9 +2,7 @@ import { useEffect, useState } from "react"
 
 import { apiUrls } from "../api"
 import { useOpusStatus, usePurchaseStatus } from "../hooks"
-import { AccountManager } from "../lib/account"
 import { loggers } from "../lib/logger"
-import { getStorageManager } from "../lib/storage"
 import { PackySite } from "../types/account"
 import { type AuthenticationResult } from "../utils/authStatus"
 
@@ -12,9 +10,13 @@ const logger = loggers.ui
 
 interface CombinedStatusProps {
   authStatus: AuthenticationResult
+  currentSite: PackySite
 }
 
-export function CombinedStatus({ authStatus }: CombinedStatusProps) {
+export function CombinedStatus({
+  authStatus,
+  currentSite
+}: CombinedStatusProps) {
   const { config: purchaseConfig, loading: purchaseLoading } =
     usePurchaseStatus()
   const { enabled: opusEnabled, loading: opusLoading } = useOpusStatus()
@@ -25,23 +27,6 @@ export function CombinedStatus({ authStatus }: CombinedStatusProps) {
   // 动态获取URL状态
   const [dashboardUrl, setDashboardUrl] = useState<string>("")
   const [pricingUrl, setPricingUrl] = useState<string>("")
-  const [currentSite, setCurrentSite] = useState<PackySite>(PackySite.WWW)
-
-  // 获取当前账号站点
-  useEffect(() => {
-    const loadCurrentSite = async () => {
-      try {
-        const storageManager = getStorageManager()
-        const accountManager = new AccountManager(storageManager)
-        const currentAccount = await accountManager.getCurrentAccount()
-        setCurrentSite(currentAccount?.site ?? PackySite.WWW)
-      } catch (error) {
-        logger.error("Failed to load current account site:", error)
-        setCurrentSite(PackySite.WWW)
-      }
-    }
-    loadCurrentSite()
-  }, [])
 
   useEffect(() => {
     // 获取动态URL

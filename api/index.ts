@@ -59,8 +59,3 @@ export const apiUrls = {
     return getApiUrl(site, ApiEndpointType.USER_INFO)
   }
 }
-
-/**
- * 重新导出配置管理函数，供其他模块使用
- */
-export { apiUrls }

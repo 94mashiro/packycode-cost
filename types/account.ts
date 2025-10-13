@@ -272,6 +272,7 @@ export interface MigrationStatus {
 export interface SubscriptionDomain {
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string
+  currentPeriodStart: string
   planName: string
   planPrice: string
   status: string

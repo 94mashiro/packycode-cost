@@ -40,7 +40,7 @@ export function convertSubscriptionToPackageInfo(
   }
 
   // 构建套餐信息
-  const startDate = new Date()
+  const startDate = new Date(subscription.currentPeriodStart)
   const endDate = new Date(subscription.currentPeriodEnd)
   const now = new Date()
 

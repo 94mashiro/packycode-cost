@@ -93,7 +93,10 @@ function IndexPopup() {
           <AccountSwitcher onAccountChanged={handleRefresh} />
         </div>
 
-        <CombinedStatus authStatus={authStatus} />
+        <CombinedStatus
+          authStatus={authStatus}
+          currentSite={currentAccountSite}
+        />
 
         {/* 认证门禁：所有需要 API 访问凭证的组件都在此条件内 */}
         {isAuthenticated && (

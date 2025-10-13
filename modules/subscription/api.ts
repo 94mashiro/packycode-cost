@@ -61,6 +61,7 @@ function transformToSubscriptionDomain(
   return {
     cancelAtPeriodEnd: firstSubscription.cancel_at_period_end,
     currentPeriodEnd: firstSubscription.current_period_end,
+    currentPeriodStart: firstSubscription.current_period_start,
     planName: firstSubscription.plan_name,
     planPrice: firstSubscription.plan_price,
     status: firstSubscription.status

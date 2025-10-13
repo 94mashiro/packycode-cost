@@ -61,10 +61,10 @@ import { fetchAllDataAsync } from "~/modules/tasks"
 import {
   type Account,
   type AuthDomain,
-  TokenType,
-  type TokenValidationState
+  TokenType
 } from "~/types"
 import { PackySite } from "~/types/account"
+import { type AuthenticationResult, getAuthenticationStatus } from "~/utils/authStatus"
 import { getSiteName as getSiteDisplayName } from "~/utils/siteHelpers"
 
 /**
@@ -92,7 +92,7 @@ function AccountManagerPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [copiedToken, setCopiedToken] = useState<null | string>(null)
   const [statusMap, setStatusMap] = useState<
-    Record<string, TokenValidationState | undefined>
+    Record<string, AuthenticationResult | undefined>
   >({})
 
   // 当账号列表变化时，拉取每个账号的 tokenValidation 状态
@@ -100,19 +100,19 @@ function AccountManagerPage() {
     const loadStatuses = async () => {
       try {
         const storage = getStorageManager()
-        const result: Record<string, TokenValidationState | undefined> = {}
+        const result: Record<string, AuthenticationResult | undefined> = {}
         await Promise.all(
           accounts.map(async (acc) => {
             const authData = await storage.get<AuthDomain>(
               acc.id,
               StorageDomain.AUTH
             )
-            result[acc.id] = authData?.validation || { status: "unknown" }
+            result[acc.id] = getAuthenticationStatus(authData)
           })
         )
         setStatusMap(result)
       } catch (e) {
-        loggers.ui.debug("Failed to load tokenValidation statuses:", e)
+        loggers.ui.debug("Failed to load authentication statuses:", e)
       }
     }
     if (accounts.length > 0) {
@@ -122,69 +122,17 @@ function AccountManagerPage() {
     }
   }, [accounts])
 
-  type DisplayStatus = "checking" | "invalid" | "valid"
+  /**
+   * 获取详细的状态消息
+   */
+  const getDetailedMessage = (authStatus: AuthenticationResult): string => {
+    let message = authStatus.reason || authStatus.displayLabel
 
-  const getDisplayStatus = (
-    status: TokenValidationState["status"]
-  ): DisplayStatus => {
-    if (status === "valid") return "valid"
-    if (status === "unknown") return "checking"
-    return "invalid"
-  }
-
-  const getDisplayLabel = (displayStatus: DisplayStatus): string => {
-    switch (displayStatus) {
-      case "checking":
-        return "检测中"
-      case "invalid":
-        return "无效"
-      case "valid":
-        return "有效"
+    if (authStatus.httpStatus) {
+      message += ` (HTTP ${authStatus.httpStatus})`
     }
-  }
-
-  const getStatusColor = (status: TokenValidationState["status"]): string => {
-    switch (status) {
-      case "expired":
-        return "bg-red-500"
-      case "invalid":
-        return "bg-red-500"
-      case "network_error":
-        return "bg-yellow-500"
-      case "rate_limited":
-        return "bg-yellow-500"
-      case "unknown":
-        return "bg-gray-400"
-      case "valid":
-        return "bg-green-500"
-      default:
-        return "bg-gray-400"
-    }
-  }
-
-  const getDetailedMessage = (
-    status: TokenValidationState["status"],
-    state?: TokenValidationState
-  ): string => {
-    const baseMessages: Record<string, string> = {
-      expired: "Token 已过期：请重新登录或更新 Token",
-      invalid: "鉴权失败：Token 无效或已被撤销",
-      network_error: "网络通信失败：请检查网络连接或 API 服务状态",
-      rate_limited: "请求频率受限：请稍后重试",
-      unknown: "正在验证 Token...",
-      valid: "Token 验证通过"
-    }
-
-    let message = baseMessages[status] || "状态未知"
-
-    if (state?.reason) {
-      message += `\n详情：${state.reason}`
-    }
-    if (state?.httpStatus) {
-      message += ` (HTTP ${state.httpStatus})`
-    }
-    if (state?.checkedAt) {
-      const checkedTime = new Date(state.checkedAt).toLocaleString()
+    if (authStatus.checkedAt) {
+      const checkedTime = new Date(authStatus.checkedAt).toLocaleString()
       message += `\n检测时间：${checkedTime}`
     }
 
@@ -447,24 +395,29 @@ function AccountManagerPage() {
                       {/* 状态 */}
                       <TableCell>
                         {(() => {
-                          const st = statusMap[account.id]?.status || "unknown"
-                          const displayStatus = getDisplayStatus(st)
-                          const color = getStatusColor(st)
-                          const label = getDisplayLabel(displayStatus)
-                          const detailedMessage = getDetailedMessage(
-                            st,
-                            statusMap[account.id]
-                          )
+                          const authStatus = statusMap[account.id]
+                          if (!authStatus) {
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-gray-400" />
+                                <span className="text-sm text-muted-foreground">
+                                  未知
+                                </span>
+                              </div>
+                            )
+                          }
+
+                          const detailedMessage = getDetailedMessage(authStatus)
 
                           return (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="flex items-center gap-2 cursor-help">
                                   <span
-                                    className={`h-2 w-2 rounded-full ${color}`}
+                                    className={`h-2 w-2 rounded-full ${authStatus.displayColor}`}
                                   />
                                   <span className="text-sm text-muted-foreground">
-                                    {label}
+                                    {authStatus.displayLabel}
                                   </span>
                                 </div>
                               </TooltipTrigger>

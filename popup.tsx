@@ -3,9 +3,9 @@ import "./reset.css"
 import eruda from "eruda"
 import { useEffect, useState } from "react"
 
-import { getTokenExpiration } from "~/modules/auth"
 import { SubscriptionDisplay } from "~/modules/subscription"
 import { fetchAllDataAsync } from "~/modules/tasks"
+import { getAuthenticationStatus } from "~/utils/authStatus"
 
 import { AccountSwitcher } from "./components/AccountSwitcher"
 import { ActionButtons } from "./components/ActionButtons"
@@ -19,7 +19,6 @@ import { useAuth } from "./hooks"
 import { useAccountManager } from "./hooks/useAccountManager"
 import { useTaskExecution } from "./hooks/useTaskExecution"
 import { enablePopupLogging, loggers } from "./lib/logger"
-import { TokenType } from "./types"
 import { PackySite } from "./types/account"
 
 // 启用 Popup 日志接收
@@ -35,19 +34,9 @@ function IndexPopup() {
   const { currentAccount, refreshAccounts } = useAccountManager() // 从当前账号读取
   const { executeAll, loading: taskLoading } = useTaskExecution()
 
-  const tokenExpiration = authData?.token
-    ? getTokenExpiration(authData.token)
-    : null
-  const isTokenValid = !!(authData?.token && authData?.tokenType)
-
-  // Token 时效性检查：API Key 永久有效，JWT 需要检查过期时间
-  const isTokenEffective =
-    authData?.tokenType === TokenType.API_KEY
-      ? true // API Key 永久有效
-      : !tokenExpiration?.isExpired // JWT 需检查过期
-
-  // 完整的认证有效性：Token 存在且未过期
-  const isAuthenticated = isTokenValid && isTokenEffective
+  // 使用统一的认证状态判断函数
+  const authStatus = getAuthenticationStatus(authData)
+  const isAuthenticated = authStatus.isAuthenticated
 
   // 从当前激活账号读取站点
   const currentAccountSite = currentAccount?.site ?? PackySite.WWW
@@ -104,17 +93,7 @@ function IndexPopup() {
           <AccountSwitcher onAccountChanged={handleRefresh} />
         </div>
 
-        <CombinedStatus
-          tokenData={{
-            expiry: null,
-            isValid: isAuthenticated || false,
-            token: authData?.token || null,
-            tokenType: authData?.tokenType || null
-          }}
-          tokenExpiration={
-            tokenExpiration || { exp: 0, formatted: "", isExpired: true }
-          }
-        />
+        <CombinedStatus authStatus={authStatus} />
 
         {/* 认证门禁：所有需要 API 访问凭证的组件都在此条件内 */}
         {isAuthenticated && (

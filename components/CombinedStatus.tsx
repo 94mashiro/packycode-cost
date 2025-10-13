@@ -1,27 +1,26 @@
 import { useEffect, useState } from "react"
 
 import { apiUrls } from "../api"
-import { useOpusStatus, usePurchaseStatus } from "../hooks"
+import { usePurchaseStatus, useOpusStatus } from "../hooks"
 import { AccountManager } from "../lib/account"
 import { loggers } from "../lib/logger"
 import { getStorageManager } from "../lib/storage"
-import { type TokenData, type TokenExpiration, TokenType } from "../types"
 import { PackySite } from "../types/account"
+import { type AuthenticationResult } from "../utils/authStatus"
 
 const logger = loggers.ui
 
 interface CombinedStatusProps {
-  tokenData: TokenData
-  tokenExpiration: TokenExpiration
+  authStatus: AuthenticationResult
 }
 
-export function CombinedStatus({
-  tokenData,
-  tokenExpiration
-}: CombinedStatusProps) {
+export function CombinedStatus({ authStatus }: CombinedStatusProps) {
   const { config: purchaseConfig, loading: purchaseLoading } =
     usePurchaseStatus()
   const { enabled: opusEnabled, loading: opusLoading } = useOpusStatus()
+
+  // 从 authStatus 获取认证状态
+  const isAuthenticated = authStatus.isAuthenticated
 
   // 动态获取URL状态
   const [dashboardUrl, setDashboardUrl] = useState<string>("")
@@ -61,9 +60,6 @@ export function CombinedStatus({
     loadUrls()
   }, [currentSite])
 
-  const isApiKey = tokenData.tokenType === TokenType.API_KEY
-  const isAuthenticated =
-    tokenData.isValid && (isApiKey || !tokenExpiration.isExpired)
   const purchaseAvailable = purchaseConfig && !purchaseConfig.purchaseDisabled
 
   return (
@@ -89,11 +85,9 @@ export function CombinedStatus({
             </span>
             <div className="flex items-center gap-1.5">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  isAuthenticated ? "bg-green-500" : "bg-orange-500"
-                }`}></div>
+                className={`w-2 h-2 rounded-full ${authStatus.displayColor}`}></div>
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {isAuthenticated ? (isApiKey ? "API Key" : "JWT") : "未认证"}
+                {authStatus.displayLabel}
               </span>
             </div>
             <div className="min-h-[20px] flex items-center">
@@ -107,7 +101,7 @@ export function CombinedStatus({
                 </button>
               ) : (
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {isApiKey ? "长期有效" : `${tokenExpiration.formatted}失效`}
+                  {authStatus.reason || "认证有效"}
                 </span>
               )}
             </div>

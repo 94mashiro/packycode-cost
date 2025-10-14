@@ -4,6 +4,7 @@ import { CombinedBudget } from "../CombinedBudget"
 import { AccountBalance } from "./components/AccountBalance"
 import { BudgetError } from "./components/BudgetError"
 import { BudgetSkeleton } from "./components/BudgetSkeleton"
+import { RateLimitProgress } from "./components/RateLimitProgress"
 import { useBudgetDisplay } from "./hooks/useBudgetDisplay"
 
 /**
@@ -29,7 +30,7 @@ import { useBudgetDisplay } from "./hooks/useBudgetDisplay"
  * - 🔀 多模式支持：WWW 公交车模式展示余额，其他模式展示预算
  */
 export function BudgetDisplay() {
-  const { accountSite, balanceData, budgetData, error, loading } =
+  const { accountSite, balanceData, budgetData, error, latestUsage, loading } =
     useBudgetDisplay()
 
   // 加载状态
@@ -42,12 +43,12 @@ export function BudgetDisplay() {
     return <BudgetError error={error} />
   }
 
-  // WWW 公交车模式 - 显示账户余额
-  if (accountSite === PackySite.WWW && balanceData) {
+  // WWW 公交车模式 - 显示账户余额（始终渲染）
+  if (accountSite === PackySite.WWW) {
     return (
       <AccountBalance
-        balance={balanceData.balance}
-        dailySpent={balanceData.dailySpent}
+        balance={balanceData?.balance}
+        dailySpent={balanceData?.dailySpent}
       />
     )
   }
@@ -55,13 +56,22 @@ export function BudgetDisplay() {
   // 其他模式 (SHARED 滴滴车, CODEX) - 显示预算信息
   if (budgetData) {
     return (
-      <CombinedBudget
-        dailyBudget={budgetData.dailyBudget}
-        dailySpent={budgetData.dailySpent}
-        monthlyBudget={budgetData.monthlyBudget}
-        monthlySpent={budgetData.monthlySpent}
-        rateLimitResetAt={budgetData.rateLimitResetAt}
-      />
+      <>
+        <CombinedBudget
+          dailyBudget={budgetData.dailyBudget}
+          dailySpent={budgetData.dailySpent}
+          monthlyBudget={budgetData.monthlyBudget}
+          monthlySpent={budgetData.monthlySpent}
+          rateLimitResetAt={budgetData.rateLimitResetAt}
+        />
+
+        {/* 滴滴车模式：显示限流进度（仅当有 latestUsage 数据时） */}
+        {accountSite === PackySite.SHARED && latestUsage && (
+          <div className="mt-3">
+            <RateLimitProgress latestUsage={latestUsage} />
+          </div>
+        )}
+      </>
     )
   }
 

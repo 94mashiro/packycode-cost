@@ -11,19 +11,26 @@
  */
 
 interface AccountBalanceProps {
-  /** 账户余额（美元字符串格式） */
-  balance: string
+  /** 账户余额（美元字符串格式，可选） */
+  balance?: string
   /** 今日消费金额（可选） */
   dailySpent?: number
 }
 
 export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
   // 格式化余额：确保显示为数字格式
-  const safeBalance = Number(balance) || 0
-  const formattedBalance = safeBalance.toFixed(2)
+  const safeBalance = balance ? Number(balance) || 0 : undefined
+  const formattedBalance =
+    safeBalance !== undefined ? safeBalance.toFixed(2) : undefined
 
   // 余额状态判断
-  const getBalanceStatus = (amount: number) => {
+  const getBalanceStatus = (amount: number | undefined) => {
+    if (amount === undefined)
+      return {
+        color: "bg-gray-300 dark:bg-gray-600",
+        level: "loading",
+        text: "加载中"
+      }
     if (amount <= 0)
       return { color: "bg-red-500", level: "danger", text: "余额不足" }
     if (amount < 10)
@@ -37,6 +44,7 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
 
   // 余额文本颜色
   const getBalanceTextColor = () => {
+    if (status.level === "loading") return "text-gray-400 dark:text-gray-500"
     if (status.level === "danger") return "text-red-600 dark:text-red-400"
     if (status.level === "warning")
       return "text-yellow-600 dark:text-yellow-400"
@@ -68,9 +76,13 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
                 {status.text}
               </span>
             </div>
-            <div className={`text-2xl font-bold ${getBalanceTextColor()}`}>
-              ${formattedBalance}
-            </div>
+            {formattedBalance !== undefined ? (
+              <div className={`text-2xl font-bold ${getBalanceTextColor()}`}>
+                ${formattedBalance}
+              </div>
+            ) : (
+              <div className="h-7 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-24"></div>
+            )}
             <div className="text-xs text-gray-500 dark:text-gray-400">
               可用余额
             </div>
@@ -79,22 +91,22 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
           {/* 分隔线 */}
           <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
 
-          {/* 今日消费统计 */}
-          {dailySpent !== undefined && (
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                今日消费
-              </div>
+          {/* 今日消费统计 - 始终渲染 */}
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              今日消费
+            </div>
+            {dailySpent !== undefined ? (
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 ${dailySpent.toFixed(2)}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-16"></div>
+            )}
+          </div>
 
-          {/* 分隔线（仅在有今日消费数据时显示） */}
-          {dailySpent !== undefined && (
-            <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
-          )}
+          {/* 分隔线 */}
+          <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
 
           {/* 信息提示区域 */}
           <div className="space-y-1.5">

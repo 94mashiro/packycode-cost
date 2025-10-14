@@ -72,6 +72,7 @@ export async function fetchPrivateOpusStatus(
 
     const opusEnabled = firstAssignment.opus_enabled
     const rateLimitResetAt = firstAssignment.rate_limit_reset_at
+    const latestUsage = firstAssignment.latest_usage
 
     // 获取当前存储的状态
     const capabilities = await storageManager.get<CapabilitiesDomain>(
@@ -86,13 +87,11 @@ export async function fetchPrivateOpusStatus(
     const hasRateLimitChange = previousRateLimitResetAt !== rateLimitResetAt
 
     // 只在状态变化时更新存储
-    if (hasOpusChange || hasRateLimitChange) {
+    if (hasOpusChange || hasRateLimitChange || latestUsage) {
       if (hasOpusChange) {
         logger.info(
           `📝 Opus 状态变化 (滴滴车模式): ${previousOpusState} → ${opusEnabled}`
         )
-        // 注意：滴滴车模式下不触发 Opus 通知
-        // 原因：状态相对固定，且 Opus 通知仅限公交车模式
       }
 
       if (hasRateLimitChange) {
@@ -101,8 +100,16 @@ export async function fetchPrivateOpusStatus(
         )
       }
 
-      // 更新 capabilities，包含 opusEnabled 和 rateLimitResetAt
+      // 更新 capabilities，包含 opusEnabled、rateLimitResetAt 和 latestUsage
       await storageManager.set(accountId, StorageDomain.CAPABILITIES, {
+        latestUsage: latestUsage
+          ? {
+              fiveHourResetsAt: latestUsage.five_hour_resets_at,
+              fiveHourUtilization: latestUsage.five_hour_utilization,
+              sevenDayResetsAt: latestUsage.seven_day_resets_at,
+              sevenDayUtilization: latestUsage.seven_day_utilization
+            }
+          : undefined,
         opusEnabled,
         rateLimitResetAt
       })

@@ -196,6 +196,13 @@ export interface AuthDomain {
  * 合并了原有的 systemPreference 和 purchaseConfig 的核心字段
  */
 export interface CapabilitiesDomain {
+  /** 限流使用情况（仅 SHARED 滴滴车模式） */
+  latestUsage?: {
+    fiveHourResetsAt: string
+    fiveHourUtilization: number
+    sevenDayResetsAt: string
+    sevenDayUtilization: number
+  }
   opusEnabled?: boolean
   purchaseDisabled?: boolean
   rateLimitResetAt?: null | string

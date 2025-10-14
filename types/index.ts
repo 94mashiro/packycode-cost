@@ -240,6 +240,27 @@ export interface SharedAccountAssignment {
   description: string
   /** 显示名称 */
   display_name: string
+  /** 最新使用情况统计（仅在 usage 接口中返回） */
+  latest_usage?: {
+    /** 数据检查时间 */
+    checked_at: string
+    /** 5小时限制重置时间 */
+    five_hour_resets_at: string
+    /** 5小时内使用次数 */
+    five_hour_utilization: number
+    /** OAuth 应用 7 天限制重置时间 */
+    seven_day_oauth_apps_resets_at: null | string
+    /** OAuth 应用 7 天内使用次数 */
+    seven_day_oauth_apps_utilization: number
+    /** Opus 模型 7 天限制重置时间 */
+    seven_day_opus_resets_at: null | string
+    /** Opus 模型 7 天内使用次数 */
+    seven_day_opus_utilization: number
+    /** 7 天限制重置时间 */
+    seven_day_resets_at: string
+    /** 7 天内使用次数 */
+    seven_day_utilization: number
+  }
   /** 是否启用 Opus 模型 */
   opus_enabled: boolean
   /** 速率限制重置时间 */

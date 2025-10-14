@@ -46,7 +46,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
         [ApiEndpointType.CONFIG]: "/api/config",
         [ApiEndpointType.PEER_SPENDING_TODAY]:
           "/api/backend/accounts/peer-spending/today",
-        [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
+        [ApiEndpointType.SHARED_SPACE]:
+          "/api/backend/accounts/my-assignments/usage",
         [ApiEndpointType.SUBSCRIPTIONS]:
           "/api/backend/subscriptions?page=1&per_page=50",
         [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
@@ -66,7 +67,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
         [ApiEndpointType.CONFIG]: "/api/config",
         [ApiEndpointType.PEER_SPENDING_TODAY]:
           "/api/backend/accounts/peer-spending/today",
-        [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
+        [ApiEndpointType.SHARED_SPACE]:
+          "/api/backend/accounts/my-assignments/usage",
         [ApiEndpointType.SUBSCRIPTIONS]:
           "/api/backend/subscriptions?page=1&per_page=50",
         [ApiEndpointType.USER_INFO]: "/api/backend/users/info"
@@ -86,7 +88,8 @@ export const API_ENVIRONMENT_REGISTRY: Record<PackySite, ApiEnvironmentConfig> =
         [ApiEndpointType.CONFIG]: "/api/config",
         [ApiEndpointType.PEER_SPENDING_TODAY]:
           "/api/backend/accounts/peer-spending/today", // 不会使用，但需要定义
-        [ApiEndpointType.SHARED_SPACE]: "/api/backend/accounts/my-assignments",
+        [ApiEndpointType.SHARED_SPACE]:
+          "/api/backend/accounts/my-assignments/usage",
         [ApiEndpointType.SUBSCRIPTIONS]:
           "/api/backend/subscriptions?page=1&per_page=50",
         [ApiEndpointType.USER_INFO]: "/api/backend/users/info"

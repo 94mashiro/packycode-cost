@@ -1,3 +1,5 @@
+import type { CapabilitiesDomain } from "~/types/account"
+
 import {
   useCapabilities,
   useFinance
@@ -24,7 +26,7 @@ export interface UseBudgetDisplayReturn {
   accountSite: PackySite
   /** 余额信息（仅 WWW 公交车模式） */
   balanceData: null | {
-    balance: string
+    balance?: string
     dailySpent?: number
   }
   /** 用户预算信息（SHARED 滴滴车 和 CODEX 模式） */
@@ -37,6 +39,8 @@ export interface UseBudgetDisplayReturn {
   }
   /** 错误信息 */
   error: null | string
+  /** 限流使用情况（仅 SHARED 滴滴车模式） */
+  latestUsage: CapabilitiesDomain["latestUsage"]
   /** 是否正在加载 */
   loading: boolean
 }
@@ -59,12 +63,12 @@ export function useBudgetDisplay(): UseBudgetDisplayReturn {
   // 从当前激活账号读取站点
   const accountSite = currentAccount?.site ?? PackySite.WWW
 
-  // WWW 公交车模式：提取余额数据
+  // WWW 公交车模式：提取余额数据（始终返回对象，字段可选）
   const balanceData =
-    accountSite === PackySite.WWW && finance?.payg?.balance
+    accountSite === PackySite.WWW
       ? {
-          balance: finance.payg.balance,
-          dailySpent: finance.payg.dailySpent
+          balance: finance?.payg?.balance,
+          dailySpent: finance?.payg?.dailySpent
         }
       : null
 
@@ -85,6 +89,7 @@ export function useBudgetDisplay(): UseBudgetDisplayReturn {
     balanceData,
     budgetData,
     error,
+    latestUsage: capabilities?.latestUsage,
     loading
   }
 }

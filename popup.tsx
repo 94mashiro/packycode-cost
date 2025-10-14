@@ -104,11 +104,11 @@ function IndexPopup() {
             {/* 预算信息 */}
             <BudgetDisplay />
 
-            {/* 套餐信息 - 仅 CODEX 和 SHARED（滴滴车）模式展示 */}
-            {currentAccountSite !== PackySite.WWW && <SubscriptionDisplay />}
-
             {/* 乘客消费排行榜 - 仅 SHARED（滴滴车）模式展示 */}
             {currentAccountSite === PackySite.SHARED && <PeerSpendingChart />}
+
+            {/* 套餐信息 - 仅 CODEX 和 SHARED（滴滴车）模式展示 */}
+            {currentAccountSite !== PackySite.WWW && <SubscriptionDisplay />}
           </>
         )}
 

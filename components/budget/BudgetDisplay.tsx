@@ -54,9 +54,10 @@ export function BudgetDisplay() {
   }
 
   // 其他模式 (SHARED 滴滴车, CODEX) - 显示预算信息
-  if (budgetData) {
+  // 滴滴车模式且有限流数据：使用水平并列布局
+  if (accountSite === PackySite.SHARED) {
     return (
-      <>
+      <div className="grid grid-cols-2 gap-4">
         <CombinedBudget
           dailyBudget={budgetData.dailyBudget}
           dailySpent={budgetData.dailySpent}
@@ -64,18 +65,19 @@ export function BudgetDisplay() {
           monthlySpent={budgetData.monthlySpent}
           rateLimitResetAt={budgetData.rateLimitResetAt}
         />
-
-        {/* 滴滴车模式：显示限流进度（仅当有 latestUsage 数据时） */}
-        {accountSite === PackySite.SHARED && latestUsage && (
-          <div className="mt-3">
-            <RateLimitProgress latestUsage={latestUsage} />
-          </div>
-        )}
-      </>
+        <RateLimitProgress latestUsage={latestUsage} />
+      </div>
     )
   }
 
-  // 无数据状态 - 优雅隐藏，不显示任何内容
-  // 产品理念：没有预算数据时，用户不应该感知到这个功能的存在
-  return <span>Nothing to show</span>
+  // 其他情况：只显示预算信息
+  return (
+    <CombinedBudget
+      dailyBudget={budgetData.dailyBudget}
+      dailySpent={budgetData.dailySpent}
+      monthlyBudget={budgetData.monthlyBudget}
+      monthlySpent={budgetData.monthlySpent}
+      rateLimitResetAt={budgetData.rateLimitResetAt}
+    />
+  )
 }

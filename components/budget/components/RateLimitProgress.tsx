@@ -8,6 +8,8 @@ import {
   formatSevenDayRemaining
 } from "~/utils/rateLimitTime"
 
+import { RateLimitSkeleton } from "./RateLimitSkeleton"
+
 interface RateLimitBarProps {
   label: string
   timeRemaining: string
@@ -15,7 +17,7 @@ interface RateLimitBarProps {
 }
 
 interface RateLimitProgressProps {
-  latestUsage: NonNullable<CapabilitiesDomain["latestUsage"]>
+  latestUsage?: CapabilitiesDomain["latestUsage"]
 }
 
 /**
@@ -34,6 +36,10 @@ interface RateLimitProgressProps {
  * - 颜色编码: 绿色(0-50%) → 黄色(51-80%) → 红色(81-100%)
  */
 export function RateLimitProgress({ latestUsage }: RateLimitProgressProps) {
+  if (!latestUsage) {
+    return <RateLimitSkeleton />
+  }
+
   const [fiveHourRemaining, setFiveHourRemaining] = useState("")
   const [sevenDayRemaining, setSevenDayRemaining] = useState("")
 

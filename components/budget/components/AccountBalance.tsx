@@ -52,7 +52,7 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {/* 标题行 */}
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -66,50 +66,49 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
       </div>
 
       {/* 余额卡片 */}
-      <div className="bg-gray-50/40 dark:bg-gray-800/30 border border-gray-200/60 dark:border-gray-700/50 rounded-lg p-4">
-        <div className="space-y-3">
-          {/* 余额显示区域 */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${status.color}`}></div>
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                {status.text}
-              </span>
-            </div>
-            {formattedBalance !== undefined ? (
-              <div className={`text-2xl font-bold ${getBalanceTextColor()}`}>
-                ${formattedBalance}
+      <div className="bg-gray-50/40 dark:bg-gray-800/30 border border-gray-200/60 dark:border-gray-700/50 rounded-lg p-3">
+        <div className="space-y-2">
+          {/* 两栏网格：余额 + 今日消费 */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* 左列：余额显示区域 */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${status.color}`}></div>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {status.text}
+                </span>
               </div>
-            ) : (
-              <div className="h-7 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-24"></div>
-            )}
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              可用余额
+              {formattedBalance !== undefined ? (
+                <div className={`text-2xl font-bold ${getBalanceTextColor()}`}>
+                  ${formattedBalance}
+                </div>
+              ) : (
+                <div className="h-7 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-24"></div>
+              )}
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                可用余额
+              </div>
+            </div>
+
+            {/* 右列：今日消费统计 */}
+            <div className="space-y-1">
+              {/* 占位空间：与左列状态指示器等高 */}
+              <div className="h-4"></div>
+              {dailySpent !== undefined ? (
+                <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  ${dailySpent.toFixed(2)}
+                </div>
+              ) : (
+                <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-16"></div>
+              )}
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                今日消费
+              </div>
             </div>
           </div>
-
-          {/* 分隔线 */}
-          <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
-
-          {/* 今日消费统计 - 始终渲染 */}
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              今日消费
-            </div>
-            {dailySpent !== undefined ? (
-              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                ${dailySpent.toFixed(2)}
-              </div>
-            ) : (
-              <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded animate-pulse w-16"></div>
-            )}
-          </div>
-
-          {/* 分隔线 */}
-          <div className="border-t border-gray-200/60 dark:border-gray-700/50"></div>
 
           {/* 信息提示区域 */}
-          <div className="space-y-1.5">
+          <div className="pt-1">
             <div className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
               <svg
                 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500"

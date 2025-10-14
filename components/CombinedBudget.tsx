@@ -4,12 +4,13 @@ import {
 } from "~/hooks/useResetCountdown"
 
 import { cn } from "../lib/utils"
+import { BudgetSkeleton } from "./budget/components/BudgetSkeleton"
 
 interface CombinedBudgetProps {
-  dailyBudget: number
-  dailySpent: number
-  monthlyBudget: number
-  monthlySpent: number
+  dailyBudget?: number
+  dailySpent?: number
+  monthlyBudget?: number
+  monthlySpent?: number
   rateLimitResetAt?: null | string
 }
 
@@ -20,7 +21,16 @@ export function CombinedBudget({
   monthlySpent,
   rateLimitResetAt
 }: CombinedBudgetProps) {
-  // 使用自定义 Hook 处理倒计时逻辑
+  const hasValidData =
+    dailyBudget !== undefined &&
+    dailySpent !== undefined &&
+    monthlyBudget !== undefined &&
+    monthlySpent !== undefined
+
+  if (!hasValidData) {
+    return <BudgetSkeleton />
+  }
+
   const { shouldShow, timeLeft } = useResetCountdown({
     rateLimitResetAt
   })

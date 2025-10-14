@@ -7,7 +7,9 @@ import {
   setActiveAccountData
 } from "~/lib/storage/activeAccountHelpers"
 import { StorageDomain } from "~/lib/storage/domains"
+import { getNotificationFieldName } from "~/services/notifications/fieldNames"
 import { type NotificationKey, type UserPreferenceStorage } from "~/types"
+import { PackySite } from "~/types/account"
 
 const logger = loggers.ui
 
@@ -35,23 +37,32 @@ export function useNotificationSettings() {
         settings: [
           {
             description: "www.packycode.com",
-            enabled: userPreference?.purchase_notification_www ?? true,
+            enabled:
+              userPreference?.[
+                getNotificationFieldName("purchase", PackySite.WWW)
+              ] ?? true,
             icon: "🚌",
-            id: "purchase_notification_www",
+            id: getNotificationFieldName("purchase", PackySite.WWW),
             label: "主站"
           },
           {
             description: "share.packycode.com",
-            enabled: userPreference?.purchase_notification_shared ?? true,
+            enabled:
+              userPreference?.[
+                getNotificationFieldName("purchase", PackySite.SHARED)
+              ] ?? true,
             icon: "🚗",
-            id: "purchase_notification_shared",
+            id: getNotificationFieldName("purchase", PackySite.SHARED),
             label: "拼车站"
           },
           {
             description: "codex.packycode.com",
-            enabled: userPreference?.purchase_notification_codex ?? true,
+            enabled:
+              userPreference?.[
+                getNotificationFieldName("purchase", PackySite.CODEX)
+              ] ?? true,
             icon: "💻",
-            id: "purchase_notification_codex",
+            id: getNotificationFieldName("purchase", PackySite.CODEX),
             label: "Codex 站"
           }
         ],
@@ -62,9 +73,12 @@ export function useNotificationSettings() {
         settings: [
           {
             description: "www.packycode.com",
-            enabled: userPreference?.opus_notification_www ?? true,
+            enabled:
+              userPreference?.[
+                getNotificationFieldName("opus", PackySite.WWW)
+              ] ?? true,
             icon: "🤖",
-            id: "opus_notification_www",
+            id: getNotificationFieldName("opus", PackySite.WWW),
             label: "主站"
           }
         ],

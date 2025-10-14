@@ -4,6 +4,8 @@ import { StorageDomain } from "~/lib/storage/domains"
 import { type UserPreferenceStorage } from "~/types"
 import { PackySite } from "~/types/account"
 
+import { getNotificationFieldName } from "./fieldNames"
+
 const logger = loggers.ui
 
 export async function checkOpusNotificationPermission(
@@ -21,13 +23,14 @@ export async function checkOpusNotificationPermission(
       StorageDomain.USER_PREFERENCE
     )
 
-    const fieldName = getSiteNotificationField("opus", site)
-    const newFieldValue = userPreference?.[fieldName] as boolean | undefined
+    // ✅ 使用统一的字段名生成器，直接消费 site 枚举值
+    const fieldName = getNotificationFieldName("opus", site)
+    const fieldValue = userPreference?.[fieldName]
 
-    const enabled = newFieldValue ?? true
+    const enabled = fieldValue ?? true
 
     logger.debug(
-      `Opus notification permission (${site}): ${enabled} (field: ${String(fieldName)}, value: ${newFieldValue})`
+      `Opus notification permission (${site}): ${enabled} (field: ${fieldName}, value: ${fieldValue})`
     )
     return enabled
   } catch (error) {
@@ -44,33 +47,18 @@ export async function checkPurchaseNotificationPermission(
       StorageDomain.USER_PREFERENCE
     )
 
-    const fieldName = getSiteNotificationField("purchase", site)
-    const newFieldValue = userPreference?.[fieldName] as boolean | undefined
+    // ✅ 使用统一的字段名生成器，直接消费 site 枚举值
+    const fieldName = getNotificationFieldName("purchase", site)
+    const fieldValue = userPreference?.[fieldName]
 
-    const enabled = newFieldValue ?? true
+    const enabled = fieldValue ?? true
 
     logger.debug(
-      `Purchase notification permission (${site}): ${enabled} (field: ${String(fieldName)}, value: ${newFieldValue})`
+      `Purchase notification permission (${site}): ${enabled} (field: ${fieldName}, value: ${fieldValue})`
     )
     return enabled
   } catch (error) {
     logger.error("Failed to check purchase notification permission:", error)
     return true
-  }
-}
-
-function getSiteNotificationField(
-  type: "opus" | "purchase",
-  site: PackySite
-): keyof UserPreferenceStorage {
-  if (type === "purchase") {
-    return `purchase_notification_${site}` as keyof UserPreferenceStorage
-  } else {
-    if (site !== PackySite.WWW) {
-      throw new Error(
-        `Opus notifications only supported for WWW site, got: ${site}`
-      )
-    }
-    return "opus_notification_www" as keyof UserPreferenceStorage
   }
 }

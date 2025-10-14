@@ -58,11 +58,6 @@ export function AccountBalance({ balance, dailySpent }: AccountBalanceProps) {
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
           账户余额
         </h3>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[10px] font-medium">
-            按量计费
-          </span>
-        </div>
       </div>
 
       {/* 余额卡片 */}

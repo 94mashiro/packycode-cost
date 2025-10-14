@@ -34,9 +34,9 @@ export enum DataTaskType {
   FETCH_USER_INFO = "fetchUserInfo"
 }
 
+export type BackgroundAction = DataTaskAction
 // 组合所有 action 类型
 export type DataTaskAction = `${DataTaskType}`
-export type BackgroundAction = DataTaskAction
 
 // 4. 任务定义的强类型结构
 interface TaskDefinition {

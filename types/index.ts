@@ -98,15 +98,15 @@ export type AssignmentType = "auto_assigned" | "user_selected"
  * 认证信息（旧版数据结构）
  *
  * @deprecated 使用 AuthDomain 替代（types/account.ts）
- * 
+ *
  * 字段映射：
  * - type → tokenType
  * - expiry → tokenExpiry
- * 
+ *
  * 迁移说明：
  * 旧版 background.ts 自动检测逻辑使用此类型，导致字段不一致。
  * 多账号管理系统（v3.0.0+）统一使用 AuthDomain。
- * 
+ *
  * @see AuthDomain in types/account.ts
  * @internal 仅用于向后兼容和数据迁移
  */
@@ -142,16 +142,23 @@ export interface JWTPayload {
  * 通知设置键类型
  * 全局类型定义，确保类型安全
  *
+ * 设计原则：直接使用站点枚举值作为后缀，无需映射
+ * - 新字段：使用完整域名（如 "opus_notification_www.packycode.com"）
+ * - 旧字段：保留向后兼容，数据迁移后可删除
+ *
  * 注意：Opus 通知仅支持主站 (WWW)
  */
 export type NotificationKey =
+  // ===== 新字段（直接使用站点枚举值） =====
   | "opus_notification"
   | "opus_notification_www"
+  // ===== 废弃字段（向后兼容，数据迁移后删除） =====
   | "purchase_notification"
   | "purchase_notification_codex"
-  // 向后兼容旧字段
   | "purchase_notification_shared"
   | "purchase_notification_www"
+  | `opus_notification_${import("./account").PackySite.WWW}`
+  | `purchase_notification_${import("./account").PackySite}`
 
 // ===== 通知状态 =====
 export interface NotificationStates {
@@ -470,31 +477,52 @@ export interface UserInfoData {
   userInfo: null | UserInfo
 }
 
-// 用户偏好
-export interface UserPreferenceStorage {
-  // ===== 废弃字段（向后兼容） =====
+/**
+ * 用户偏好存储
+ *
+ * 设计原则：直接使用站点枚举值作为字段名后缀
+ * - 新字段：使用完整域名（如 "opus_notification_www.packycode.com"）
+ * - 旧字段：保留向后兼容，数据迁移后可删除
+ */
+export type UserPreferenceStorage = {
+  /** 购买开放通知 - 所有站点 */
+  [K in `purchase_notification_${import("./account").PackySite}`]?: boolean
+} & {
+  // ===== 废弃字段（向后兼容，数据迁移后删除） =====
   /**
-   * @deprecated 使用站点特定字段 opus_notification_{site}
-   * 保留用于数据迁移，新代码请使用站点级字段
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
    */
   opus_notification?: boolean
-  // ===== Opus 通知 - 站点级控制 =====
-  /** Opus 模型状态通知 - 仅主站 (www.packycode.com) */
+  /**
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
+   */
   opus_notification_www?: boolean
   /**
-   * @deprecated 使用站点特定字段 purchase_notification_{site}
-   * 保留用于数据迁移，新代码请使用站点级字段
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
    */
   purchase_notification?: boolean
-
-  /** 购买开放通知 - Codex站 (codex.packycode.com) */
+  /**
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
+   */
   purchase_notification_codex?: boolean
-
-  /** 购买开放通知 - 拼车站 (share.packycode.com) */
+  /**
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
+   */
   purchase_notification_shared?: boolean
-  // ===== 购买通知 - 站点级控制 =====
-  /** 购买开放通知 - 主站 (www.packycode.com) */
+  /**
+   * @deprecated 使用站点特定字段，直接用 site 枚举值
+   * 保留用于数据迁移，新代码请使用新字段
+   */
   purchase_notification_www?: boolean
+} & {
+  // ===== 新字段（直接使用站点枚举值作为后缀） =====
+  /** Opus 模型状态通知 - 主站 (www.packycode.com) */
+  [K in `opus_notification_${import("./account").PackySite.WWW}`]?: boolean
 }
 
 // ===== 多账号管理系统类型 =====

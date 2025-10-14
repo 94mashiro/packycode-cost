@@ -57,7 +57,7 @@ export function BudgetDisplay() {
   // 滴滴车模式且有限流数据：使用水平并列布局
   if (accountSite === PackySite.SHARED) {
     return (
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <CombinedBudget
           dailyBudget={budgetData.dailyBudget}
           dailySpent={budgetData.dailySpent}
@@ -65,7 +65,8 @@ export function BudgetDisplay() {
           monthlySpent={budgetData.monthlySpent}
           rateLimitResetAt={budgetData.rateLimitResetAt}
         />
-        <RateLimitProgress latestUsage={latestUsage} />
+        {/* 暂时屏蔽，后端接口存在问题 */}
+        {/* <RateLimitProgress latestUsage={latestUsage} /> */}
       </div>
     )
   }

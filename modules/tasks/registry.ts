@@ -21,12 +21,11 @@ import { PackySite } from "~/types/account"
 
 const logger = loggers.ui
 
-// 1. 其他 background action 枚举
-export enum BackgroundActionEnum {
-  GET_STORED_TOKEN = "getStoredToken"
-}
+// ===== Background Action 枚举已废弃 =====
+// BackgroundActionEnum.GET_STORED_TOKEN 已移除
+// 直接使用 getActiveAccountData() 读取认证信息
 
-// 2. 数据获取任务类型枚举
+// 数据获取任务类型枚举
 export enum DataTaskType {
   CHECK_PURCHASE_STATUS = "checkPurchaseStatus",
   FETCH_PEER_SPENDING = "fetchPeerSpending",
@@ -35,9 +34,9 @@ export enum DataTaskType {
   FETCH_USER_INFO = "fetchUserInfo"
 }
 
-export type BackgroundAction = `${BackgroundActionEnum}` | DataTaskAction
-// 3. 组合所有 action 类型
+// 组合所有 action 类型
 export type DataTaskAction = `${DataTaskType}`
+export type BackgroundAction = DataTaskAction
 
 // 4. 任务定义的强类型结构
 interface TaskDefinition {
@@ -245,13 +244,11 @@ export function getTasksInfo() {
 
 /**
  * 验证 action 是否为有效的 background action (类型守卫)
+ *
+ * 简化版：现在只检查 DataTaskAction
  */
 export function isBackgroundAction(action: string): action is BackgroundAction {
-  return (
-    Object.values(BackgroundActionEnum).includes(
-      action as BackgroundActionEnum
-    ) || isDataTaskAction(action)
-  )
+  return isDataTaskAction(action)
 }
 
 /**

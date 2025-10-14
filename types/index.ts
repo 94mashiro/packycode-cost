@@ -94,7 +94,22 @@ export interface ApiResponse<T> {
  */
 export type AssignmentType = "auto_assigned" | "user_selected"
 
-// 认证信息
+/**
+ * 认证信息（旧版数据结构）
+ *
+ * @deprecated 使用 AuthDomain 替代（types/account.ts）
+ * 
+ * 字段映射：
+ * - type → tokenType
+ * - expiry → tokenExpiry
+ * 
+ * 迁移说明：
+ * 旧版 background.ts 自动检测逻辑使用此类型，导致字段不一致。
+ * 多账号管理系统（v3.0.0+）统一使用 AuthDomain。
+ * 
+ * @see AuthDomain in types/account.ts
+ * @internal 仅用于向后兼容和数据迁移
+ */
 export interface AuthStorage {
   expiry?: number
   token: string

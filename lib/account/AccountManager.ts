@@ -249,6 +249,9 @@ export class AccountManager {
   /**
    * 设置 Token 可用性状态（使用 USER_INFO 的结果进行回写）
    * - status 为 valid 时，会同时更新 lastSyncAt
+   *
+   * 修复：从 Account Registry 读取正确的 token 和 tokenType 字段
+   * 背景：Background 自动检测可能写入旧字段导致 accountData.auth 数据不一致
    */
   async setTokenValidation(
     accountId: string,
@@ -266,10 +269,15 @@ export class AccountManager {
       (await storage.get<AccountData>(`account_${accountId}_info`)) ||
       this.createEmptyAccountData()
 
+    // ✅ 从 Account Registry 读取正确的字段（单一数据源）
     accountData.auth = {
       ...accountData.auth,
-      token: accountData.auth?.token || null,
-      tokenType: accountData.auth?.tokenType || null,
+      token: account.token,
+      tokenExpiry:
+        account.tokenType === TokenType.JWT
+          ? this.extractTokenExpiry(account.token)
+          : undefined,
+      tokenType: account.tokenType,
       validation: state
     }
 

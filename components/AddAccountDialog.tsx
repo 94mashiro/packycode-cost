@@ -74,7 +74,7 @@ export function AddAccountDialog({
 }: AddAccountDialogProps) {
   const [token, setToken] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [tokenType, setTokenType] = useState<TokenType>(TokenType.JWT)
+  const [tokenType, setTokenType] = useState<TokenType>(TokenType.API_KEY)
   const [site, setSite] = useState<PackySite>(PackySite.WWW)
   const [error, setError] = useState<null | string>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -109,7 +109,7 @@ export function AddAccountDialog({
       // 重置表单
       setToken("")
       setDisplayName("")
-      setTokenType(TokenType.JWT)
+      setTokenType(TokenType.API_KEY)
       setSite(PackySite.WWW)
       onClose()
     } catch (err) {
@@ -124,7 +124,7 @@ export function AddAccountDialog({
   const handleCancel = () => {
     setToken("")
     setDisplayName("")
-    setTokenType(TokenType.JWT)
+    setTokenType(TokenType.API_KEY)
     setSite(PackySite.WWW)
     setError(null)
     onClose()
@@ -209,7 +209,7 @@ export function AddAccountDialog({
               disabled={isSubmitting}
               id="token"
               onChange={(e) => setToken(e.target.value)}
-              placeholder={tokenType === "jwt" ? "eyJ..." : "sk-ant-api03-..."}
+              placeholder={tokenType === "jwt" ? "eyJ..." : "sk-*"}
               required
               rows={4}
               value={token}
